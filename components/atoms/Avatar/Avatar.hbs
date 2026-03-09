@@ -1,0 +1,9 @@
+<div class="avatar avatar--{{size}} {{#if onClick}}avatar--clickable{{/if}}" 
+     {{#if onClick}}data-user-id="{{userId}}"{{/if}}
+     {{#if ariaLabel}}aria-label="{{ariaLabel}}"{{/if}}>
+    {{#if src}}
+        <img class="avatar__image" src="{{src}}" alt="{{alt}}">
+    {{else}}
+        <div class="avatar__placeholder">{{initials}}</div>
+    {{/if}}
+</div>

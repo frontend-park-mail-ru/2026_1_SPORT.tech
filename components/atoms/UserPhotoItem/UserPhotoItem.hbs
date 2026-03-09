@@ -1,0 +1,34 @@
+<div class="user-photo-item {{#if clickable}}user-photo-item--clickable{{/if}} {{#if isEmpty}}user-photo-item--empty{{/if}}" 
+     data-user-id="{{id}}">
+    
+    <div class="user-photo-item__avatar">
+        {{#if isEmpty}}
+            <div class="avatar avatar--medium">
+                <div class="avatar__placeholder">?</div>
+            </div>
+        {{else}}
+            <div class="avatar avatar--medium {{#if clickable}}avatar--clickable{{/if}}">
+                {{#if avatar}}
+                    <img class="avatar__image" src="{{avatar}}" alt="{{name}}">
+                {{else}}
+                    <div class="avatar__placeholder">{{initials}}</div>
+                {{/if}}
+            </div>
+        {{/if}}
+    </div>
+    
+    <div class="user-photo-item__info">
+        {{#if isEmpty}}
+            <span class="user-photo-item__empty-message">{{emptyMessage}}</span>
+        {{else}}
+            <span class="user-photo-item__name">{{name}}</span>
+            <span class="user-photo-item__role">{{role}}</span>
+        {{/if}}
+    </div>
+
+    {{#if count}}
+    <div class="user-photo-item__stats">
+        <span>{{count}}</span>
+    </div>
+    {{/if}}
+</div>

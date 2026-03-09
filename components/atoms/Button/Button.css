@@ -1,0 +1,188 @@
+/* ===== БАЗОВЫЙ КОМПОНЕНТ КНОПКИ ===== */
+/* Поддерживает все состояния из UI Kit:
+   - Типы: primary-orange, secondary-blue, text-orange, text-blue
+   - Состояния: normal, hover, active, disabled
+   - Размеры: small (32px), medium (40px), large (48px)
+   - Модификатор: full-width
+*/
+
+.button {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: all 0.2s ease;
+    border: none;
+    line-height: 1;
+    white-space: nowrap;
+    font-weight: var(--font-weight-medium);
+}
+
+/* ===== РАЗМЕРЫ ===== */
+.button--small {
+    height: 32px;
+    padding: 0 var(--spacing-md);
+    font-size: var(--font-size-xs);
+    gap: var(--spacing-xs);
+}
+
+.button--medium {
+    height: 40px;
+    padding: 0 var(--spacing-lg);
+    font-size: var(--font-size-sm);
+    gap: var(--spacing-sm);
+}
+
+.button--large {
+    height: 48px;
+    padding: 0 var(--spacing-xl);
+    font-size: var(--font-size-md);
+    gap: var(--spacing-md);
+}
+
+/* ===== ТИП: PRIMARY ORANGE (ОСНОВНЫЕ ОРАНЖЕВЫЕ КНОПКИ) ===== */
+.button--primary-orange {
+    background: var(--primary-orange);
+    color: var(--base-white);
+}
+
+.button--primary-orange.button--normal {
+    background: var(--primary-orange);
+}
+
+.button--primary-orange.button--hover {
+    background: var(--primary-orange-hover);
+}
+
+.button--primary-orange.button--active {
+    background: var(--primary-orange-active);
+    transform: translateY(1px);
+}
+
+.button--primary-orange.button--disabled {
+    background: var(--primary-orange-light);
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    color: var(--base-white);
+}
+
+/* ===== ТИП: SECONDARY BLUE (СИНИЕ КНОПКИ) ===== */
+.button--secondary-blue {
+    background: var(--secondary-blue);
+    color: var(--base-white);
+}
+
+.button--secondary-blue.button--normal {
+    background: var(--secondary-blue);
+}
+
+.button--secondary-blue.button--hover {
+    background: var(--secondary-blue-hover);
+}
+
+.button--secondary-blue.button--active {
+    background: var(--secondary-blue-active);
+    transform: translateY(1px);
+}
+
+.button--secondary-blue.button--disabled {
+    background: var(--secondary-blue-light);
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    color: var(--base-white);
+}
+
+/* ===== ТИП: TEXT ORANGE (ТЕКСТОВЫЕ ОРАНЖЕВЫЕ) ===== */
+.button--text-orange {
+    background: transparent;
+    color: var(--text-orange);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    height: auto;
+}
+
+.button--text-orange.button--normal {
+    color: var(--text-orange);
+    background: transparent;
+}
+
+.button--text-orange.button--hover {
+    color: var(--text-orange-hover);
+    text-decoration: underline;
+    background: transparent;
+}
+
+.button--text-orange.button--active {
+    color: var(--primary-orange-active);
+    text-decoration: underline;
+    background: transparent;
+}
+
+.button--text-orange.button--disabled {
+    color: var(--primary-orange-light);
+    cursor: not-allowed;
+    pointer-events: none;
+    text-decoration: none;
+}
+
+/* ===== ТИП: TEXT BLUE (ТЕКСТОВЫЕ СИНИЕ) ===== */
+.button--text-blue {
+    background: transparent;
+    color: var(--text-blue);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    height: auto;
+}
+
+.button--text-blue.button--normal {
+    color: var(--text-blue);
+    background: transparent;
+}
+
+.button--text-blue.button--hover {
+    color: var(--text-blue-hover);
+    text-decoration: underline;
+    background: transparent;
+}
+
+.button--text-blue.button--active {
+    color: var(--secondary-blue-active);
+    text-decoration: underline;
+    background: transparent;
+}
+
+.button--text-blue.button--disabled {
+    color: var(--secondary-blue-light);
+    cursor: not-allowed;
+    pointer-events: none;
+    text-decoration: none;
+}
+
+/* ===== МОДИФИКАТОР: FULL WIDTH ===== */
+.button--full-width {
+    width: 100%;
+}
+
+/* ===== КНОПКА С ИКОНКОЙ ===== */
+.button__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+}
+
+.button__icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* ===== ДЛИННЫЙ ТЕКСТ В КНОПКЕ ===== */
+.button__text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
