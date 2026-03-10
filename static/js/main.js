@@ -2,19 +2,29 @@
 Handlebars.templates = {};
 
 async function loadTemplates() {
+    // Определяем где искать каждый шаблон
     const templates = [
-        'Button',
-        'Input',
-        'Avatar',
-        'UserPhotoItem'
+        // atoms
+        { name: 'Button', folder: 'atoms' },
+        { name: 'Input', folder: 'atoms' },
+        { name: 'Avatar', folder: 'atoms' },
+        { name: 'UserPhotoItem', folder: 'atoms' },
+        // molecules
+        { name: 'ProfileHeader', folder: 'molecules' },
+        { name: 'PostCard', folder: 'molecules' },
+        // organisms
+        { name: 'Sidebar', folder: 'organisms' },
+        { name: 'ProfileContent', folder: 'organisms' },
+        // pages
+        { name: 'ProfilePage', folder: 'pages' }
     ];
 
-    for (const name of templates) {
+    for (const { name, folder } of templates) {
         try {
-            const response = await fetch(`/components/atoms/${name}/${name}.hbs`);
+            const response = await fetch(`/components/${folder}/${name}/${name}.hbs`);
             const source = await response.text();
             Handlebars.templates[`${name}.hbs`] = Handlebars.compile(source);
-            console.log(`✅ Loaded template: ${name}`);
+            console.log(`✅ Loaded template: ${name} from ${folder}`);
         } catch (error) {
             console.error(`❌ Failed to load template ${name}:`, error);
         }
@@ -487,3 +497,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadTemplates();
     await demoAllComponents();
 });
+// Демо страницы профиля
+async function demoProfilePage() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  
+  const { renderProfilePage } = await import('/pages/ProfilePage/ProfilePage.js');
+  
+  await renderProfilePage(app, {
+    profile: {
+      name: 'Абдурахман Гасанов',
+      role: 'Фитнес-тренер',
+      isOwnProfile: false
+    },
+    currentUser: {
+      name: 'Абдурахман Гасанов',
+      role: 'Фитнес-тренер'
+    },
+    subscriptions: [
+      { id: 1, name: 'Ярослав-Лют... Владимиров', role: 'Физиолог' },
+      { id: 2, name: 'Антон Переславль-З...', role: 'Тренер ОФП' },
+      { id: 3, name: 'Ксения Бортникова', role: 'Тренер по КОНК...' },
+      { id: 4, name: 'Сергей Генц', role: 'Диетолог' }
+    ],
+    posts: [
+      {
+        title: 'Топ упражнений на грудные мышцы',
+        content: `
+          <h4>Анатомия и важность тренировки груди</h4>
+          <p>Грудные мышцы — это мощный массив, состоящий в первую очередь из большой и малой грудных мышц, а также передней зубчатой мышцы. Они отвечают за приведение и вращение руки, а также стабилизацию плечевого пояса. Развитая грудь не только придаёт фигуре эстетичный и мужественный силуэт, но и улучшает осанку, помогая бороться с сутулостью, и повышает результаты во многих видах спорта — от плавания до бокса.</p>
+          <h4>Правила эффективного тренинга</h4>
+          <ol>
+            <li><strong>Разминка обязательна:</strong> Разогрейте суставы и мышцы, чтобы подготовить их к нагрузке и избежать травм.</li>
+            <li><strong>Разнообразие углов:</strong> Грудь состоит из разных пучков (верх, середина, низ). Чтобы проработать их все...</li>
+          </ol>
+        `,
+        authorName: 'Абдурахман Гасанов',
+        authorRole: 'Фитнес-тренер',
+        likes: 52,
+        comments: 42
+      }
+    ],
+    popularPosts: [
+      { title: 'Топ упражнений на грудные мышцы', image: null },
+      { title: 'Топ упражнений на мышцы спины', image: null }
+    ]
+  });
+}
+
+// Замените вызов demoComponents() на demoProfilePage() для просмотра
+// document.addEventListener('DOMContentLoaded', async () => {
+//   await loadTemplates();
+//   await demoProfilePage();
+// });

@@ -1,0 +1,21 @@
+.profile-page {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.profile-page__sidebar {
+  flex-shrink: 0;
+  width: 240px;
+}
+
+.profile-page__main {
+  flex: 1;
+  margin-left: 240px;
+  padding: 20px;
+}
+
+.profile-page__container {
+  max-width: 900px;
+  margin: 0 auto;
+}

@@ -1,0 +1,57 @@
+<div class="profile-content">
+  <div class="profile-content__tabs">
+    {{#each tabs}}
+    <button class="profile-content__tab {{#if active}}profile-content__tab--active{{/if}}" data-tab="{{id}}">
+      {{label}}
+    </button>
+    {{/each}}
+  </div>
+  
+  <div class="profile-content__layout">
+    <div class="profile-content__main">
+      <div class="profile-content__section-title">
+        <h2>{{sectionTitle}}</h2>
+        {{#if showFilters}}
+        <div class="profile-content__filters">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          <span>Фильтры</span>
+        </div>
+        {{/if}}
+      </div>
+      
+      <div id="posts-container-{{id}}">
+        <!-- Посты вставляются через JS -->
+      </div>
+    </div>
+    
+    <aside class="profile-content__sidebar">
+      <div class="profile-content__search">
+        <span class="profile-content__search-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+        <input type="text" class="profile-content__search-input" placeholder="Поиск публикаций">
+      </div>
+      
+      <div class="profile-content__popular">
+        <h3>Популярные публикации:</h3>
+        {{#each popularPosts}}
+        <div class="profile-content__popular-item">
+          <div class="profile-content__popular-thumb">
+            {{#if image}}
+            <img src="{{image}}" alt="{{title}}">
+            {{/if}}
+          </div>
+          <div class="profile-content__popular-info">
+            <div class="profile-content__popular-title">{{title}}</div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </aside>
+  </div>
+</div>
