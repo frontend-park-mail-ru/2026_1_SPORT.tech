@@ -1,0 +1,11 @@
+<button 
+    class="button button--{{variant}} button--{{state}} button--{{size}} {{#if fullWidth}}button--full-width{{/if}}" 
+    type="{{type}}"
+    {{#if disabled}}disabled{{/if}}
+    {{#if ariaLabel}}aria-label="{{ariaLabel}}"{{/if}}
+>
+    {{#if icon}}
+        <span class="button__icon">{{{icon}}}</span>
+    {{/if}}
+    <span class="button__text">{{text}}</span>
+</button>

@@ -1,0 +1,158 @@
+/* ===== БАЗОВЫЙ КОМПОНЕНТ ЭЛЕМЕНТА ПОЛЬЗОВАТЕЛЯ ===== */
+.user-photo-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    width: 100%;
+    background: white;
+    border: 1px solid #f0f0f0;
+    margin-bottom: 8px;
+}
+
+/* Hover эффект для кликабельных элементов */
+.user-photo-item--clickable {
+    cursor: pointer;
+}
+
+.user-photo-item--clickable:hover {
+    background-color: #FFF5F2;
+    border-color: #FF6B4A;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 107, 74, 0.1);
+}
+
+/* Аватар внутри элемента */
+.user-photo-item__avatar {
+    flex-shrink: 0;
+}
+
+.user-photo-item__avatar .avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 16px;
+}
+
+/* Информация о пользователе */
+.user-photo-item__info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.user-photo-item__name {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: #1A1A1A;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    margin-bottom: 4px;
+}
+
+.user-photo-item__role {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #666666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* Компактный режим */
+.user-photo-item--compact {
+    padding: 8px 12px;
+    gap: 12px;
+}
+
+.user-photo-item--compact .user-photo-item__avatar .avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+}
+
+.user-photo-item--compact .user-photo-item__name {
+    font-size: 14px;
+}
+
+.user-photo-item--compact .user-photo-item__role {
+    font-size: 12px;
+}
+
+/* Empty state */
+.user-photo-item--empty {
+    opacity: 0.8;
+    cursor: default;
+    background: #F9F9F9;
+    border: 1px dashed #DDDDDD;
+}
+
+.user-photo-item--empty:hover {
+    background: #F9F9F9;
+    border-color: #DDDDDD;
+    transform: none;
+    box-shadow: none;
+}
+
+.user-photo-item__empty-message {
+    font-family: 'Inter', sans-serif;
+    color: #999999;
+    font-size: 14px;
+    font-style: italic;
+    padding: 8px 0;
+}
+
+/* Иконки (если нужны) */
+.user-photo-item__icon {
+    margin-left: auto;
+    color: #999999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-photo-item__icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Счётчики (как на скриншоте с постами) */
+.user-photo-item__stats {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: auto;
+    color: #666666;
+    font-size: 14px;
+}
+
+/* Группа элементов (для списков) */
+.user-photo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 400px;
+    border: 1px solid #f0f0f0;
+    border-radius: 16px;
+    padding: 16px;
+    background: white;
+}
+
+/* Заголовки секций */
+.user-photo-section-title {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1A1A1A;
+    margin: 24px 0 16px;
+}
+
+.user-photo-section-title:first-of-type {
+    margin-top: 0;
+}
