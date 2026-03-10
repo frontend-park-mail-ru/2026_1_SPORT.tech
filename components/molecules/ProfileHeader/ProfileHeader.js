@@ -8,7 +8,6 @@ import { renderButton } from '../../atoms/Button/Button.js';
  * @param {string} profile.role
  * @param {string} profile.avatar 
  * @param {boolean} profile.isOwnProfile 
- * @param {Function} profile.onSubscribe 
  * @param {Function} profile.onEdit 
  */
 export async function renderProfileHeader(container, {
@@ -16,7 +15,6 @@ export async function renderProfileHeader(container, {
   role,
   avatar = null,
   isOwnProfile = false,
-  onSubscribe = null,
   onEdit = null
 }) {
   const template = Handlebars.templates['ProfileHeader.hbs'];
@@ -35,7 +33,8 @@ export async function renderProfileHeader(container, {
     role,
     avatar,
     initials,
-    id
+    id,
+    isOwnProfile
   });
   
   const wrapper = document.createElement('div');
@@ -43,19 +42,33 @@ export async function renderProfileHeader(container, {
   const element = wrapper.firstElementChild;
   const actionsContainer = element.querySelector(`#profile-actions-${id}`);
   
-  if (isOwnProfile) {
+  // Кнопка редактирования для своего профиля
+  if (isOwnProfile && actionsContainer) {
     await renderButton(actionsContainer, {
       text: 'Редактировать',
-      variant: 'secondary',
+      variant: 'primary-orange', // Оранжевая кнопка
       state: 'normal',
+      size: 'medium', // Средний размер
       onClick: onEdit
     });
-  } else {
-    await renderButton(actionsContainer, {
-      text: 'Подписаться',
-      variant: 'default',
-      state: 'normal',
-      onClick: onSubscribe
+  }
+  
+  // Обработчики для статистики и подписок
+  const statBtn = element.querySelector(`#stat-btn-${id}`);
+  if (statBtn) {
+    statBtn.addEventListener('click', () => {
+      console.log('📊 Statistics clicked');
+      statBtn.classList.add('button--active');
+      setTimeout(() => statBtn.classList.remove('button--active'), 100);
+    });
+  }
+  
+  const subsBtn = element.querySelector(`#subscriptions-btn-${id}`);
+  if (subsBtn) {
+    subsBtn.addEventListener('click', () => {
+      console.log('👥 Subscriptions clicked');
+      subsBtn.classList.add('button--active');
+      setTimeout(() => subsBtn.classList.remove('button--active'), 100);
     });
   }
   

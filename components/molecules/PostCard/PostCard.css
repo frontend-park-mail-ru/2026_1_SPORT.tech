@@ -1,5 +1,5 @@
 .post-card {
-  background: #f0f7ff; 
+  background: #f0f7ff;
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 16px;
@@ -24,12 +24,6 @@
   font-weight: 600;
   font-size: 14px;
   overflow: hidden;
-}
-
-.post-card__author-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .post-card__author-info {
@@ -110,30 +104,10 @@
   height: 20px;
 }
 
-.post-card__actions-center {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-
-.post-card__access-btn {
-  padding: 10px 32px;
-  background: #1a3a4a; 
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.post-card__access-btn:hover {
-  background: #2a4a5a;
-}
-
 .post-card__actions-right {
   display: flex;
   gap: 12px;
+  margin-left: auto; /* Прижимаем иконки к правому краю */
 }
 
 .post-card__icon-btn {

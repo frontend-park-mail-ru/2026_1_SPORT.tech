@@ -12,12 +12,14 @@
           {{initials}}
         {{/if}}
       </div>
+      {{#if isOwnProfile}}
       <button class="profile-header__camera-btn" title="Сменить фото">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
           <circle cx="12" cy="13" r="4"/>
         </svg>
       </button>
+      {{/if}}
     </div>
     
     <div class="profile-header__details">
@@ -26,11 +28,12 @@
     </div>
     
     <div class="profile-header__actions" id="profile-actions-{{id}}">
+      <!-- Сюда будет вставлена кнопка "Редактировать" для своего профиля -->
     </div>
   </div>
   
   <div class="profile-header__stats">
-    <div class="profile-header__stat">
+    <button class="profile-header__stat" id="stat-btn-{{id}}" data-action="statistics">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M3 3v18h18"/>
         <path d="M18 17V9"/>
@@ -38,8 +41,8 @@
         <path d="M8 17v-3"/>
       </svg>
       <span>Статистика</span>
-    </div>
-    <div class="profile-header__stat">
+    </button>
+    <button class="profile-header__stat" id="subscriptions-btn-{{id}}" data-action="subscriptions">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
         <circle cx="9" cy="7" r="4"/>
@@ -47,6 +50,6 @@
         <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
       </svg>
       <span>Подписки</span>
-    </div>
+    </button>
   </div>
 </div>

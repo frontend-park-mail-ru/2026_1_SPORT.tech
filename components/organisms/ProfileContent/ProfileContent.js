@@ -1,4 +1,5 @@
 import { renderPostCard } from '../../molecules/PostCard/PostCard.js';
+import { renderButton } from '../../atoms/Button/Button.js';
 
 /**
  * Рендерит контент профиля с вкладками
@@ -7,11 +8,15 @@ import { renderPostCard } from '../../molecules/PostCard/PostCard.js';
  * @param {string} params.activeTab 
  * @param {Array} params.posts 
  * @param {Array} params.popularPosts
+ * @param {boolean} params.canAddPost - может ли пользователь добавлять посты
+ * @param {Function} params.onAddPost - callback для добавления поста
  */
 export async function renderProfileContent(container, {
   activeTab = 'main',
   posts = [],
-  popularPosts = []
+  popularPosts = [],
+  canAddPost = false,
+  onAddPost = null
 }) {
   const template = Handlebars.templates['ProfileContent.hbs'];
   
@@ -23,27 +28,32 @@ export async function renderProfileContent(container, {
   ];
   
   const sectionTitles = {
-    main: 'Недавние публикации:',
+    main: 'Недавние публикации',
     publications: 'Все публикации',
     subscriptions: 'Подписки',
     about: 'О тренере'
   };
   
-  const id = 'content-' + Date.now();
+  // Добавляем описания для популярных постов
+  const popularWithDescriptions = popularPosts.map(post => ({
+    ...post,
+    description: post.description || 'Практические советы и рекомендации'
+  }));
   
   const html = template({
     tabs,
     activeTab,
     sectionTitle: sectionTitles[activeTab],
     showFilters: activeTab === 'main' || activeTab === 'publications',
-    popularPosts,
-    id
+    popularPosts: popularWithDescriptions,
+    canAddPost: canAddPost && activeTab === 'publications' // Показываем только на вкладке "Публикации"
   });
   
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild;
   
+  // Обработчики вкладок
   element.querySelectorAll('.profile-content__tab').forEach(tab => {
     tab.addEventListener('click', () => {
       const tabId = tab.dataset.tab;
@@ -51,7 +61,22 @@ export async function renderProfileContent(container, {
     });
   });
   
-  const postsContainer = element.querySelector(`#posts-container-${id}`);
+  // Рендерим кнопку "Добавить публикацию" если нужно
+  if (canAddPost && activeTab === 'publications') {
+    const addButtonContainer = element.querySelector('#add-post-button-container');
+    if (addButtonContainer) {
+      await renderButton(addButtonContainer, {
+        text: 'Добавить публикацию',
+        variant: 'primary-orange', // Используем оранжевый тип
+        state: 'normal',
+        size: 'medium', // Добавляем размер
+        onClick: onAddPost
+      });
+    }
+  }
+  
+  // Рендерим посты
+  const postsContainer = element.querySelector('#posts-container');
   
   if (posts.length === 0 && activeTab !== 'about') {
     postsContainer.innerHTML = `

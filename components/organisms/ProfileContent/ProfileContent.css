@@ -1,69 +1,62 @@
 .profile-content {
-  flex: 1;
-  padding: 20px;
   width: 100%;
-  max-width: 1200px; /* Ограничиваем максимальную ширину */
 }
 
+/* ВКЛАДКИ */
 .profile-content__tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   background: white;
   padding: 8px;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  justify-content: center; /* Центрируем вкладки */
+  width: 100%;
 }
 
 .profile-content__tab {
-  padding: 12px 32px; /* Увеличиваем отступы */
+  padding: 12px 24px;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: #666;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   border-radius: 8px;
   transition: all 0.2s;
+  flex: 1;
+  text-align: center;
 }
 
 .profile-content__tab:hover {
-  color: var(--base-purple);
-  background: var(--accent-purple);
+  color: #E85A2B;
+  background: #FFF5F0;
 }
 
 .profile-content__tab--active {
-  color: #E85A2B; /* Оранжевый цвет как на скриншоте */
-  background: transparent;
+  color: #E85A2B;
+  background: #FFF5F0;
   position: relative;
 }
 
-.profile-content__tab--active::after {
-  content: '';
-  position: absolute;
-  bottom: -8px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #E85A2B;
-}
-
-/* ОСНОВНОЙ LAYOUT: центральная часть + правая колонка */
+/* ОСНОВНОЙ ЛЭЙАУТ */
 .profile-content__layout {
-  display: grid;
-  /* Центральная часть растягивается, правая фиксирована */
-  grid-template-columns: 1fr 280px;
+  display: flex;
   gap: 24px;
-  align-items: start;
+  width: 100%;
 }
 
-/* Центральная колонка с постами */
+/* ЦЕНТРАЛЬНАЯ КОЛОНКА */
 .profile-content__main {
-  min-width: 0;
+  flex: 1;
   background: white;
   border-radius: 16px;
-  padding: 20px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
 }
 
 .profile-content__section-header {
@@ -72,29 +65,30 @@
   justify-content: space-between;
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid #EDF2F7;
+  flex-shrink: 0;
 }
 
 .profile-content__section-title {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 600;
-  color: #1a3a4a; /* Тёмно-синий как на скриншоте */
+  color: #1A2B3C;
 }
 
 .profile-content__filters {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--text-secondary);
-  font-size: 14px;
+  color: #666;
+  font-size: 13px;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
   transition: background 0.2s;
 }
 
 .profile-content__filters:hover {
-  background: var(--background-light);
+  background: #F7FAFC;
 }
 
 .profile-content__filters svg {
@@ -102,66 +96,147 @@
   height: 16px;
 }
 
-/* ПРАВАЯ КОЛОНКА (фиксированная ширина) */
-.profile-content__sidebar-right {
+/* Контейнер постов - скроллится */
+#posts-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  width: 280px;
-  position: sticky;
-  top: 20px;
+  gap: 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #E85A2B #FFE8E3;
 }
 
-/* Поиск */
+#posts-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+#posts-container::-webkit-scrollbar-track {
+  background: #FFE8E3;
+  border-radius: 3px;
+}
+
+#posts-container::-webkit-scrollbar-thumb {
+  background: #E85A2B;
+  border-radius: 3px;
+}
+
+/* ПРАВАЯ КОЛОНКА */
+.profile-content__sidebar-right {
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* БЛОК ПОИСКА */
 .profile-content__search {
-  position: relative;
   background: white;
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.profile-content__search-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1A2B3C;
+  margin-bottom: 12px;
+}
+
+.profile-content__search-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.profile-content__search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
 }
 
 .profile-content__search-input {
   width: 100%;
   height: 40px;
   padding: 0 16px 0 40px;
-  border: 1px solid var(--border-light);
+  border: 1px solid #E2E8F0;
   border-radius: 8px;
   font-size: 14px;
-  background: var(--background-light);
-  color: var(--text-secondary);
-}
-
-.profile-content__search-input::placeholder {
-  color: var(--text-secondary);
+  background: #F8FAFC;
+  color: #333;
+  box-sizing: border-box;
 }
 
 .profile-content__search-input:focus {
   outline: none;
-  border-color: var(--base-purple);
+  border-color: #E85A2B;
+  background: white;
 }
 
-.profile-content__search-icon {
-  position: absolute;
-  left: 28px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-secondary);
-}
-
-/* Популярные публикации */
+/* ПОПУЛЯРНЫЕ ПУБЛИКАЦИИ - с собственным скроллом */
 .profile-content__popular {
   background: white;
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 800px; /* Фиксированная высота */
+  max-height: 655px; /* Максимальная высота */
+  overflow: hidden; /* Скрываем overflow у родителя */
 }
 
 .profile-content__popular h3 {
   font-size: 16px;
   font-weight: 600;
+  color: #1A2B3C;
   margin-bottom: 16px;
-  color: #1a3a4a;
+  flex-shrink: 0; /* Заголовок не сжимается */
+  padding-bottom: 8px;
+  border-bottom: 1px solid #EDF2F7;
+}
+
+/* Контейнер популярных публикаций со скроллом */
+.profile-content__popular-list {
+  overflow-y: auto; /* ВКЛЮЧАЕМ скролл */
+  flex: 1;
+  min-height: 0; /* Важно для скролла */
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #E85A2B #FFE8E3;
+}
+
+/* Стилизация скроллбара */
+.profile-content__popular-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.profile-content__popular-list::-webkit-scrollbar-track {
+  background: #FFE8E3;
+  border-radius: 3px;
+}
+
+.profile-content__popular-list::-webkit-scrollbar-thumb {
+  background: #E85A2B;
+  border-radius: 3px;
+}
+
+.profile-content__popular-list::-webkit-scrollbar-thumb:hover {
+  background: #D04A1B;
 }
 
 .profile-content__popular-item {
@@ -169,56 +244,86 @@
   gap: 12px;
   margin-bottom: 12px;
   cursor: pointer;
-  padding: 8px;
+  padding: 10px;
   border-radius: 8px;
   transition: background 0.2s;
+  background: #F8FAFC;
+  border: 1px solid #EDF2F7;
 }
 
 .profile-content__popular-item:hover {
-  background: var(--background-light);
+  background: #FFF5F0;
+  border-color: #FFD4CC;
+}
+
+.profile-content__popular-item:last-child {
+  margin-bottom: 0;
 }
 
 .profile-content__popular-thumb {
-  width: 70px;
-  height: 70px;
+  width: 60px;
+  height: 60px;
   border-radius: 8px;
-  background: var(--background-light);
+  background: linear-gradient(135deg, #FFE8E3 0%, #FFD4CC 100%);
   overflow: hidden;
   flex-shrink: 0;
-}
-
-.profile-content__popular-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #E85A2B;
+  font-size: 12px;
+  border: 1px solid #FFD4CC;
 }
 
 .profile-content__popular-info {
   flex: 1;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
 }
 
 .profile-content__popular-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--base-black);
+  font-size: 14px;
+  font-weight: 600;
+  color: #1A2B3C;
+  line-height: 1.4;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-content__popular-description {
+  font-size: 12px;
+  color: #666;
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
+
+/* Пустое состояние */
 .profile-content__empty {
   text-align: center;
   padding: 60px 20px;
-  color: var(--text-secondary);
+  color: #999;
+  width: 100%;
 }
 
-.profile-content__empty svg {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 16px;
-  opacity: 0.5;
+.profile-content__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-content__add-button {
+  margin-left: auto;
+}
+
+.profile-content__add-button button {
+  white-space: nowrap; /* Чтобы текст не переносился */
 }

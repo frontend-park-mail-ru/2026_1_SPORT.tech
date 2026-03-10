@@ -23,28 +23,10 @@ export async function renderProfilePage(container, {
     { id: 2, name: 'Антон Переславль-З...', role: 'Тренер ОФП' },
     { id: 3, name: 'Ксения Бортникова', role: 'Тренер по КОНК...' }
   ],
-  posts = [
-    {
-      title: 'Топ упражнений на грудные мышцы',
-      content: `
-        <h4>Анатомия и важность тренировки груди</h4>
-        <p>Грудные мышцы — это мощный массив, состоящий в первую очередь из большой и малой грудных мышц...</p>
-        <h4>Правила эффективного тренинга</h4>
-        <ol>
-          <li>Разминка обязательна: Разогрейте суставы и мышцы...</li>
-          <li>Разнообразие углов: Грудь состоит из разных пучков...</li>
-        </ol>
-      `,
-      authorName: 'Абдурахман Гасанов',
-      authorRole: 'Фитнес-тренер',
-      likes: 52,
-      comments: 42
-    }
-  ],
-  popularPosts = [
-    { title: 'Топ упражнений на грудные мышцы', image: null },
-    { title: 'Топ упражнений на мышцы спины', image: null }
-  ]
+  posts = [],
+  popularPosts = [],
+  activeTab = 'main', // ← ДОБАВЛЕНО: активная вкладка
+  onLogout = null
 } = {}) {
   const template = Handlebars.templates['ProfilePage.hbs'];
   const html = template({});
@@ -52,6 +34,8 @@ export async function renderProfilePage(container, {
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const page = wrapper.firstElementChild;
+  
+  // Саидбар
   const sidebarContainer = page.querySelector('#sidebar-container');
   await renderSidebar(sidebarContainer, {
     activePage: 'profile',
@@ -59,20 +43,35 @@ export async function renderProfilePage(container, {
     users: subscriptions
   });
   
+  // Контейнер для контента профиля
   const profileContainer = page.querySelector('#profile-container');
-  await renderProfileHeader(profileContainer, {
+  
+  // Создаем отдельные контейнеры для шапки и контента
+  const headerContainer = document.createElement('div');
+  headerContainer.className = 'profile-page__header';
+  profileContainer.appendChild(headerContainer);
+  
+  const contentContainer = document.createElement('div');
+  contentContainer.className = 'profile-page__content';
+  profileContainer.appendChild(contentContainer);
+  
+  // Рендерим шапку
+  await renderProfileHeader(headerContainer, {
     name: profile.name,
     role: profile.role,
     avatar: profile.avatar,
     isOwnProfile: profile.isOwnProfile,
-    onSubscribe: () => console.log('Подписаться'),
     onEdit: () => console.log('Редактировать профиль')
+    // Убрали onSubscribe
   });
 
-  await renderProfileContent(profileContainer, {
-    activeTab: 'main',
+  // Рендерим контент с активной вкладкой
+  await renderProfileContent(contentContainer, {
+    activeTab: activeTab,
     posts,
-    popularPosts
+    popularPosts,
+    canAddPost: profile.isOwnProfile, // Только свой профиль может добавлять посты
+    onAddPost: () => console.log('Добавить публикацию')
   });
   
   container.appendChild(page);
