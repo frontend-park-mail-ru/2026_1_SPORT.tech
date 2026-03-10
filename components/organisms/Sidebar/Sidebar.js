@@ -88,7 +88,7 @@ export async function renderSidebar(container, {
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild;
   
-  // Обработчики кликов
+  // Обработчики навигации
   element.querySelectorAll('.sidebar__nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
       e.preventDefault();
@@ -97,6 +97,7 @@ export async function renderSidebar(container, {
     });
   });
   
+  // Обработчики подписок
   element.querySelectorAll('.sidebar__user-item').forEach(item => {
     item.addEventListener('click', () => {
       const userId = item.dataset.userId;
@@ -104,12 +105,34 @@ export async function renderSidebar(container, {
     });
   });
   
-  // Обработчик выхода
-  const logoutBtn = element.querySelector('.sidebar__logout-btn');
-  if (logoutBtn && onLogout) {
-    logoutBtn.addEventListener('click', (e) => {
+  // Обработчик для меню с тремя точками
+  const menuBtn = element.querySelector('.sidebar__menu-btn');
+  const dropdown = element.querySelector('.sidebar__dropdown');
+  
+  if (menuBtn && dropdown) {
+    // Открытие/закрытие меню
+    menuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      onLogout();
+      e.preventDefault();
+      dropdown.classList.toggle('sidebar__dropdown--active');
+    });
+    
+    // Обработчик кнопки выхода
+    const logoutBtn = dropdown.querySelector('.sidebar__logout-option');
+    if (logoutBtn && onLogout) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        dropdown.classList.remove('sidebar__dropdown--active');
+        onLogout();
+      });
+    }
+    
+    // Закрытие меню при клике вне его
+    document.addEventListener('click', (e) => {
+      if (!menuBtn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('sidebar__dropdown--active');
+      }
     });
   }
   
