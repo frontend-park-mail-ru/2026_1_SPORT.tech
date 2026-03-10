@@ -5,11 +5,13 @@
  * @param {string} params.activePage 
  * @param {Object} params.currentUser 
  * @param {Array} params.users 
+ * @param {Function} params.onLogout 
  */
 export async function renderSidebar(container, {
   activePage = 'home',
   currentUser = {},
-  users = []
+  users = [],
+  onLogout = null
 }) {
   const template = Handlebars.templates['Sidebar.hbs'];
   
@@ -65,6 +67,7 @@ export async function renderSidebar(container, {
     }
   ];
   
+  // Добавляем инициалы пользователям
   const usersWithInitials = users.map(u => ({
     ...u,
     initials: u.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -85,6 +88,7 @@ export async function renderSidebar(container, {
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild;
   
+  // Обработчики кликов
   element.querySelectorAll('.sidebar__nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
       e.preventDefault();
@@ -99,6 +103,15 @@ export async function renderSidebar(container, {
       console.log('Open user profile:', userId);
     });
   });
+  
+  // Обработчик выхода
+  const logoutBtn = element.querySelector('.sidebar__logout-btn');
+  if (logoutBtn && onLogout) {
+    logoutBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onLogout();
+    });
+  }
   
   container.appendChild(element);
   return element;

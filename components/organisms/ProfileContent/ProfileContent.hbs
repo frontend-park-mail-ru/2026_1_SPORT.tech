@@ -1,4 +1,5 @@
 <div class="profile-content">
+  <!-- Вкладки -->
   <div class="profile-content__tabs">
     {{#each tabs}}
     <button class="profile-content__tab {{#if active}}profile-content__tab--active{{/if}}" data-tab="{{id}}">
@@ -7,10 +8,12 @@
     {{/each}}
   </div>
   
+  <!-- Основной layout: центр + правая колонка -->
   <div class="profile-content__layout">
+    <!-- ЦЕНТРАЛЬНАЯ КОЛОНКА (посты) -->
     <div class="profile-content__main">
-      <div class="profile-content__section-title">
-        <h2>{{sectionTitle}}</h2>
+      <div class="profile-content__section-header">
+        <h2 class="profile-content__section-title">{{sectionTitle}}</h2>
         {{#if showFilters}}
         <div class="profile-content__filters">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -26,7 +29,8 @@
       </div>
     </div>
     
-    <aside class="profile-content__sidebar">
+    <!-- ПРАВАЯ КОЛОНКА (поиск + популярное) -->
+    <aside class="profile-content__sidebar-right">
       <div class="profile-content__search">
         <span class="profile-content__search-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">

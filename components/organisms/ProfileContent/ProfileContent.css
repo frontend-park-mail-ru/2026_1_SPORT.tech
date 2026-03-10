@@ -1,7 +1,8 @@
 .profile-content {
   flex: 1;
   padding: 20px;
-  max-width: 900px;
+  width: 100%;
+  max-width: 1200px; /* Ограничиваем максимальную ширину */
 }
 
 .profile-content__tabs {
@@ -12,10 +13,11 @@
   padding: 8px;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  justify-content: center; /* Центрируем вкладки */
 }
 
 .profile-content__tab {
-  padding: 12px 24px;
+  padding: 12px 32px; /* Увеличиваем отступы */
   border: none;
   background: transparent;
   color: var(--text-secondary);
@@ -32,31 +34,51 @@
 }
 
 .profile-content__tab--active {
-  color: var(--base-purple);
-  background: var(--accent-purple);
+  color: #E85A2B; /* Оранжевый цвет как на скриншоте */
+  background: transparent;
+  position: relative;
 }
 
+.profile-content__tab--active::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #E85A2B;
+}
+
+/* ОСНОВНОЙ LAYOUT: центральная часть + правая колонка */
 .profile-content__layout {
   display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 20px;
+  /* Центральная часть растягивается, правая фиксирована */
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+  align-items: start;
 }
 
+/* Центральная колонка с постами */
 .profile-content__main {
   min-width: 0;
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
 }
 
-.profile-content__section-title {
+.profile-content__section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-light);
 }
 
-.profile-content__section-title h2 {
-  font-size: 20px;
+.profile-content__section-title {
+  font-size: 24px;
   font-weight: 600;
-  color: var(--base-black);
+  color: #1a3a4a; /* Тёмно-синий как на скриншоте */
 }
 
 .profile-content__filters {
@@ -66,6 +88,13 @@
   color: var(--text-secondary);
   font-size: 14px;
   cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.profile-content__filters:hover {
+  background: var(--background-light);
 }
 
 .profile-content__filters svg {
@@ -73,14 +102,23 @@
   height: 16px;
 }
 
-.profile-content__sidebar {
+/* ПРАВАЯ КОЛОНКА (фиксированная ширина) */
+.profile-content__sidebar-right {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+  width: 280px;
+  position: sticky;
+  top: 20px;
 }
 
+/* Поиск */
 .profile-content__search {
   position: relative;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .profile-content__search-input {
@@ -90,7 +128,12 @@
   border: 1px solid var(--border-light);
   border-radius: 8px;
   font-size: 14px;
-  background: white;
+  background: var(--background-light);
+  color: var(--text-secondary);
+}
+
+.profile-content__search-input::placeholder {
+  color: var(--text-secondary);
 }
 
 .profile-content__search-input:focus {
@@ -100,23 +143,25 @@
 
 .profile-content__search-icon {
   position: absolute;
-  left: 12px;
+  left: 28px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-secondary);
 }
 
+/* Популярные публикации */
 .profile-content__popular {
   background: white;
   border-radius: 12px;
   padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .profile-content__popular h3 {
   font-size: 16px;
   font-weight: 600;
   margin-bottom: 16px;
-  color: var(--base-black);
+  color: #1a3a4a;
 }
 
 .profile-content__popular-item {
@@ -124,11 +169,18 @@
   gap: 12px;
   margin-bottom: 12px;
   cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.profile-content__popular-item:hover {
+  background: var(--background-light);
 }
 
 .profile-content__popular-thumb {
-  width: 60px;
-  height: 60px;
+  width: 70px;
+  height: 70px;
   border-radius: 8px;
   background: var(--background-light);
   overflow: hidden;
@@ -143,6 +195,8 @@
 
 .profile-content__popular-info {
   flex: 1;
+  display: flex;
+  align-items: center;
 }
 
 .profile-content__popular-title {

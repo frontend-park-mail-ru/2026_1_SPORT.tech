@@ -1,13 +1,14 @@
 .sidebar {
   width: 240px;
   background: #E85A2B;
-  min-height: 100vh;
+  height: 100vh;
   padding: 20px 0;
   display: flex;
   flex-direction: column;
   position: fixed;
   left: 0;
   top: 0;
+  overflow: hidden; /* Важно: скрываем общий скролл */
 }
 
 .sidebar__logo {
@@ -17,6 +18,7 @@
   padding: 0 20px 20px;
   margin-bottom: 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
 }
 
 .sidebar__logo-icon {
@@ -42,9 +44,10 @@
   letter-spacing: 0.5px;
 }
 
+/* Навигация - фиксированная */
 .sidebar__nav {
-  flex: 1;
   padding: 0 12px;
+  flex-shrink: 0;
 }
 
 .sidebar__nav-item {
@@ -76,9 +79,15 @@
   font-size: 14px;
 }
 
+/* ПОДПИСКИ - подняты сразу после навигации, со скроллом */
 .sidebar__users {
   padding: 20px 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  flex: 1; /* Занимаем всё доступное пространство */
+  min-height: 0; /* Важно для flex-скролла */
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar__users-title {
@@ -88,6 +97,30 @@
   letter-spacing: 0.5px;
   margin-bottom: 12px;
   padding: 0 8px;
+  flex-shrink: 0;
+}
+
+/* Скроллируемая область подписок */
+.sidebar__users-list {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  /* Скрываем скроллбар для красоты */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+}
+
+.sidebar__users-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar__users-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar__users-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.3);
+  border-radius: 2px;
 }
 
 .sidebar__user-item {
@@ -117,6 +150,7 @@
   font-size: 12px;
   font-weight: 600;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .sidebar__user-avatar img {
@@ -144,15 +178,21 @@
   font-size: 11px;
 }
 
+/* Текущий пользователь - ВЫХОД вместо трёх точек */
 .sidebar__current-user {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 12px;
-  margin: 0 12px;
+  margin: 12px;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 12px;
   cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sidebar__current-user:hover {
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .sidebar__current-user-avatar {
@@ -166,10 +206,38 @@
   color: white;
   font-weight: 600;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
-.sidebar__current-user-menu {
-  color: white;
+.sidebar__current-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Кнопка ВЫХОД вместо трёх точек */
+.sidebar__logout-btn {
   margin-left: auto;
-  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 20px;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.sidebar__logout-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sidebar__logout-btn svg {
+  width: 16px;
+  height: 16px;
 }
