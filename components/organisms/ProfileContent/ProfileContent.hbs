@@ -1,0 +1,80 @@
+<div class="profile-content">
+  <!-- Вкладки -->
+  <div class="profile-content__tabs">
+    {{#each tabs}}
+    <button class="profile-content__tab {{#if active}}profile-content__tab--active{{/if}}" data-tab="{{id}}">
+      {{label}}
+    </button>
+    {{/each}}
+  </div>
+  
+  <!-- Основной лэйаут -->
+  <div class="profile-content__layout">
+    <!-- ЦЕНТРАЛЬНАЯ КОЛОНКА -->
+    <div class="profile-content__main">
+      <div class="profile-content__section-header">
+        <h2 class="profile-content__section-title">{{sectionTitle}}</h2>
+        <div class="profile-content__header-actions">
+          {{#if showFilters}}
+          <div class="profile-content__filters">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            <span>Фильтры</span>
+          </div>
+          {{/if}}
+          {{#if canAddPost}}
+          <div id="add-post-button-container" class="profile-content__add-button"></div>
+          {{/if}}
+        </div>
+      </div>
+      
+      <div id="posts-container">
+        <!-- Посты вставляются через JS -->
+      </div>
+    </div>
+    
+    <!-- ПРАВАЯ КОЛОНКА -->
+    <aside class="profile-content__sidebar-right">
+      <!-- Блок поиска -->
+      <div class="profile-content__search">
+        <div class="profile-content__search-title">Поиск публикаций</div>
+        <div class="profile-content__search-input-wrapper">
+          <span class="profile-content__search-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </span>
+          <input type="text" class="profile-content__search-input" placeholder="Введите запрос...">
+        </div>
+      </div>
+      
+      <!-- Популярные публикации со скроллом -->
+      <div class="profile-content__popular">
+        <h3>Популярные публикации</h3>
+        <div class="profile-content__popular-list">
+          {{#each popularPosts}}
+          <div class="profile-content__popular-item">
+            <div class="profile-content__popular-thumb">
+              {{#if image}}
+                <img src="{{image}}" alt="{{title}}">
+              {{else}}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="2" y="2" width="20" height="20" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+              {{/if}}
+            </div>
+            <div class="profile-content__popular-info">
+              <div class="profile-content__popular-title">{{title}}</div>
+              <div class="profile-content__popular-description">{{description}}</div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
