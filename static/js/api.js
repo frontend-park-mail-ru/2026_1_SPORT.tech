@@ -61,7 +61,15 @@ class ApiClient {
     }
 
     async getCurrentUser() {
-        return this.request('/auth/me');
+        try {
+            return await this.request('/auth/me');
+        } catch (error) {
+            if (error.message === 'Не авторизован') {
+                console.log('User not logged in (expected for first load)');
+                return null; // Возвращаем null вместо ошибки
+            }
+            throw error;
+        }
     }
 
     async logout() {
