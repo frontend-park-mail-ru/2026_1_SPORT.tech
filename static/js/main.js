@@ -150,7 +150,7 @@ async function demoProfilePage() {
                 try {
                     await api.logout();
                     alert('Вы вышли из системы');
-                    window.location.reload();
+                    window.location.hash = '#/auth';
                 } catch (error) {
                     alert('Ошибка при выходе');
                 }
@@ -184,9 +184,15 @@ class App {
 
         await loadTemplates();
 
-        let path = window.location.pathname;
+        // let path = window.location.pathname;
 
-        if (path === '/' || path === '/index.html') {
+        // if (path === '/' || path === '/index.html') {
+        //     path = '/auth';
+        // }
+
+        let path = window.location.hash.slice(1);
+
+        if (!path || path === '/') {
             path = '/auth';
         }
 
@@ -240,7 +246,7 @@ class App {
                 <h1 style="color: var(--primary-orange);">SPORT.tech</h1>
                 <p style="margin-top: 20px;">Главная страница</p>
                 <div style="margin-top: 20px;">
-                    <button onclick="window.location.href='/auth'" style="
+                    <button onclick="window.location.hash='#/auth'" style="
                         margin: 10px;
                         padding: 10px 20px;
                         background: var(--primary-orange);
@@ -251,7 +257,7 @@ class App {
                     ">
                         Перейти к авторизации
                     </button>
-                    <button onclick="window.location.href='/profile'" style="
+                    <button onclick="window.location.hash='#/profile'" style="
                         margin: 10px;
                         padding: 10px 20px;
                         background: var(--primary-orange);
@@ -267,6 +273,12 @@ class App {
         `;
     }
 }
+
+window.addEventListener('hashchange', async () => {
+    if (window.app) {
+        await window.app.init();
+    }
+});
 
 // ===== ЗАПУСК =====
 document.addEventListener('DOMContentLoaded', async () => {
