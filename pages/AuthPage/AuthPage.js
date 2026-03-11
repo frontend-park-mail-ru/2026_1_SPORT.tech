@@ -60,6 +60,8 @@ export class AuthPage {
      */
     async handleTrainerRegister(data) {
         try {
+            console.log(data);
+            console.log(data.career_start_date);
             const response = await api.registerTrainer({
                 username: data.username,
                 email: data.email,
