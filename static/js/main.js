@@ -118,7 +118,7 @@ async function demoProfilePage() {
         const { renderProfilePage } = await import('/pages/ProfilePage/ProfilePage.js');
         
         // Загружаем реальные данные (ID пользователя можно менять)
-        const userId = 123; // Тестовый ID
+        const userId = 1; // Тестовый ID
         const data = await loadProfilePageData(userId);
         
         // В API пока нет подписок, используем моковые
