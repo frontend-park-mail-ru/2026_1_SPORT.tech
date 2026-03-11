@@ -157,8 +157,6 @@ async function demoProfilePage() {
         return;
     }
 
-    app.innerHTML = '<div style="text-align: center; padding: 50px;">⏳ Загрузка данных...</div>';
-
     try {
         const { renderProfilePage } = await import('/pages/ProfilePage/ProfilePage.js');
         const currentUser = await api.getCurrentUser();
