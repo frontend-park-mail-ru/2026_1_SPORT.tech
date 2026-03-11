@@ -7,19 +7,21 @@ async function loadTemplates() {
         { name: 'Input', folder: 'atoms' },
         { name: 'Avatar', folder: 'atoms' },
         { name: 'UserPhotoItem', folder: 'atoms' },
+        { name: 'AuthForm', folder: 'organisms' },
         { name: 'ProfileHeader', folder: 'molecules' },
         { name: 'PostCard', folder: 'molecules' },
         { name: 'Sidebar', folder: 'organisms' },
         { name: 'ProfileContent', folder: 'organisms' },
+        { name: 'AuthPage', folder: 'pages' },
         { name: 'ProfilePage', folder: 'pages' }
     ];
 
     for (const { name, folder } of templates) {
         try {
-            let path = folder === 'pages' 
+            const path = folder === 'pages'
                 ? `/pages/${name}/${name}.hbs`
                 : `/components/${folder}/${name}/${name}.hbs`;
-            
+
             const response = await fetch(path);
             const source = await response.text();
             Handlebars.templates[`${name}.hbs`] = Handlebars.compile(source);
@@ -30,13 +32,13 @@ async function loadTemplates() {
     }
 }
 
-// Преобразование данных из API в формат компонентов
+// ===== ПРОФИЛЬ =====
 function mapProfileData(apiData, currentUser) {
     const isOwnProfile = apiData.is_me;
     const firstName = apiData.profile.first_name || '';
     const lastName = apiData.profile.last_name || '';
     const fullName = `${firstName} ${lastName}`.trim() || 'Пользователь';
-    
+
     return {
         profile: {
             name: fullName,
@@ -53,16 +55,13 @@ function mapProfileData(apiData, currentUser) {
     };
 }
 
-// Загрузка данных профиля
 async function loadProfilePageData(userId = 1) {
     try {
         console.log(`📦 Loading profile data for user ${userId}...`);
-        
-        // Загружаем профиль
+
         const profileData = await api.getProfile(userId);
         console.log('📊 Profile data:', profileData);
-        
-        // Загружаем текущего пользователя (если авторизован)
+
         let currentUser = null;
         try {
             currentUser = await api.getCurrentUser();
@@ -70,8 +69,7 @@ async function loadProfilePageData(userId = 1) {
         } catch (e) {
             console.log('User not logged in');
         }
-        
-        // Загружаем посты пользователя
+
         let postsData = { posts: [] };
         try {
             postsData = await api.getUserPosts(userId);
@@ -79,24 +77,23 @@ async function loadProfilePageData(userId = 1) {
         } catch (e) {
             console.log('No posts or error loading posts');
         }
-        
-        // Преобразуем посты в формат компонента PostCard
+
         const posts = postsData.posts.map(post => ({
             post_id: post.post_id,
             title: post.title,
-            content: 'Загрузите пост для просмотра', // Нужно загружать отдельно по post_id
-            authorName: profileData.profile.first_name + ' ' + profileData.profile.last_name,
+            content: 'Загрузите пост для просмотра',
+            authorName: `${profileData.profile.first_name || ''} ${profileData.profile.last_name || ''}`.trim(),
             authorRole: profileData.is_trainer ? 'Тренер' : 'Клиент',
-            likes: 0, // В API пока нет лайков
-            comments: 0, // В API пока нет комментариев
+            likes: 0,
+            comments: 0,
             can_view: post.can_view
         }));
-        
+
         const mappedData = mapProfileData(profileData, currentUser);
-        
+
         return {
             ...mappedData,
-            posts: posts
+            posts
         };
     } catch (error) {
         console.error('❌ Failed to load profile data:', error);
@@ -104,24 +101,21 @@ async function loadProfilePageData(userId = 1) {
     }
 }
 
-// Демо страницы профиля с реальными данными
 async function demoProfilePage() {
     const app = document.getElementById('app');
     if (!app) {
         console.error('❌ Element with id "app" not found');
         return;
     }
-    
+
     app.innerHTML = '<div style="text-align: center; padding: 50px;">⏳ Загрузка данных...</div>';
-    
+
     try {
         const { renderProfilePage } = await import('/pages/ProfilePage/ProfilePage.js');
-        
-        // Загружаем реальные данные (ID пользователя можно менять)
-        const userId = 1; // Тестовый ID
+
+        const userId = 1;
         const data = await loadProfilePageData(userId);
-        
-        // В API пока нет подписок, используем моковые
+
         const subscriptions = [
             { id: 1, name: 'Ярослав-Лют... Владимиров', role: 'Физиолог' },
             { id: 2, name: 'Антон Переславль-З...', role: 'Тренер ОФП' },
@@ -132,8 +126,7 @@ async function demoProfilePage() {
             { id: 7, name: 'Елена Смирнова', role: 'Нутрициолог' },
             { id: 8, name: 'Дмитрий Козлов', role: 'Тренер по боксу' }
         ];
-        
-        // Популярные посты пока моковые
+
         const popularPosts = [
             { title: 'Топ упражнений на грудные мышцы', description: 'Лучшие упражнения для развития грудных мышц' },
             { title: 'Топ упражнений на мышцы спины', description: 'Как накачать широкую спину' },
@@ -141,7 +134,7 @@ async function demoProfilePage() {
             { title: 'Кардио для жиросжигания', description: 'Интервальные тренировки' },
             { title: 'Растяжка после тренировки', description: 'Комплекс упражнений для заминки' }
         ];
-        
+
         await renderProfilePage(app, {
             profile: data.profile,
             currentUser: data.currentUser || {
@@ -149,10 +142,10 @@ async function demoProfilePage() {
                 name: data.profile.name,
                 role: data.profile.role
             },
-            subscriptions: subscriptions,
+            subscriptions,
             posts: data.posts,
             activeTab: 'publications',
-            popularPosts: popularPosts,
+            popularPosts,
             onLogout: async () => {
                 try {
                     await api.logout();
@@ -163,7 +156,7 @@ async function demoProfilePage() {
                 }
             }
         });
-        
+
         console.log('✅ Profile page rendered with real data');
     } catch (error) {
         console.error('❌ Failed to render profile page:', error);
@@ -179,9 +172,107 @@ async function demoProfilePage() {
     }
 }
 
+// ===== НАВИГАЦИЯ =====
+class App {
+    constructor() {
+        this.currentPage = null;
+        this.app = document.getElementById('app');
+    }
+
+    async init() {
+        console.log('App initializing...');
+
+        await loadTemplates();
+
+        let path = window.location.pathname;
+
+        if (path === '/' || path === '/index.html') {
+            path = '/auth';
+        }
+
+        console.log('Current path:', path);
+
+        if (path === '/auth') {
+            await this.showAuthPage();
+        } else if (path === '/profile') {
+            await this.showProfilePage();
+        } else {
+            await this.showMainPage();
+        }
+    }
+
+    async showAuthPage() {
+        console.log('Showing auth page');
+        this.app.innerHTML = '';
+        document.body.classList.add('auth-page');
+
+        try {
+            const { AuthPage } = await import('/pages/AuthPage/AuthPage.js');
+            const authPage = new AuthPage(this.app);
+            await authPage.render();
+            this.currentPage = authPage;
+        } catch (error) {
+            console.error('Failed to load AuthPage:', error);
+            this.app.innerHTML = `
+                <div style="color: red; padding: 20px;">
+                    <h2>Ошибка загрузки страницы авторизации</h2>
+                    <p>${error.message}</p>
+                    <pre>${error.stack}</pre>
+                </div>
+            `;
+        }
+    }
+
+    async showProfilePage() {
+        console.log('Showing profile page');
+        this.app.innerHTML = '';
+        document.body.classList.remove('auth-page');
+        await demoProfilePage();
+    }
+
+    async showMainPage() {
+        console.log('Showing main page');
+        this.app.innerHTML = '';
+        document.body.classList.remove('auth-page');
+
+        this.app.innerHTML = `
+            <div style="padding: 40px; text-align: center;">
+                <h1 style="color: var(--primary-orange);">SPORT.tech</h1>
+                <p style="margin-top: 20px;">Главная страница</p>
+                <div style="margin-top: 20px;">
+                    <button onclick="window.location.href='/auth'" style="
+                        margin: 10px;
+                        padding: 10px 20px;
+                        background: var(--primary-orange);
+                        color: white;
+                        border: none;
+                        border-radius: var(--radius-md);
+                        cursor: pointer;
+                    ">
+                        Перейти к авторизации
+                    </button>
+                    <button onclick="window.location.href='/profile'" style="
+                        margin: 10px;
+                        padding: 10px 20px;
+                        background: var(--primary-orange);
+                        color: white;
+                        border: none;
+                        border-radius: var(--radius-md);
+                        cursor: pointer;
+                    ">
+                        Перейти в профиль
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+}
+
 // ===== ЗАПУСК =====
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Starting application...');
-    await loadTemplates();
-    await demoProfilePage();
+    console.log('DOM loaded');
+
+    const app = new App();
+    window.app = app;
+    await app.init();
 });

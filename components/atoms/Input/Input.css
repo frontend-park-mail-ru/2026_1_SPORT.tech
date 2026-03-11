@@ -150,8 +150,15 @@
     margin-top: var(--spacing-xs);
     min-height: 18px;
     transition: color 0.2s ease;
+    display: block;
+    visibility: visible;
 }
 
+.input-field__message:empty {
+    display: block;
+    content: "";
+    min-height: 18px;
+}
 .input-field--error .input-field__message {
     color: var(--error-red);
 }

@@ -1,0 +1,109 @@
+/* ===== СТРАНИЦА АВТОРИЗАЦИИ ===== */
+
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, var(--gradient-start) 35%, var(--gradient-end) 65%);
+    padding: var(--spacing-xl);
+    animation: fadeIn 0.5s ease;
+}
+
+.auth-page__container {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4xl);
+}
+
+.auth-page__info {
+    flex: 1;
+    max-width: 500px;
+}
+
+.auth-page__title {
+    font-size: var(--font-size-4xl);
+    color: var(--primary-orange);
+    margin-bottom: var(--spacing-lg);
+    font-family: var(--font-heading);
+}
+
+.auth-page__description {
+    font-size: var(--font-size-lg);
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: var(--spacing-xl);
+}
+
+.auth-page__features {
+    list-style: none;
+    padding: 0;
+}
+
+.auth-page__feature {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    color: var(--text-primary);
+}
+
+.auth-page__feature-icon {
+    width: 24px;
+    height: 24px;
+    color: var(--success-green);
+}
+
+.auth-page__form {
+    flex: 1;
+    max-width: 450px;
+}
+
+.auth-page__role-selector {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-2xl);
+    justify-content: center;
+}
+
+.auth-page__role-btn {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.auth-page__role-btn--active {
+    background: var(--primary-orange);
+    border-color: var(--primary-orange);
+    color: white;
+}
+
+.auth-page__role-btn:hover {
+    border-color: var(--primary-orange);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+    .auth-page__container {
+        flex-direction: column;
+    }
+
+    .auth-page__info {
+        text-align: center;
+    }
+
+    .auth-page__feature {
+        justify-content: center;
+    }
+}
