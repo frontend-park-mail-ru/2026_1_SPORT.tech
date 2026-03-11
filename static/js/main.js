@@ -3,15 +3,26 @@ Handlebars.templates = {};
 
 async function loadTemplates() {
     const templates = [
-        'Button',
-        'Input',
-        'Avatar',
-        'UserPhotoItem'
+        { name: 'Button', folder: 'atoms' },
+        { name: 'Input', folder: 'atoms' },
+        { name: 'Avatar', folder: 'atoms' },
+        { name: 'UserPhotoItem', folder: 'atoms' },
+        { name: 'AuthForm', folder: 'organisms' },
+        { name: 'ProfileHeader', folder: 'molecules' },
+        { name: 'PostCard', folder: 'molecules' },
+        { name: 'Sidebar', folder: 'organisms' },
+        { name: 'ProfileContent', folder: 'organisms' },
+        { name: 'AuthPage', folder: 'pages' },
+        { name: 'ProfilePage', folder: 'pages' }
     ];
 
-    for (const name of templates) {
+    for (const { name, folder } of templates) {
         try {
-            const response = await fetch(`/components/atoms/${name}/${name}.hbs`);
+            const path = folder === 'pages'
+                ? `/pages/${name}/${name}.hbs`
+                : `/components/${folder}/${name}/${name}.hbs`;
+
+            const response = await fetch(path);
             const source = await response.text();
             Handlebars.templates[`${name}.hbs`] = Handlebars.compile(source);
             console.log(`✅ Loaded template: ${name}`);
@@ -21,469 +32,247 @@ async function loadTemplates() {
     }
 }
 
-// ===== ДЕМОНСТРАЦИЯ ВСЕХ СОСТОЯНИЙ КОМПОНЕНТОВ =====
-async function demoAllComponents() {
+// ===== ПРОФИЛЬ =====
+function mapProfileData(apiData, currentUser) {
+    const isOwnProfile = apiData.is_me;
+    const firstName = apiData.profile.first_name || '';
+    const lastName = apiData.profile.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim() || 'Пользователь';
+
+    return {
+        profile: {
+            name: fullName,
+            role: apiData.is_trainer ? 'Тренер' : 'Клиент',
+            avatar: apiData.profile.avatar_url,
+            isOwnProfile: isOwnProfile
+        },
+        currentUser: currentUser ? {
+            id: currentUser.user.user_id,
+            name: `${currentUser.user.profile.first_name} ${currentUser.user.profile.last_name}`.trim(),
+            role: currentUser.user.is_trainer ? 'Тренер' : 'Клиент',
+            avatar: currentUser.user.profile.avatar_url
+        } : null
+    };
+}
+
+async function loadProfilePageData(userId = 1) {
+    try {
+        console.log(`📦 Loading profile data for user ${userId}...`);
+
+        const profileData = await api.getProfile(userId);
+        console.log('📊 Profile data:', profileData);
+
+        let currentUser = null;
+        try {
+            currentUser = await api.getCurrentUser();
+            console.log('👤 Current user:', currentUser);
+        } catch (e) {
+            console.log('User not logged in');
+        }
+
+        let postsData = { posts: [] };
+        try {
+            postsData = await api.getUserPosts(userId);
+            console.log('📝 Posts data:', postsData);
+        } catch (e) {
+            console.log('No posts or error loading posts');
+        }
+
+        const posts = postsData.posts.map(post => ({
+            post_id: post.post_id,
+            title: post.title,
+            content: 'Загрузите пост для просмотра',
+            authorName: `${profileData.profile.first_name || ''} ${profileData.profile.last_name || ''}`.trim(),
+            authorRole: profileData.is_trainer ? 'Тренер' : 'Клиент',
+            likes: 0,
+            comments: 0,
+            can_view: post.can_view
+        }));
+
+        const mappedData = mapProfileData(profileData, currentUser);
+
+        return {
+            ...mappedData,
+            posts
+        };
+    } catch (error) {
+        console.error('❌ Failed to load profile data:', error);
+        throw error;
+    }
+}
+
+async function demoProfilePage() {
     const app = document.getElementById('app');
-    app.innerHTML = '';
-    
-    // Заголовок
-    const title = document.createElement('h1');
-    title.textContent = 'SPORT.tech - Базовые компоненты';
-    title.style.margin = '20px';
-    title.style.color = 'var(--base-purple)';
-    app.appendChild(title);
-    
-    // Контейнер для демо
-    const demoContainer = document.createElement('div');
-    demoContainer.style.display = 'flex';
-    demoContainer.style.flexDirection = 'column';
-    demoContainer.style.gap = '40px';
-    demoContainer.style.padding = '20px';
-    demoContainer.style.maxWidth = '1200px';
-    demoContainer.style.margin = '0 auto';
-    app.appendChild(demoContainer);
-
-    // ===== 1. ДЕМО КНОПОК =====
-    const buttonSection = document.createElement('div');
-    buttonSection.innerHTML = '<h2 style="margin-bottom: 20px; font-family: var(--font-heading);">Кнопки (оранжевые и синие)</h2>';
-    demoContainer.appendChild(buttonSection);
-
-    const { renderButton, BUTTON_VARIANTS, BUTTON_STATES, BUTTON_SIZES } = await import('/components/atoms/Button/Button.js');
-
-    // Контейнер для всех кнопок в две колонки
-    const buttonsGrid = document.createElement('div');
-    buttonsGrid.style.display = 'grid';
-    buttonsGrid.style.gridTemplateColumns = '1fr 1fr';
-    buttonsGrid.style.gap = '30px';
-    buttonsGrid.style.maxWidth = '600px';
-    buttonSection.appendChild(buttonsGrid);
-
-    // Левая колонка
-    const leftColumn = document.createElement('div');
-    leftColumn.style.display = 'flex';
-    leftColumn.style.flexDirection = 'column';
-    leftColumn.style.gap = '20px';
-    buttonsGrid.appendChild(leftColumn);
-
-    // Правая колонка
-    const rightColumn = document.createElement('div');
-    rightColumn.style.display = 'flex';
-    rightColumn.style.flexDirection = 'column';
-    rightColumn.style.gap = '20px';
-    buttonsGrid.appendChild(rightColumn);
-
-    // ===== ЛЕВАЯ КОЛОНКА =====
-
-    // Оранжевые кнопки
-    const orangeTitle = document.createElement('div');
-    orangeTitle.textContent = 'Оранжевые';
-    orangeTitle.style.fontFamily = 'var(--font-body)';
-    orangeTitle.style.fontWeight = '500';
-    orangeTitle.style.marginBottom = '8px';
-    orangeTitle.style.color = 'var(--text-secondary)';
-    leftColumn.appendChild(orangeTitle);
-
-    const orangeButtons = document.createElement('div');
-    orangeButtons.style.display = 'flex';
-    orangeButtons.style.flexDirection = 'column';
-    orangeButtons.style.gap = '10px';
-    orangeButtons.style.marginBottom = '20px';
-    leftColumn.appendChild(orangeButtons);
-
-    await renderButton(orangeButtons, { 
-        text: 'Войти', 
-        variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
-        size: BUTTON_SIZES.MEDIUM
-    });
-
-    await renderButton(orangeButtons, { 
-        text: 'Зарегистрироваться', 
-        variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
-        size: BUTTON_SIZES.MEDIUM
-    });
-
-    // Синие кнопки
-    const blueTitle = document.createElement('div');
-    blueTitle.textContent = 'Синие';
-    blueTitle.style.fontFamily = 'var(--font-body)';
-    blueTitle.style.fontWeight = '500';
-    blueTitle.style.marginBottom = '8px';
-    blueTitle.style.color = 'var(--text-secondary)';
-    leftColumn.appendChild(blueTitle);
-
-    const blueButtons = document.createElement('div');
-    blueButtons.style.display = 'flex';
-    blueButtons.style.flexDirection = 'column';
-    blueButtons.style.gap = '10px';
-    blueButtons.style.marginBottom = '20px';
-    leftColumn.appendChild(blueButtons);
-
-    await renderButton(blueButtons, { 
-        text: 'Я тренер', 
-        variant: BUTTON_VARIANTS.SECONDARY_BLUE,
-        size: BUTTON_SIZES.MEDIUM
-    });
-
-    await renderButton(blueButtons, { 
-        text: 'Я спортсмен', 
-        variant: BUTTON_VARIANTS.SECONDARY_BLUE,
-        size: BUTTON_SIZES.MEDIUM
-    });
-
-    // ===== ПРАВАЯ КОЛОНКА =====
-
-    // Текстовые оранжевые
-    const textOrangeTitle = document.createElement('div');
-    textOrangeTitle.textContent = 'Текстовые оранжевые';
-    textOrangeTitle.style.fontFamily = 'var(--font-body)';
-    textOrangeTitle.style.fontWeight = '500';
-    textOrangeTitle.style.marginBottom = '8px';
-    textOrangeTitle.style.color = 'var(--text-secondary)';
-    rightColumn.appendChild(textOrangeTitle);
-
-    const textOrangeButtons = document.createElement('div');
-    textOrangeButtons.style.display = 'flex';
-    textOrangeButtons.style.flexDirection = 'column';
-    textOrangeButtons.style.gap = '10px';
-    textOrangeButtons.style.marginBottom = '20px';
-    rightColumn.appendChild(textOrangeButtons);
-
-    await renderButton(textOrangeButtons, { 
-        text: 'Войти', 
-        variant: BUTTON_VARIANTS.TEXT_ORANGE,
-        size: BUTTON_SIZES.SMALL
-    });
-
-    await renderButton(textOrangeButtons, { 
-        text: 'Зарегистрироваться', 
-        variant: BUTTON_VARIANTS.TEXT_ORANGE,
-        size: BUTTON_SIZES.SMALL
-    });
-
-    // Текстовые синие (как на скриншоте: "Уже есть аккаунт? Войти")
-    const textBlueContainer = document.createElement('div');
-    textBlueContainer.style.display = 'flex';
-    textBlueContainer.style.alignItems = 'center';
-    textBlueContainer.style.gap = '8px';
-    textBlueContainer.style.marginTop = '10px';
-    rightColumn.appendChild(textBlueContainer);
-
-    // Текст "Уже есть аккаунт?" (обычный текст, не кнопка)
-    const questionText = document.createElement('span');
-    questionText.textContent = 'Уже есть аккаунт?';
-    questionText.style.fontFamily = 'var(--font-body)';
-    questionText.style.fontSize = 'var(--font-size-sm)';
-    questionText.style.color = 'var(--text-secondary)';
-    textBlueContainer.appendChild(questionText);
-
-    // Кнопка "Войти" (текстовая синяя)
-    await renderButton(textBlueContainer, { 
-        text: 'Войти', 
-        variant: BUTTON_VARIANTS.TEXT_BLUE,
-        size: BUTTON_SIZES.SMALL
-    });
-
-    // Дополнительно: пример с двумя текстовыми кнопками
-    const textBlueButtons = document.createElement('div');
-    textBlueButtons.style.display = 'flex';
-    textBlueButtons.style.gap = '16px';
-    textBlueButtons.style.marginTop = '10px';
-    rightColumn.appendChild(textBlueButtons);
-
-    await renderButton(textBlueButtons, { 
-        text: 'Войти', 
-        variant: BUTTON_VARIANTS.TEXT_BLUE,
-        size: BUTTON_SIZES.SMALL
-    });
-
-    await renderButton(textBlueButtons, { 
-        text: 'Зарегистрироваться', 
-        variant: BUTTON_VARIANTS.TEXT_BLUE,
-        size: BUTTON_SIZES.SMALL
-    });
-
-    // Добавляем разделитель
-    const divider = document.createElement('hr');
-    divider.style.margin = '40px 0';
-    divider.style.border = 'none';
-    divider.style.borderTop = '1px solid var(--border-light)';
-    demoContainer.appendChild(divider);
-    
-    // ===== 2. ДЕМО ИНПУТОВ (ВСЕ СОСТОЯНИЯ ИЗ UI KIT) =====
-    const inputSection = document.createElement('div');
-    inputSection.innerHTML = '<h2 style="margin: 30px 0 20px;">Input - все состояния</h2>';
-    demoContainer.appendChild(inputSection);
-
-    const { renderInput, INPUT_TYPES, INPUT_STATES, EYE_STATES } = await import('/components/atoms/Input/Input.js');
-
-    // Normal состояния
-    const normalInputTitle = document.createElement('h3');
-    normalInputTitle.textContent = 'Normal состояния:';
-    normalInputTitle.style.margin = '10px 0';
-    inputSection.appendChild(normalInputTitle);
-
-    const normalInputContainer = document.createElement('div');
-    normalInputContainer.style.display = 'grid';
-    normalInputContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
-    normalInputContainer.style.gap = '20px';
-    normalInputContainer.style.marginBottom = '30px';
-    inputSection.appendChild(normalInputContainer);
-
-    await renderInput(normalInputContainer, { type: INPUT_TYPES.MAIL, label: 'Mail - Normal', placeholder: 'email@example.com' });
-    await renderInput(normalInputContainer, { type: INPUT_TYPES.PASSWORD, label: 'Password - Normal', showEye: true });
-    await renderInput(normalInputContainer, { type: INPUT_TYPES.NAME, label: 'Name - Normal', placeholder: 'Иван Иванов' });
-    await renderInput(normalInputContainer, { type: INPUT_TYPES.WITHOUTS, label: 'Withouts - Normal', placeholder: 'Обычное поле' });
-
-    // Active состояния
-    const activeInputTitle = document.createElement('h3');
-    activeInputTitle.textContent = 'Active (в фокусе):';
-    activeInputTitle.style.margin = '10px 0';
-    inputSection.appendChild(activeInputTitle);
-
-    const activeInputContainer = document.createElement('div');
-    activeInputContainer.style.display = 'grid';
-    activeInputContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
-    activeInputContainer.style.gap = '20px';
-    activeInputContainer.style.marginBottom = '30px';
-    inputSection.appendChild(activeInputContainer);
-
-    await renderInput(activeInputContainer, { type: INPUT_TYPES.MAIL, state: INPUT_STATES.ACTIVE, label: 'Mail - Active', value: 'user@example.com' });
-    await renderInput(activeInputContainer, { type: INPUT_TYPES.PASSWORD, state: INPUT_STATES.ACTIVE, label: 'Password - Active', showEye: true, value: 'password123' });
-
-    // Error состояния
-    const errorInputTitle = document.createElement('h3');
-    errorInputTitle.textContent = 'Error (ошибки):';
-    errorInputTitle.style.margin = '10px 0';
-    inputSection.appendChild(errorInputTitle);
-
-    const errorInputContainer = document.createElement('div');
-    errorInputContainer.style.display = 'grid';
-    errorInputContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
-    errorInputContainer.style.gap = '20px';
-    errorInputContainer.style.marginBottom = '30px';
-    inputSection.appendChild(errorInputContainer);
-
-    await renderInput(errorInputContainer, { 
-        type: INPUT_TYPES.MAIL, 
-        state: INPUT_STATES.ERROR, 
-        label: 'Mail - Error', 
-        value: 'wrong-email',
-        message: 'Неверный формат email' 
-    });
-    
-    await renderInput(errorInputContainer, { 
-        type: INPUT_TYPES.PASSWORD, 
-        state: INPUT_STATES.ERROR, 
-        label: 'Password - Error', 
-        showEye: true,
-        message: 'Слишком простой пароль' 
-    });
-
-    // Warning состояния
-    const warningInputTitle = document.createElement('h3');
-    warningInputTitle.textContent = 'Warning (предупреждения):';
-    warningInputTitle.style.margin = '10px 0';
-    inputSection.appendChild(warningInputTitle);
-
-    const warningInputContainer = document.createElement('div');
-    warningInputContainer.style.display = 'grid';
-    warningInputContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
-    warningInputContainer.style.gap = '20px';
-    warningInputContainer.style.marginBottom = '30px';
-    inputSection.appendChild(warningInputContainer);
-
-    await renderInput(warningInputContainer, { 
-        type: INPUT_TYPES.MAIL, 
-        state: INPUT_STATES.WARNING, 
-        label: 'Mail - Warning', 
-        value: 'used@email.com',
-        message: 'Этот email уже используется' 
-    });
-    
-    await renderInput(warningInputContainer, { 
-        type: INPUT_TYPES.PASSWORD, 
-        state: INPUT_STATES.WARNING, 
-        label: 'Password - Warning', 
-        showEye: true,
-        message: 'Пароли не совпадают' 
-    });
-
-    // Correct состояния
-    const correctInputTitle = document.createElement('h3');
-    correctInputTitle.textContent = 'Correct (правильно заполнено):';
-    correctInputTitle.style.margin = '10px 0';
-    inputSection.appendChild(correctInputTitle);
-
-    const correctInputContainer = document.createElement('div');
-    correctInputContainer.style.display = 'grid';
-    correctInputContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
-    correctInputContainer.style.gap = '20px';
-    correctInputContainer.style.marginBottom = '30px';
-    inputSection.appendChild(correctInputContainer);
-
-    await renderInput(correctInputContainer, { 
-        type: INPUT_TYPES.MAIL, 
-        state: INPUT_STATES.CORRECT, 
-        label: 'Mail - Correct', 
-        value: 'user@example.com',
-        message: 'Email доступен' 
-    });
-    
-    await renderInput(correctInputContainer, { 
-        type: INPUT_TYPES.PASSWORD, 
-        state: INPUT_STATES.CORRECT, 
-        label: 'Password - Correct', 
-        showEye: true,
-        value: 'StrongPass123',
-        message: 'Надёжный пароль' 
-    });
-
-    // Глазок (все состояния)
-    const eyeTitle = document.createElement('h3');
-    eyeTitle.textContent = 'Глазок - все состояния:';
-    eyeTitle.style.margin = '10px 0';
-    inputSection.appendChild(eyeTitle);
-
-    const eyeContainer = document.createElement('div');
-    eyeContainer.style.display = 'grid';
-    eyeContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
-    eyeContainer.style.gap = '20px';
-    eyeContainer.style.marginBottom = '30px';
-    inputSection.appendChild(eyeContainer);
-
-    await renderInput(eyeContainer, { 
-        type: INPUT_TYPES.PASSWORD, 
-        label: 'Close Eye Non Active', 
-        showEye: true, 
-        eyeState: EYE_STATES.NON_ACTIVE 
-    });
-    
-    await renderInput(eyeContainer, { 
-        type: INPUT_TYPES.PASSWORD, 
-        label: 'Open Eye Non Active', 
-        showEye: true, 
-        eyeState: EYE_STATES.ACTIVE 
-    });
-    
-    await renderInput(eyeContainer, { 
-        type: INPUT_TYPES.PASSWORD, 
-        state: INPUT_STATES.ERROR,
-        label: 'Close Eye + Error', 
-        showEye: true, 
-        eyeState: EYE_STATES.NON_ACTIVE,
-        message: 'Bad Password'
-    });
-    
-    await renderInput(eyeContainer, { 
-        type: INPUT_TYPES.PASSWORD, 
-        state: INPUT_STATES.CORRECT,
-        label: 'Open Eye + Correct', 
-        showEye: true, 
-        eyeState: EYE_STATES.ACTIVE,
-        value: 'StrongPass123',
-        message: 'Password Correct'
-    });
-
-    // ===== 3. ДЕМО АВАТАРОВ =====
-    const avatarSection = document.createElement('div');
-    avatarSection.innerHTML = '<h2 style="margin: 40px 0 20px; font-family: var(--font-heading);">Avatar - размеры и состояния</h2>';
-    demoContainer.appendChild(avatarSection);
-
-    const { renderAvatar, AVATAR_SIZES } = await import('/components/atoms/Avatar/Avatar.js');
-
-    const avatarContainer = document.createElement('div');
-    avatarContainer.style.display = 'flex';
-    avatarContainer.style.gap = '20px';
-    avatarContainer.style.alignItems = 'center';
-    avatarContainer.style.flexWrap = 'wrap';
-    avatarContainer.style.padding = '20px';
-    avatarContainer.style.background = '#F9F9F9';
-    avatarContainer.style.borderRadius = '16px';
-    avatarSection.appendChild(avatarContainer);
-
-    await renderAvatar(avatarContainer, { name: 'JD', size: AVATAR_SIZES.SMALL });
-    await renderAvatar(avatarContainer, { name: 'AS', size: AVATAR_SIZES.MEDIUM });
-    await renderAvatar(avatarContainer, { name: 'KZ', size: AVATAR_SIZES.LARGE });
-    await renderAvatar(avatarContainer, { name: 'RS', size: AVATAR_SIZES.XLARGE });
-
-    // С длинным именем
-    await renderAvatar(avatarContainer, { 
-        name: 'Переславль-Залесская Анна', 
-        size: AVATAR_SIZES.MEDIUM,
-        onClick: (user) => console.log('Clicked avatar')
-    });
-
-    // ===== 4. ДЕМО USERPHOTOITEM =====
-    const photoSection = document.createElement('div');
-    photoSection.innerHTML = '<h2 style="margin: 40px 0 20px; font-family: var(--font-heading);">UserPhotoItem - список пользователей</h2>';
-    demoContainer.appendChild(photoSection);
-
-    const { renderUserPhotoItem, renderUserPhotoList } = await import('/components/atoms/UserPhotoItem/UserPhotoItem.js');
-
-    // Обычный список
-    const regularList = document.createElement('div');
-    regularList.className = 'user-photo-list';
-    photoSection.appendChild(regularList);
-
-    const users = [
-        { id: 1, name: 'Ярослав-Лют Владимиров', role: 'Физолог' },
-        { id: 2, name: 'Антон Переславль-Залесский', role: 'Тренер ОФП' },
-        { id: 3, name: 'Ксения Бортникова', role: 'Тренер по конкуру' },
-        { id: 4, name: 'Софья Заяц', role: 'Спортсмен' }
-    ];
-
-    for (const user of users) {
-        await renderUserPhotoItem(regularList, {
-            ...user,
-            onClick: (u) => console.log('Clicked:', u)
-        });
+    if (!app) {
+        console.error('❌ Element with id "app" not found');
+        return;
     }
 
-    // Компактный режим
-    const compactTitle = document.createElement('h3');
-    compactTitle.className = 'user-photo-section-title';
-    compactTitle.textContent = 'Компактный режим (для длинных списков):';
-    compactTitle.style.marginTop = '40px';
-    photoSection.appendChild(compactTitle);
+    app.innerHTML = '<div style="text-align: center; padding: 50px;">⏳ Загрузка данных...</div>';
 
-    const compactList = document.createElement('div');
-    compactList.className = 'user-photo-list';
-    photoSection.appendChild(compactList);
+    try {
+        const { renderProfilePage } = await import('/pages/ProfilePage/ProfilePage.js');
 
-    // Генерируем 5 пользователей с длинными именами
-    for (let i = 1; i <= 5; i++) {
-        await renderUserPhotoItem(compactList, {
-            id: i + 10,
-            name: `Пользователь ${i} с очень длинным именем для проверки обрезания`,
-            role: 'Роль',
-            compact: true
+        const userId = 1;
+        const data = await loadProfilePageData(userId);
+
+        const subscriptions = [
+            { id: 1, name: 'Ярослав-Лют... Владимиров', role: 'Физиолог' },
+            { id: 2, name: 'Антон Переславль-З...', role: 'Тренер ОФП' },
+            { id: 3, name: 'Ксения Бортникова', role: 'Тренер по КОНК...' },
+            { id: 4, name: 'Сергей Генц', role: 'Диетолог' },
+            { id: 5, name: 'Мария Иванова', role: 'Йога-инструктор' },
+            { id: 6, name: 'Алексей Петров', role: 'Персональный тренер' },
+            { id: 7, name: 'Елена Смирнова', role: 'Нутрициолог' },
+            { id: 8, name: 'Дмитрий Козлов', role: 'Тренер по боксу' }
+        ];
+
+        const popularPosts = [
+            { title: 'Топ упражнений на грудные мышцы', description: 'Лучшие упражнения для развития грудных мышц' },
+            { title: 'Топ упражнений на мышцы спины', description: 'Как накачать широкую спину' },
+            { title: 'Питание для набора массы', description: 'Что есть чтобы мышцы росли' },
+            { title: 'Кардио для жиросжигания', description: 'Интервальные тренировки' },
+            { title: 'Растяжка после тренировки', description: 'Комплекс упражнений для заминки' }
+        ];
+
+        await renderProfilePage(app, {
+            profile: data.profile,
+            currentUser: data.currentUser || {
+                id: userId,
+                name: data.profile.name,
+                role: data.profile.role
+            },
+            subscriptions,
+            posts: data.posts,
+            activeTab: 'publications',
+            popularPosts,
+            onLogout: async () => {
+                try {
+                    await api.logout();
+                    alert('Вы вышли из системы');
+                    window.location.reload();
+                } catch (error) {
+                    alert('Ошибка при выходе');
+                }
+            }
         });
+
+        console.log('✅ Profile page rendered with real data');
+    } catch (error) {
+        console.error('❌ Failed to render profile page:', error);
+        app.innerHTML = `
+            <div style="color: red; padding: 20px; text-align: center;">
+                <h3>Ошибка загрузки</h3>
+                <p>${error.message}</p>
+                <button onclick="window.location.reload()" style="padding: 8px 16px; margin-top: 16px;">
+                    Повторить
+                </button>
+            </div>
+        `;
+    }
+}
+
+// ===== НАВИГАЦИЯ =====
+class App {
+    constructor() {
+        this.currentPage = null;
+        this.app = document.getElementById('app');
     }
 
-    // Empty states
-    const emptyTitle = document.createElement('h3');
-    emptyTitle.className = 'user-photo-section-title';
-    emptyTitle.textContent = 'Empty state (нет данных):';
-    emptyTitle.style.marginTop = '40px';
-    photoSection.appendChild(emptyTitle);
+    async init() {
+        console.log('App initializing...');
 
-    const emptyList = document.createElement('div');
-    emptyList.className = 'user-photo-list';
-    photoSection.appendChild(emptyList);
+        await loadTemplates();
 
-    await renderUserPhotoItem(emptyList, {
-        isEmpty: true,
-        emptyMessage: 'По вашему запросу ничего не найдено'
-    });
+        let path = window.location.pathname;
 
-    await renderUserPhotoItem(emptyList, {
-        isEmpty: true,
-        emptyMessage: 'У вас нет новых подписок'
-    });
+        if (path === '/' || path === '/index.html') {
+            path = '/auth';
+        }
+
+        console.log('Current path:', path);
+
+        if (path === '/auth') {
+            await this.showAuthPage();
+        } else if (path === '/profile') {
+            await this.showProfilePage();
+        } else {
+            await this.showMainPage();
+        }
+    }
+
+    async showAuthPage() {
+        console.log('Showing auth page');
+        this.app.innerHTML = '';
+        document.body.classList.add('auth-page');
+
+        try {
+            const { AuthPage } = await import('/pages/AuthPage/AuthPage.js');
+            const authPage = new AuthPage(this.app);
+            await authPage.render();
+            this.currentPage = authPage;
+        } catch (error) {
+            console.error('Failed to load AuthPage:', error);
+            this.app.innerHTML = `
+                <div style="color: red; padding: 20px;">
+                    <h2>Ошибка загрузки страницы авторизации</h2>
+                    <p>${error.message}</p>
+                    <pre>${error.stack}</pre>
+                </div>
+            `;
+        }
+    }
+
+    async showProfilePage() {
+        console.log('Showing profile page');
+        this.app.innerHTML = '';
+        document.body.classList.remove('auth-page');
+        await demoProfilePage();
+    }
+
+    async showMainPage() {
+        console.log('Showing main page');
+        this.app.innerHTML = '';
+        document.body.classList.remove('auth-page');
+
+        this.app.innerHTML = `
+            <div style="padding: 40px; text-align: center;">
+                <h1 style="color: var(--primary-orange);">SPORT.tech</h1>
+                <p style="margin-top: 20px;">Главная страница</p>
+                <div style="margin-top: 20px;">
+                    <button onclick="window.location.href='/auth'" style="
+                        margin: 10px;
+                        padding: 10px 20px;
+                        background: var(--primary-orange);
+                        color: white;
+                        border: none;
+                        border-radius: var(--radius-md);
+                        cursor: pointer;
+                    ">
+                        Перейти к авторизации
+                    </button>
+                    <button onclick="window.location.href='/profile'" style="
+                        margin: 10px;
+                        padding: 10px 20px;
+                        background: var(--primary-orange);
+                        color: white;
+                        border: none;
+                        border-radius: var(--radius-md);
+                        cursor: pointer;
+                    ">
+                        Перейти в профиль
+                    </button>
+                </div>
+            </div>
+        `;
+    }
 }
 
 // ===== ЗАПУСК =====
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadTemplates();
-    await demoAllComponents();
+    console.log('DOM loaded');
+
+    const app = new App();
+    window.app = app;
+    await app.init();
 });

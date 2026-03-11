@@ -2,16 +2,16 @@
     {{#if label}}
         <label class="input-field__label" for="{{id}}">{{label}}</label>
     {{/if}}
-    
+
     <div class="input-field__wrapper">
         {{#if icon}}
             <span class="input-field__icon">{{{icon}}}</span>
         {{/if}}
-        
-        <input 
-            type="{{inputType}}" 
+
+        <input
+            type="{{inputType}}"
             id="{{id}}"
-            class="input-field__input" 
+            class="input-field__input"
             placeholder="{{placeholder}}"
             value="{{value}}"
             {{#if disabled}}disabled{{/if}}
@@ -20,10 +20,10 @@
             {{#if maxlength}}maxlength="{{maxlength}}"{{/if}}
             {{#if autocomplete}}autocomplete="{{autocomplete}}"{{/if}}
         >
-        
+
         {{#if showEye}}
-        <button 
-            class="input-field__eye input-field__eye--{{eyeState}}" 
+        <button
+            class="input-field__eye input-field__eye--{{eyeState}}"
             type="button"
             aria-label="{{#if isPasswordVisible}}Скрыть пароль{{else}}Показать пароль{{/if}}"
         >
@@ -43,8 +43,7 @@
         </button>
         {{/if}}
     </div>
-    
-    {{#if message}}
-        <span class="input-field__message">{{message}}</span>
-    {{/if}}
+
+     <!-- ВСЕГДА создаем элемент сообщения -->
+    <span class="input-field__message">{{message}}</span>
 </div>

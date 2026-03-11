@@ -1,0 +1,84 @@
+<aside class="sidebar">
+  <div class="sidebar__content">
+    <div class="sidebar__logo">
+      <div class="sidebar__logo-icon">
+        <svg viewBox="0 0 40 40" fill="none">
+          <path d="M20 5L25 15H15L20 5Z" fill="#E85A2B"/>
+          <circle cx="20" cy="25" r="8" fill="#E85A2B"/>
+        </svg>
+      </div>
+      <div>
+        <div class="sidebar__logo-text">SPORTEON</div>
+        <div class="sidebar__logo-subtext">BY SPORTTECH</div>
+      </div>
+    </div>
+    
+    <nav class="sidebar__nav">
+      {{#each navItems}}
+      <a href="{{url}}" class="sidebar__nav-item {{#if active}}sidebar__nav-item--active{{/if}}" data-page="{{id}}">
+        {{{icon}}}
+        <span class="sidebar__nav-text">{{label}}</span>
+      </a>
+      {{/each}}
+    </nav>
+    
+    <div class="sidebar__users">
+      <div class="sidebar__users-title">ПОДПИСКИ</div>
+      <div class="sidebar__users-list">
+        {{#each users}}
+        <div class="sidebar__user-item" data-user-id="{{id}}">
+          <div class="sidebar__user-avatar">
+            {{#if avatar}}
+              <img src="{{avatar}}" alt="{{name}}">
+            {{else}}
+              {{initials}}
+            {{/if}}
+          </div>
+          <div class="sidebar__user-info">
+            <div class="sidebar__user-name">{{name}}</div>
+            <div class="sidebar__user-role">{{role}}</div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+    
+    <!-- Текущий пользователь с меню -->
+    <div class="sidebar__current-user" data-user-id="{{currentUser.id}}">
+      <div class="sidebar__current-user-avatar">
+        {{#if currentUser.avatar}}
+          <img src="{{currentUser.avatar}}" alt="{{currentUser.name}}">
+        {{else}}
+          {{currentUser.initials}}
+        {{/if}}
+      </div>
+      <div class="sidebar__user-info">
+        <div class="sidebar__user-name">{{currentUser.name}}</div>
+        <div class="sidebar__user-role">{{currentUser.role}}</div>
+      </div>
+      
+      <!-- Кнопка с тремя точками (без ID) -->
+      <div class="sidebar__menu-container">
+        <button class="sidebar__menu-btn" title="Меню">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="1"/>
+            <circle cx="12" cy="5" r="1"/>
+            <circle cx="12" cy="19" r="1"/>
+          </svg>
+        </button>
+        
+        <!-- Выпадающее меню (без ID) -->
+        <div class="sidebar__dropdown">
+          <button class="sidebar__dropdown-item sidebar__logout-option">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            <span>Выход</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>

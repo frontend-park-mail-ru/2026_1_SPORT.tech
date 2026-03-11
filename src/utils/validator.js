@@ -22,19 +22,21 @@ const rules = {
     required: true,
     max: 254,
     pattern: /^[^@\s]+@[^@\s]+\.[^@\s]+$/,
-    messages: {
-      required: 'Email обязателен',
-      pattern: 'Неверный формат email'
-    }
+    messages: {required: 'Email обязателен', pattern: 'Неверный формат email (пример: example@smail.ru)'}
   },
 
   password: {
     required: true,
     min: 8,
+    pattern:
+        /^[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/,
     messages: {
       required: 'Пароль обязателен',
-      min: 'Минимум 8 символов'
+      min: 'Минимум 8 символов',
+      pattern:
+          'Пароль может содержать только латинские буквы, цифры и спецсимволы'
     }
+
   },
 
   first_name: {
@@ -51,7 +53,7 @@ const rules = {
   last_name: {
     required: true,
     min: 1,
-    max: 100, 
+    max: 100,
     messages: {
       required: 'Фамилия обязательна',
       min: 'Фамилия не может быть пустой',
@@ -59,29 +61,13 @@ const rules = {
     }
   },
 
-  bio: {
-    required: false,
-    max: 1000,
-    messages: {
-      max: 'Максимум 1000 символов'
-    }
-  },
+  bio: {required: false, max: 1000, messages: {max: 'Максимум 1000 символов'}},
 
-  education_degree: {
-    required: false,
-    max: 255,
-    messages: {
-      max: 'Максимум 255 символов'
-    }
-  },
+  education_degree:
+      {required: false, max: 255, messages: {max: 'Максимум 255 символов'}},
 
-  sports_rank: {
-    required: false,
-    max: 100,
-    messages: {
-      max: 'Максимум 100 символов'
-    }
-  }
+  sports_rank:
+      {required: false, max: 100, messages: {max: 'Максимум 100 символов'}}
 };
 
 const checks = {
@@ -123,35 +109,39 @@ class Validator {
   }
 
   addError(field, message) {
-    this.errors.push({ field, message });
+    this.errors.push({field, message});
   }
 
   /**
    * Валидация поля с учетом nullable
    */
   validateField(value, fieldName, fieldRules, nullable = false) {
-    const { required, min, max, pattern, messages = {} } = fieldRules;
+    const {required, min, max, pattern, messages = {}} = fieldRules;
 
     if (nullable && value === null) {
       return true;
     }
 
     if (required && !checks.required(value)) {
-      this.addError(fieldName, messages.required || `Поле ${fieldName} обязательно`);
+      this.addError(
+          fieldName, messages.required || `Поле ${fieldName} обязательно`);
       return false;
     }
 
     if (!value && !required) return true;
 
-    if (min !== undefined && typeof value === 'string' && !checks.minLength(value, min)) {
+    if (min !== undefined && typeof value === 'string' &&
+        !checks.minLength(value, min)) {
       this.addError(fieldName, messages.min || `Минимум ${min} символов`);
     }
 
-    if (max !== undefined && typeof value === 'string' && !checks.maxLength(value, max)) {
+    if (max !== undefined && typeof value === 'string' &&
+        !checks.maxLength(value, max)) {
       this.addError(fieldName, messages.max || `Максимум ${max} символов`);
     }
 
-    if (pattern && typeof value === 'string' && !checks.pattern(value, pattern)) {
+    if (pattern && typeof value === 'string' &&
+        !checks.pattern(value, pattern)) {
       this.addError(fieldName, messages.pattern || `Недопустимый формат`);
     }
 
@@ -164,10 +154,7 @@ class Validator {
   validateUsername(username) {
     this.reset();
     this.validateField(username, 'username', this.rules.username);
-    return {
-      isValid: !this.hasErrors(),
-      errors: this.getErrors()
-    };
+    return {isValid: !this.hasErrors(), errors: this.getErrors()};
   }
 
   /**
@@ -176,44 +163,33 @@ class Validator {
   validateEmail(email) {
     this.reset();
     this.validateField(email, 'email', this.rules.email);
-    return {
-      isValid: !this.hasErrors(),
-      errors: this.getErrors()
-    };
+    return {isValid: !this.hasErrors(), errors: this.getErrors()};
   }
 
   /**
    * Валидация пароля (без подтверждения)
    */
+
   validatePassword(password) {
     this.reset();
     this.validateField(password, 'password', this.rules.password);
-    return {
-      isValid: !this.hasErrors(),
-      errors: this.getErrors()
-    };
+    return {isValid: !this.hasErrors(), errors: this.getErrors()};
   }
-
   /**
    * Валидация пароля с подтверждением
    */
   validatePasswordWithConfirmation(password, passwordRepeat) {
     this.reset();
 
-    // Валидация пароля
     this.validateField(password, 'password', this.rules.password);
 
-    // Проверка подтверждения
     if (!checks.required(passwordRepeat)) {
       this.addError('password_repeat', 'Подтверждение пароля обязательно');
     } else if (!checks.passwordsMatch(password, passwordRepeat)) {
       this.addError('password_repeat', 'Пароли не совпадают');
     }
 
-    return {
-      isValid: !this.hasErrors(),
-      errors: this.getErrors()
-    };
+    return {isValid: !this.hasErrors(), errors: this.getErrors()};
   }
 
   /**
@@ -222,10 +198,7 @@ class Validator {
   validateFirstName(firstName) {
     this.reset();
     this.validateField(firstName, 'first_name', this.rules.first_name);
-    return {
-      isValid: !this.hasErrors(),
-      errors: this.getErrors()
-    };
+    return {isValid: !this.hasErrors(), errors: this.getErrors()};
   }
 
   /**
@@ -234,10 +207,7 @@ class Validator {
   validateLastName(lastName) {
     this.reset();
     this.validateField(lastName, 'last_name', this.rules.last_name);
-    return {
-      isValid: !this.hasErrors(),
-      errors: this.getErrors()
-    };
+    return {isValid: !this.hasErrors(), errors: this.getErrors()};
   }
 
   /**
@@ -248,10 +218,7 @@ class Validator {
     if (bio) {
       this.validateField(bio, 'bio', this.rules.bio);
     }
-    return {
-      isValid: !this.hasErrors(),
-      errors: this.getErrors()
-    };
+    return {isValid: !this.hasErrors(), errors: this.getErrors()};
   }
 
   /**
@@ -260,17 +227,20 @@ class Validator {
   validateClientRegister(data) {
     this.reset();
 
-    const { username, email, password, password_repeat, first_name, last_name } = data;
+    const {username, email, password, password_repeat, first_name, last_name} =
+        data;
 
     this.validateField(username, 'username', this.rules.username);
     this.validateField(email, 'email', this.rules.email);
     this.validateField(first_name, 'first_name', this.rules.first_name);
     this.validateField(last_name, 'last_name', this.rules.last_name);
 
-    const passwordResult = this.validatePasswordWithConfirmation(password, password_repeat);
+    const passwordResult =
+        this.validatePasswordWithConfirmation(password, password_repeat);
 
     if (passwordResult.errors.length > 0) {
-      passwordResult.errors.forEach(err => this.addError(err.field, err.message));
+      passwordResult.errors.forEach(
+          err => this.addError(err.field, err.message));
     }
 
     return {
@@ -293,12 +263,15 @@ class Validator {
       });
     }
 
-    if (sport.experience_years === undefined || sport.experience_years === null) {
+    if (sport.experience_years === undefined ||
+        sport.experience_years === null) {
       errors.push({
         field: `sports[${index}].experience_years`,
         message: 'Опыт работы обязателен'
       });
-    } else if (typeof sport.experience_years !== 'number' || sport.experience_years < 0) {
+    } else if (
+        typeof sport.experience_years !== 'number' ||
+        sport.experience_years < 0) {
       errors.push({
         field: `sports[${index}].experience_years`,
         message: 'Опыт работы должен быть неотрицательным числом'
@@ -334,13 +307,12 @@ class Validator {
     }
 
     if (details.education_degree && details.education_degree.length > 255) {
-      errors.push({
-        field: 'education_degree',
-        message: 'Максимум 255 символов'
-      });
+      errors.push(
+          {field: 'education_degree', message: 'Максимум 255 символов'});
     }
 
-    if (!details.sports || !Array.isArray(details.sports) || details.sports.length === 0) {
+    if (!details.sports || !Array.isArray(details.sports) ||
+        details.sports.length === 0) {
       errors.push({
         field: 'sports',
         message: 'Должен быть указан хотя бы один вид спорта'
@@ -360,16 +332,26 @@ class Validator {
   validateTrainerRegister(data) {
     this.reset();
 
-    const { username, email, password, password_repeat, first_name, last_name, trainer_details } = data;
+    const {
+      username,
+      email,
+      password,
+      password_repeat,
+      first_name,
+      last_name,
+      trainer_details
+    } = data;
 
     this.validateField(username, 'username', this.rules.username);
     this.validateField(email, 'email', this.rules.email);
     this.validateField(first_name, 'first_name', this.rules.first_name);
     this.validateField(last_name, 'last_name', this.rules.last_name);
 
-    const passwordResult = this.validatePasswordWithConfirmation(password, password_repeat);
+    const passwordResult =
+        this.validatePasswordWithConfirmation(password, password_repeat);
     if (passwordResult.errors.length > 0) {
-      passwordResult.errors.forEach(err => this.addError(err.field, err.message));
+      passwordResult.errors.forEach(
+          err => this.addError(err.field, err.message));
     }
 
     if (!trainer_details) {
@@ -404,17 +386,24 @@ class Validator {
 
 const validator = new Validator();
 
-export const validateUsername = (username) => validator.validateUsername(username);
+export const validateUsername = (username) =>
+    validator.validateUsername(username);
 export const validateEmail = (email) => validator.validateEmail(email);
-export const validatePassword = (password) => validator.validatePassword(password);
+export const validatePassword = (password) =>
+    validator.validatePassword(password);
 export const validatePasswordWithConfirmation = (password, repeat) =>
-  validator.validatePasswordWithConfirmation(password, repeat);
-export const validateFirstName = (firstName) => validator.validateFirstName(firstName);
-export const validateLastName = (lastName) => validator.validateLastName(lastName); // ЭКСПОРТ!
+    validator.validatePasswordWithConfirmation(password, repeat);
+export const validateFirstName = (firstName) =>
+    validator.validateFirstName(firstName);
+export const validateLastName = (lastName) =>
+    validator.validateLastName(lastName);
 export const validateBio = (bio) => validator.validateBio(bio);
-export const validateClientRegister = (data) => validator.validateClientRegister(data);
-export const validateTrainerRegister = (data) => validator.validateTrainerRegister(data);
-export const validateTrainerDetails = (details) => validator.validateTrainerDetails(details);
+export const validateClientRegister = (data) =>
+    validator.validateClientRegister(data);
+export const validateTrainerRegister = (data) =>
+    validator.validateTrainerRegister(data);
+export const validateTrainerDetails = (details) =>
+    validator.validateTrainerDetails(details);
 export const formatErrorsForAPI = () => validator.formatErrorsForAPI();
 
 export default Validator;

@@ -1,0 +1,77 @@
+/* ===== ФОРМА АВТОРИЗАЦИИ ===== */
+.auth-form {
+    max-width: 400px;
+    width: 100%;
+    margin: 0 auto;
+    background: var(--base-white);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    padding: var(--spacing-3xl);
+}
+
+.auth-form__header {
+    text-align: center;
+    margin-bottom: var(--spacing-2xl);
+}
+
+.auth-form__title {
+    font-size: var(--font-size-2xl);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.auth-form__subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.auth-form__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.auth-form__forgot-password {
+    text-align: right;
+    margin-bottom: var(--spacing-xl);
+}
+
+.auth-form__link {
+    color: var(--text-blue);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    transition: color 0.2s ease;
+}
+
+.auth-form__link:hover {
+    color: var(--text-blue-hover);
+    text-decoration: underline;
+}
+
+.auth-form__actions {
+    margin-bottom: var(--spacing-xl);
+}
+
+.auth-form__alt-action {
+    text-align: center;
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--border-light);
+}
+
+.auth-form__alt-text {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    margin-right: var(--spacing-xs);
+}
+
+.auth-form__link--alt {
+    color: var(--text-orange);
+    font-weight: var(--font-weight-semibold);
+}
+
+.auth-form__link--alt:hover {
+    color: var(--text-orange-hover);
+}
