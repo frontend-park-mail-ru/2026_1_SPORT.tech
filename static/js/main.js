@@ -33,67 +33,116 @@ async function loadTemplates() {
 }
 
 // ===== ПРОФИЛЬ =====
+function getUserRoleLabel(isTrainer) {
+    return isTrainer ? 'Тренер' : 'Клиент';
+}
+
+function getFullName(profile = {}) {
+    return `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || 'Пользователь';
+}
+
+function escapeHtml(value = '') {
+    return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function formatPostContent(textContent) {
+    if (!textContent) {
+        return 'Нет доступа к содержимому поста';
+    }
+
+    return escapeHtml(textContent).replace(/\n/g, '<br>');
+}
+
 function mapProfileData(apiData, currentUser) {
     const isOwnProfile = apiData.is_me;
-    const firstName = apiData.profile.first_name || '';
-    const lastName = apiData.profile.last_name || '';
-    const fullName = `${firstName} ${lastName}`.trim() || 'Пользователь';
+    const fullName = getFullName(apiData.profile);
 
     return {
         profile: {
             name: fullName,
-            role: apiData.is_trainer ? 'Тренер' : 'Клиент',
+            role: getUserRoleLabel(apiData.is_trainer),
             avatar: apiData.profile.avatar_url,
             isOwnProfile: isOwnProfile
         },
-        currentUser: currentUser ? {
+        currentUser: currentUser?.user ? {
             id: currentUser.user.user_id,
-            name: `${currentUser.user.profile.first_name} ${currentUser.user.profile.last_name}`.trim(),
-            role: currentUser.user.is_trainer ? 'Тренер' : 'Клиент',
+            name: getFullName(currentUser.user.profile),
+            role: getUserRoleLabel(currentUser.user.is_trainer),
             avatar: currentUser.user.profile.avatar_url
         } : null
     };
 }
 
-async function loadProfilePageData(userId = 1) {
+async function loadProfilePageData(userId, currentUser = null) {
     try {
-        console.log(`📦 Loading profile data for user ${userId}...`);
+        const resolvedUserId = userId || currentUser?.user?.user_id;
 
-        const profileData = await api.getProfile(userId);
+        if (!resolvedUserId) {
+            throw new Error('Пользователь не авторизован');
+        }
+
+        console.log(`📦 Loading profile data for user ${resolvedUserId}...`);
+        console.log('👤 Current user:', currentUser);
+
+        const [profileData, postsData] = await Promise.all([
+            api.getProfile(resolvedUserId),
+            api.getUserPosts(resolvedUserId).catch((error) => {
+                console.log('No posts or error loading posts', error);
+                return { posts: [] };
+            })
+        ]);
+
         console.log('📊 Profile data:', profileData);
+        console.log('📝 Posts data:', postsData);
 
-        let currentUser = null;
-        try {
-            currentUser = await api.getCurrentUser();
-            console.log('👤 Current user:', currentUser);
-        } catch (e) {
-            console.log('User not logged in');
-        }
+        const authorName = getFullName(profileData.profile);
+        const authorRole = getUserRoleLabel(profileData.is_trainer);
+        const postList = Array.isArray(postsData?.posts) ? postsData.posts : [];
 
-        let postsData = { posts: [] };
-        try {
-            postsData = await api.getUserPosts(userId);
-            console.log('📝 Posts data:', postsData);
-        } catch (e) {
-            console.log('No posts or error loading posts');
-        }
+        const posts = await Promise.all(
+            postList.map(async (post) => {
+                let fullPost = null;
 
-        const posts = postsData.posts.map(post => ({
-            post_id: post.post_id,
-            title: post.title,
-            content: 'Загрузите пост для просмотра',
-            authorName: `${profileData.profile.first_name || ''} ${profileData.profile.last_name || ''}`.trim(),
-            authorRole: profileData.is_trainer ? 'Тренер' : 'Клиент',
-            likes: 0,
-            comments: 0,
-            can_view: post.can_view
-        }));
+                if (post.can_view) {
+                    try {
+                        fullPost = await api.getPost(post.post_id);
+                    } catch (error) {
+                        console.log(`Failed to load full post ${post.post_id}`, error);
+                    }
+                }
+
+                const textContent = fullPost?.text_content || '';
+
+                return {
+                    post_id: post.post_id,
+                    title: post.title,
+                    content: post.can_view
+                        ? formatPostContent(textContent)
+                        : 'Нет доступа к содержимому поста',
+                    authorName,
+                    authorRole,
+                    likes: 0,
+                    comments: 0,
+                    can_view: post.can_view,
+                    created_at: post.created_at,
+                    min_tier_id: post.min_tier_id ?? null,
+                    attachments: fullPost?.attachments || []
+                };
+            })
+        );
 
         const mappedData = mapProfileData(profileData, currentUser);
 
         return {
             ...mappedData,
-            posts
+            posts,
+            subscriptions: [],
+            popularPosts: []
         };
     } catch (error) {
         console.error('❌ Failed to load profile data:', error);
@@ -112,9 +161,15 @@ async function demoProfilePage() {
 
     try {
         const { renderProfilePage } = await import('/pages/ProfilePage/ProfilePage.js');
+        const currentUser = await api.getCurrentUser();
+        const userId = currentUser?.user?.user_id;
 
-        const userId = 1;
-        const data = await loadProfilePageData(userId);
+        if (!userId) {
+            window.location.hash = '#/auth';
+            return;
+        }
+
+        const data = await loadProfilePageData(userId, currentUser);
 
         const subscriptions = [
             { id: 1, name: 'Ярослав-Лют... Владимиров', role: 'Физиолог' },
@@ -137,11 +192,7 @@ async function demoProfilePage() {
 
         await renderProfilePage(app, {
             profile: data.profile,
-            currentUser: data.currentUser || {
-                id: userId,
-                name: data.profile.name,
-                role: data.profile.role
-            },
+            currentUser: data.currentUser,
             subscriptions,
             posts: data.posts,
             activeTab: 'publications',
@@ -149,6 +200,7 @@ async function demoProfilePage() {
             onLogout: async () => {
                 try {
                     await api.logout();
+                    localStorage.removeItem('user');
                     alert('Вы вышли из системы');
                     window.location.hash = '#/auth';
                 } catch (error) {
