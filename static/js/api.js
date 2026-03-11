@@ -89,5 +89,5 @@ class ApiClient {
 }
 
 // Создаем и экспортируем экземпляр
-window.api = new ApiClient('');
+window.api = new ApiClient('http://212.233.99.79:8080');
 console.log('✅ API Client initialized');   
