@@ -120,11 +120,11 @@ export async function renderSidebar(container, {
     // Обработчик кнопки выхода
     const logoutBtn = dropdown.querySelector('.sidebar__logout-option');
     if (logoutBtn && onLogout) {
-      logoutBtn.addEventListener('click', (e) => {
+      logoutBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         e.preventDefault();
         dropdown.classList.remove('sidebar__dropdown--active');
-        onLogout();
+        await onLogout();
       });
     }
     
