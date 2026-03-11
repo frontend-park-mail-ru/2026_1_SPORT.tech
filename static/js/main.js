@@ -54,7 +54,7 @@ function mapProfileData(apiData, currentUser) {
 }
 
 // Загрузка данных профиля
-async function loadProfilePageData(userId = 123) {
+async function loadProfilePageData(userId = 1) {
     try {
         console.log(`📦 Loading profile data for user ${userId}...`);
         
