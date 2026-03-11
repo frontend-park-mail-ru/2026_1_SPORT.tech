@@ -60,8 +60,6 @@ export class AuthPage {
      */
     async handleTrainerRegister(data) {
         try {
-            console.log(data);
-            console.log(data.career_start_date);
             const response = await api.registerTrainer({
                 username: data.username,
                 email: data.email,
@@ -71,7 +69,7 @@ export class AuthPage {
                 last_name: data.last_name,
                 trainer_details: {
                     education_degree: data.education || "",
-                    career_since_date: data.career_start_date,
+                    career_since_date: data.career_since_date,
                     sports: [
                         {
                             sport_type_id: 1,
