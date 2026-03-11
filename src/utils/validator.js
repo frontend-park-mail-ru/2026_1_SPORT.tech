@@ -22,7 +22,7 @@ const rules = {
     required: true,
     max: 254,
     pattern: /^[^@\s]+@[^@\s]+\.[^@\s]+$/,
-    messages: {required: 'Email обязателен', pattern: 'Неверный формат email (пример: name@domain.com)'}
+    messages: {required: 'Email обязателен', pattern: 'Неверный формат email (пример: example@smail.ru)'}
   },
 
   password: {
