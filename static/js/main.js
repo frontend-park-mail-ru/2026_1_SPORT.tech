@@ -171,32 +171,13 @@ async function demoProfilePage() {
 
         const data = await loadProfilePageData(userId, currentUser);
 
-        const subscriptions = [
-            { id: 1, name: 'Ярослав-Лют... Владимиров', role: 'Физиолог' },
-            { id: 2, name: 'Антон Переславль-З...', role: 'Тренер ОФП' },
-            { id: 3, name: 'Ксения Бортникова', role: 'Тренер по КОНК...' },
-            { id: 4, name: 'Сергей Генц', role: 'Диетолог' },
-            { id: 5, name: 'Мария Иванова', role: 'Йога-инструктор' },
-            { id: 6, name: 'Алексей Петров', role: 'Персональный тренер' },
-            { id: 7, name: 'Елена Смирнова', role: 'Нутрициолог' },
-            { id: 8, name: 'Дмитрий Козлов', role: 'Тренер по боксу' }
-        ];
-
-        const popularPosts = [
-            { title: 'Топ упражнений на грудные мышцы', description: 'Лучшие упражнения для развития грудных мышц' },
-            { title: 'Топ упражнений на мышцы спины', description: 'Как накачать широкую спину' },
-            { title: 'Питание для набора массы', description: 'Что есть чтобы мышцы росли' },
-            { title: 'Кардио для жиросжигания', description: 'Интервальные тренировки' },
-            { title: 'Растяжка после тренировки', description: 'Комплекс упражнений для заминки' }
-        ];
-
         await renderProfilePage(app, {
             profile: data.profile,
             currentUser: data.currentUser,
-            subscriptions,
+            subscriptions: [],
             posts: data.posts,
             activeTab: 'publications',
-            popularPosts,
+            popularPosts: [],
             onLogout: async () => {
                 try {
                     await api.logout();
