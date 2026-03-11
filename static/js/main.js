@@ -63,13 +63,13 @@ async function loadProfilePageData(userId = 1) {
         console.log('📊 Profile data:', profileData);
         
         // Загружаем текущего пользователя (если авторизован)
-        let currentUser = null;
-        try {
-            currentUser = await api.getCurrentUser();
-            console.log('👤 Current user:', currentUser);
-        } catch (e) {
-            console.log('User not logged in');
-        }
+        // let currentUser = null;
+        // try {
+        //     currentUser = await api.getCurrentUser();
+        //     console.log('👤 Current user:', currentUser);
+        // } catch (e) {
+        //     console.log('User not logged in');
+        // }
         
         // Загружаем посты пользователя
         let postsData = { posts: [] };
