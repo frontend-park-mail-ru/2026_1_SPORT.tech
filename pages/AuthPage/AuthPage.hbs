@@ -1,0 +1,43 @@
+<div class="auth-page">
+    <div class="auth-page__container">
+        <div class="auth-page__info">
+            <h1 class="auth-page__title">SPORTEON</h1>
+            <p class="auth-page__description">
+                Sporteon — это твой персональный фитнес-хаб.
+                Вся история тренировок, контроль питания и общение с тренером
+                в одном безопасном пространстве.
+            </p>
+            <ul class="auth-page__features">
+                <li class="auth-page__feature">
+                    <svg class="auth-page__feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span>Персональные программы тренировок</span>
+                </li>
+                <li class="auth-page__feature">
+                    <svg class="auth-page__feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span>Контроль питания и прогресса</span>
+                </li>
+                <li class="auth-page__feature">
+                    <svg class="auth-page__feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span>Общение с тренером в реальном времени</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="auth-page__form">
+            {{#if showRoleSelector}}
+            <div class="auth-page__role-selector">
+                <button class="auth-page__role-btn {{#if isClientActive}}auth-page__role-btn--active{{/if}}" data-role="client">Я спортсмен</button>
+                <button class="auth-page__role-btn {{#if isTrainerActive}}auth-page__role-btn--active{{/if}}" data-role="trainer">Я тренер</button>
+            </div>
+            {{/if}}
+
+            <div class="auth-form-container"></div>
+        </div>
+    </div>
+</div>

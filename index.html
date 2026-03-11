@@ -4,65 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SPORT.tech - Базовые компоненты</title>
-    
+
     <!-- Шрифты (из Figma) -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Глобальные стили -->
     <link rel="stylesheet" href="/static/css/global.css">
-    
+
     <!-- Стили компонентов -->
     <link rel="stylesheet" href="/components/atoms/Button/Button.css">
     <link rel="stylesheet" href="/components/atoms/Input/Input.css">
     <link rel="stylesheet" href="/components/atoms/Avatar/Avatar.css">
     <link rel="stylesheet" href="/components/atoms/UserPhotoItem/UserPhotoItem.css">
-    
-    <style>
-        /* Дополнительные стили для демо */
-        body {
-            background-color: #f8f9fa;
-            padding: 20px;
-        }
-        
-        #app {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
-            padding: var(--spacing-xl);
-        }
-        
-        h1, h2, h3 {
-            font-family: var(--font-primary);
-            color: var(--base-black);
-        }
-        
-        h1 {
-            font-size: var(--font-size-xxl);
-            font-weight: var(--font-weight-bold);
-        }
-        
-        h2 {
-            font-size: var(--font-size-xl);
-            font-weight: var(--font-weight-semibold);
-            border-bottom: 2px solid var(--border-light);
-            padding-bottom: var(--spacing-sm);
-        }
-        
-        h3 {
-            font-size: var(--font-size-lg);
-            font-weight: var(--font-weight-medium);
-            color: var(--text-secondary);
-        }
-    </style>
+
+    <!-- НОВОЕ: Стили для формы авторизации -->
+    <link rel="stylesheet" href="/components/organisms/AuthForm/AuthForm.css">
+        <!-- Стили для страницы авторизации -->
+    <link rel="stylesheet" href="/pages/AuthPage/AuthPage.css">
+
 </head>
 <body>
     <div id="app"></div>
-    
+
     <!-- Handlebars -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.8/handlebars.min.js"></script>
-    
+
     <!-- Главный скрипт -->
     <script type="module" src="/static/js/main.js"></script>
 </body>

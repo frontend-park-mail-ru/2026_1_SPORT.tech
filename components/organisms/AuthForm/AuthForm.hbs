@@ -1,0 +1,27 @@
+<div class="auth-form">
+    <div class="auth-form__header">
+        <h2 class="auth-form__title">{{title}}</h2>
+        {{#if subtitle}}
+            <p class="auth-form__subtitle">{{subtitle}}</p>
+        {{/if}}
+    </div>
+
+    <div class="auth-form__content">
+        <div class="auth-form__fields">
+            <!-- Поля будут динамически добавляться через JS -->
+        </div>
+
+
+
+        <div class="auth-form__actions">
+            <div class="auth-form__submit-container"></div>
+        </div>
+
+        {{#if hasAltAction}}
+            <div class="auth-form__alt-action">
+                <span class="auth-form__alt-text">{{altText}}</span>
+                <a href="#" class="auth-form__link auth-form__link--alt">{{altLinkText}}</a>
+            </div>
+        {{/if}}
+    </div>
+</div>
