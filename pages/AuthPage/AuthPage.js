@@ -4,7 +4,6 @@
  */
 
 import { renderAuthForm, AUTH_MODES } from '../../components/organisms/AuthForm/AuthForm.js';
-import { post } from '/src/utils/api.js';
 
 export class AuthPage {
     constructor(container) {
@@ -18,15 +17,13 @@ export class AuthPage {
      */
     async handleLogin(data) {
         try {
-            const response = await post('/auth/login', {
-                email: data.email,
-                password: data.password
-            });
+            const response = await api.login(data.email, data.password);
 
-            if (response.user) {
+            if (response?.user) {
                 localStorage.setItem('user', JSON.stringify(response.user));
-                window.location.href = '/';
             }
+
+            window.location.hash = '#/profile';
         } catch (error) {
             console.error('Login error:', error);
             throw error;
@@ -38,7 +35,7 @@ export class AuthPage {
      */
     async handleClientRegister(data) {
         try {
-            const response = await post('/auth/register/client', {
+            const response = await api.registerClient({
                 username: data.username,
                 email: data.email,
                 password: data.password,
@@ -47,10 +44,11 @@ export class AuthPage {
                 last_name: data.last_name
             });
 
-            if (response.user) {
+            if (response?.user) {
                 localStorage.setItem('user', JSON.stringify(response.user));
-                window.location.href = '/';
             }
+
+            window.location.hash = '#/profile';
         } catch (error) {
             console.error('Register error:', error);
             throw error;
@@ -61,36 +59,37 @@ export class AuthPage {
      * Обработка регистрации тренера
      */
     async handleTrainerRegister(data) {
-    try {
-        const response = await post('/auth/register/trainer', {
-            username: data.username,
-            email: data.email,
-            password: data.password,
-            password_repeat: data.password_repeat,
-            first_name: data.first_name,
-            last_name: data.last_name,
-            trainer_details: {
-                education_degree: data.education || "",
-                career_since_date: data.career_start_date,
-                sports: [
-                    {
-                        sport_type_id: 1,
-                        experience_years: 0,
-                        sports_rank: ""
-                    }
-                ]
-            }
-        });
+        try {
+            const response = await api.registerTrainer({
+                username: data.username,
+                email: data.email,
+                password: data.password,
+                password_repeat: data.password_repeat,
+                first_name: data.first_name,
+                last_name: data.last_name,
+                trainer_details: {
+                    education_degree: data.education || "",
+                    career_since_date: data.career_start_date,
+                    sports: [
+                        {
+                            sport_type_id: 1,
+                            experience_years: 0,
+                            sports_rank: ""
+                        }
+                    ]
+                }
+            });
 
-        if (response.user) {
-            localStorage.setItem('user', JSON.stringify(response.user));
-            window.location.href = '/';
+            if (response?.user) {
+                localStorage.setItem('user', JSON.stringify(response.user));
+            }
+
+            window.location.hash = '#/profile';
+        } catch (error) {
+            console.error('Trainer register error:', error);
+            throw error;
         }
-    } catch (error) {
-        console.error('Trainer register error:', error);
-        throw error;
     }
-}
 
     /**
      * Переключение режима формы
