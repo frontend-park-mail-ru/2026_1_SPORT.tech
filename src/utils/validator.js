@@ -22,7 +22,7 @@ const rules = {
     required: true,
     max: 254,
     pattern: /^[^@\s]+@[^@\s]+\.[^@\s]+$/,
-    messages: {required: 'Email обязателен', pattern: 'Неверный формат email'}
+    messages: {required: 'Email обязателен', pattern: 'Неверный формат email (пример: name@domain.com)'}
   },
 
   password: {
@@ -181,10 +181,8 @@ class Validator {
   validatePasswordWithConfirmation(password, passwordRepeat) {
     this.reset();
 
-    // Валидация пароля
     this.validateField(password, 'password', this.rules.password);
 
-    // Проверка подтверждения
     if (!checks.required(passwordRepeat)) {
       this.addError('password_repeat', 'Подтверждение пароля обязательно');
     } else if (!checks.passwordsMatch(password, passwordRepeat)) {
@@ -398,7 +396,7 @@ export const validatePasswordWithConfirmation = (password, repeat) =>
 export const validateFirstName = (firstName) =>
     validator.validateFirstName(firstName);
 export const validateLastName = (lastName) =>
-    validator.validateLastName(lastName);  // ЭКСПОРТ!
+    validator.validateLastName(lastName);
 export const validateBio = (bio) => validator.validateBio(bio);
 export const validateClientRegister = (data) =>
     validator.validateClientRegister(data);

@@ -74,8 +74,8 @@ export class AuthPage {
                 career_since_date: data.career_start_date,
                 sports: [
                     {
-                        sport_type_id: 1, // Заглушка, нужно будет выбирать из списка
-                        experience_years: 0, // Заглушка
+                        sport_type_id: 1,
+                        experience_years: 0,
                         sports_rank: ""
                     }
                 ]
@@ -106,7 +106,6 @@ export class AuthPage {
     async render() {
         this.container.innerHTML = '';
 
-        // Загружаем шаблон страницы
         const template = Handlebars.templates['AuthPage.hbs'];
 
         const html = template({
@@ -119,10 +118,8 @@ export class AuthPage {
         wrapper.innerHTML = html.trim();
         const pageElement = wrapper.firstElementChild;
 
-        // Находим контейнер для формы
         const formContainer = pageElement.querySelector('.auth-form-container');
 
-        // Рендерим форму
         this.form = await renderAuthForm(formContainer, {
             mode: this.currentMode,
             onSubmit: async (data, mode) => {
@@ -139,7 +136,6 @@ export class AuthPage {
             }
         });
 
-        // Обработчики для кнопок выбора роли
         const roleButtons = pageElement.querySelectorAll('.auth-page__role-btn');
         roleButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {

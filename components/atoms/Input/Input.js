@@ -156,14 +156,14 @@ export async function renderInput(container, config = {}) {
    * Установить сообщение под полем
    */
 const setMessage = (text, newState = null) => {
-    // Убедимся что messageEl существует
+
     if (!messageEl) {
         messageEl = document.createElement('span');
         messageEl.className = 'input-field__message';
         field.appendChild(messageEl);
     }
 
-    // Устанавливаем текст сообщения (пустая строка очищает)
+
     messageEl.textContent = text || '';
     messageEl.style.display = 'block';
     messageEl.style.visibility = 'visible';
@@ -171,7 +171,6 @@ const setMessage = (text, newState = null) => {
     if (newState) {
         setState(newState);
     } else {
-        // Если новое состояние не указано, а текст пустой - возвращаем normal
         if (!text) {
             setState(INPUT_STATES.NORMAL);
         }

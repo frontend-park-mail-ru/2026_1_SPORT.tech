@@ -145,17 +145,15 @@
 }
 
 /* ===== СООБЩЕНИЕ ПОД ПОЛЕМ ===== */
-/* Найдите или добавьте эти стили */
 .input-field__message {
     font-size: var(--font-size-xs);
     margin-top: var(--spacing-xs);
     min-height: 18px;
     transition: color 0.2s ease;
-    display: block; /* Важно: всегда блок */
-    visibility: visible; /* Важно: всегда видимо */
+    display: block;
+    visibility: visible;
 }
 
-/* Даже пустое сообщение должно занимать место */
 .input-field__message:empty {
     display: block;
     content: "";

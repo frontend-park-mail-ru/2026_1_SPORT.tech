@@ -45,10 +45,8 @@ export async function renderAuthForm(container, config = {}) {
   const {mode = AUTH_MODES.LOGIN, onSubmit = null, onSwitchMode = null} =
       config;
 
-  // Загружаем шаблон
   const template = Handlebars.templates['AuthForm.hbs'];
 
-  // Конфигурация для разных режимов
   const modeConfig = {
     [AUTH_MODES.LOGIN]: {
       title: 'Вход в Sporteon',
@@ -223,17 +221,14 @@ export async function renderAuthForm(container, config = {}) {
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const form = wrapper.firstElementChild;
-  form.setAttribute('novalidate', '');  // Отключает браузерную валидацию
+  form.setAttribute('novalidate', '');
 
-  // Контейнер для полей
   const fieldsContainer = form.querySelector('.auth-form__fields');
   const submitContainer = form.querySelector('.auth-form__submit-container');
 
-  // Хранилище для инпутов и их API
   const inputs = new Map();
   const inputsApi = new Map();
 
-  // ===== ВАЖНО: определяем validateField ПЕРЕД созданием полей =====
   /**
    * Валидация поля
    */
@@ -266,7 +261,6 @@ export async function renderAuthForm(container, config = {}) {
         result = validatePasswordWithConfirmation(password, value);
         break;
       case 'education_degree':
-        // Валидация образования (необязательное, только проверка длины)
         const eduValid = !value || value.length <= 255;
         result = {
           isValid: eduValid,
@@ -274,7 +268,6 @@ export async function renderAuthForm(container, config = {}) {
         };
         break;
       case 'career_since_date':
-        // Валидация даты
         if (!value) {
           result = {
             isValid: false,
@@ -290,7 +283,6 @@ export async function renderAuthForm(container, config = {}) {
         }
         break;
       case 'sport_discipline':
-        // Валидация вида спорта
         if (!value || value.trim().length === 0) {
           result = {
             isValid: false,
@@ -306,7 +298,6 @@ export async function renderAuthForm(container, config = {}) {
         }
         break;
       case 'bio':
-        // Валидация bio
         const bioValid = !value || value.length <= 1000;
         result = {
           isValid: bioValid,
@@ -326,12 +317,10 @@ export async function renderAuthForm(container, config = {}) {
     }
   };
 
-  // Создаем поля с валидацией при каждом изменении
   for (const fieldConfig of currentMode.fields) {
     const fieldContainer = document.createElement('div');
     fieldsContainer.appendChild(fieldContainer);
 
-    // Специальная обработка для поля даты
     if (fieldConfig.name === 'career_since_date') {
       const inputApi = await renderInput(fieldContainer, {
         type: fieldConfig.type,
@@ -343,7 +332,6 @@ export async function renderAuthForm(container, config = {}) {
         onChange: (value) => validateField(fieldConfig.name, value)
       });
 
-      // Добавляем форматирование даты
       const input = inputApi.input;
       input.addEventListener('input', (e) => {
         const formatted = formatDateInput(e.target.value);
@@ -356,7 +344,6 @@ export async function renderAuthForm(container, config = {}) {
       inputs.set(fieldConfig.name, fieldContainer);
       inputsApi.set(fieldConfig.name, inputApi);
     }
-    // Для поля вида спорта добавляем подсказку
     else if (fieldConfig.name === 'sport_discipline') {
       const inputApi = await renderInput(fieldContainer, {
         type: fieldConfig.type,
@@ -368,7 +355,6 @@ export async function renderAuthForm(container, config = {}) {
         onChange: (value) => validateField(fieldConfig.name, value)
       });
 
-      // Добавляем подсказку
       const helpText = document.createElement('small');
       helpText.textContent = 'Можно указать несколько через запятую';
       helpText.style.cssText = `
@@ -382,7 +368,6 @@ export async function renderAuthForm(container, config = {}) {
       inputs.set(fieldConfig.name, fieldContainer);
       inputsApi.set(fieldConfig.name, inputApi);
     }
-    // Обычные поля
     else {
       const inputApi = await renderInput(fieldContainer, {
         type: fieldConfig.type,
@@ -399,7 +384,6 @@ export async function renderAuthForm(container, config = {}) {
     }
   }
 
-  // Кнопка отправки
   const submitBtn = await renderButton(submitContainer, {
     text: currentMode.submitText,
     variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
@@ -420,7 +404,6 @@ export async function renderAuthForm(container, config = {}) {
       }
     }
 
-    // Специальная проверка для паролей при регистрации
     if (mode !== AUTH_MODES.LOGIN) {
       const password = inputsApi.get('password')?.getValue();
       const passwordRepeat = inputsApi.get('password_repeat')?.getValue();
@@ -502,7 +485,6 @@ export async function renderAuthForm(container, config = {}) {
     }
   };
 
-  // Обработчик отправки
   submitBtn.element.addEventListener('click', async (e) => {
     e.preventDefault();
 
@@ -527,7 +509,6 @@ export async function renderAuthForm(container, config = {}) {
     }
   });
 
-  // Обработчик переключения режима
   const altLink = form.querySelector('.auth-form__link--alt');
   if (altLink && onSwitchMode) {
     altLink.addEventListener('click', (e) => {
