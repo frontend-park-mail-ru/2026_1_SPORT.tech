@@ -40,7 +40,8 @@ export async function renderProfilePage(container, {
   await renderSidebar(sidebarContainer, {
     activePage: 'profile',
     currentUser,
-    users: subscriptions
+    users: subscriptions,
+    onLogout
   });
   
   // Контейнер для контента профиля
