@@ -8,12 +8,13 @@ import { renderAuthForm, AUTH_MODES } from '../../components/organisms/AuthForm/
 export async function renderAuthPage(container, api) {
     let currentMode = AUTH_MODES.LOGIN;
     let form = null;
+
     /**
      * Обработка входа
      */
     async function handleLogin(data) {
         try {
-            const response = await this.api.login(data.email, data.password);
+            const response = await api.login(data.email, data.password);
 
             if (response?.user) {
                 localStorage.setItem('user', JSON.stringify(response.user));
@@ -31,7 +32,7 @@ export async function renderAuthPage(container, api) {
      */
     async function handleClientRegister(data) {
         try {
-            const response = await this.api.registerClient({
+            const response = await api.registerClient({
                 username: data.username,
                 email: data.email,
                 password: data.password,
@@ -56,7 +57,7 @@ export async function renderAuthPage(container, api) {
      */
     async function handleTrainerRegister(data) {
         try {
-            const response = await this.api.registerTrainer({
+            const response = await api.registerTrainer({
                 username: data.username,
                 email: data.email,
                 password: data.password,
@@ -64,7 +65,7 @@ export async function renderAuthPage(container, api) {
                 first_name: data.first_name,
                 last_name: data.last_name,
                 trainer_details: {
-                    education_degree: data.education || "",
+                    education_degree: data.education_degree || "",
                     career_since_date: data.career_since_date,
                     sports: [
                         {
@@ -91,22 +92,22 @@ export async function renderAuthPage(container, api) {
      * Переключение режима формы
      */
     async function switchMode(newMode) {
-        this.currentMode = newMode;
-        await this.render();
+        currentMode = newMode;
+        await render();
     }
 
     /**
      * Рендер страницы
      */
     async function render() {
-        this.container.innerHTML = '';
+        container.innerHTML = '';
 
         const template = Handlebars.templates['AuthPage.hbs'];
 
         const html = template({
-            showRoleSelector: this.currentMode !== AUTH_MODES.LOGIN,
-            isClientActive: this.currentMode === AUTH_MODES.REGISTER_CLIENT,
-            isTrainerActive: this.currentMode === AUTH_MODES.REGISTER_TRAINER
+            showRoleSelector: currentMode !== AUTH_MODES.LOGIN,
+            isClientActive: currentMode === AUTH_MODES.REGISTER_CLIENT,
+            isTrainerActive: currentMode === AUTH_MODES.REGISTER_TRAINER
         });
 
         const wrapper = document.createElement('div');
@@ -115,20 +116,24 @@ export async function renderAuthPage(container, api) {
 
         const formContainer = pageElement.querySelector('.auth-form-container');
 
-        this.form = await renderAuthForm(formContainer, {
-            mode: this.currentMode,
-            api: this.api,
+        form = await renderAuthForm(formContainer, {
+            mode: currentMode,
+            api: api,
             onSubmit: async (data, mode) => {
-                if (mode === AUTH_MODES.LOGIN) {
-                    await this.handleLogin(data);
-                } else if (mode === AUTH_MODES.REGISTER_CLIENT) {
-                    await this.handleClientRegister(data);
-                } else if (mode === AUTH_MODES.REGISTER_TRAINER) {
-                    await this.handleTrainerRegister(data);
+                try {
+                    if (mode === AUTH_MODES.LOGIN) {
+                        await handleLogin(data);
+                    } else if (mode === AUTH_MODES.REGISTER_CLIENT) {
+                        await handleClientRegister(data);
+                    } else if (mode === AUTH_MODES.REGISTER_TRAINER) {
+                        await handleTrainerRegister(data);
+                    }
+                } catch (error) {
+                    console.error('Form submission error:', error);
                 }
             },
             onSwitchMode: (newMode) => {
-                this.switchMode(newMode);
+                switchMode(newMode);
             }
         });
 
@@ -137,13 +142,15 @@ export async function renderAuthPage(container, api) {
             btn.addEventListener('click', (e) => {
                 const role = e.target.dataset.role;
                 if (role === 'client') {
-                    this.switchMode(AUTH_MODES.REGISTER_CLIENT);
+                    switchMode(AUTH_MODES.REGISTER_CLIENT);
                 } else if (role === 'trainer') {
-                    this.switchMode(AUTH_MODES.REGISTER_TRAINER);
+                    switchMode(AUTH_MODES.REGISTER_TRAINER);
                 }
             });
         });
 
-        this.container.appendChild(pageElement);
+        container.appendChild(pageElement);
     }
+
+    await render();
 }

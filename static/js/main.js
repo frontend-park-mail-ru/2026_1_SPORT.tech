@@ -229,22 +229,19 @@ class App {
     document.body.classList.add('auth-page');
 
     try {
-      const {AuthPage} = await import('/pages/AuthPage/AuthPage.js');
-      const {renderAuthPage} = await import('/pages/AuthPage/AuthPage.js');
-      await renderAuthPage(this.app, this.api);
-      this.currentPage = authPage;
+        const { renderAuthPage } = await import('/pages/AuthPage/AuthPage.js');
+        await renderAuthPage(this.app, this.api);
     } catch (error) {
-      console.error('Failed to load AuthPage:', error);
-      this.app.innerHTML = `
-                <div style="color: red; padding: 20px;">
-                    <h2>Ошибка загрузки страницы авторизации</h2>
-                    <p>${error.message}</p>
-                    <pre>${error.stack}</pre>
-                </div>
-            `;
+        console.error('Failed to load AuthPage:', error);
+        this.app.innerHTML = `
+            <div style="color: red; padding: 20px;">
+                <h2>Ошибка загрузки страницы авторизации</h2>
+                <p>${error.message}</p>
+                <pre>${error.stack}</pre>
+            </div>
+        `;
     }
-  }
-
+}
   async showProfilePage() {
     this.app.innerHTML = '';
     document.body.classList.remove('auth-page');
