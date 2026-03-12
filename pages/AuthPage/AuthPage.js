@@ -5,18 +5,13 @@
 
 import { renderAuthForm, AUTH_MODES } from '../../components/organisms/AuthForm/AuthForm.js';
 
-export class AuthPage {
-    constructor(container, api) {
-        this.container = container;
-        this.api = api;
-        this.form = null;
-        this.currentMode = AUTH_MODES.LOGIN;
-    }
-
+export async function renderAuthPage(container, api) {
+    let currentMode = AUTH_MODES.LOGIN;
+    let form = null;
     /**
      * Обработка входа
      */
-    async handleLogin(data) {
+    async function handleLogin(data) {
         try {
             const response = await this.api.login(data.email, data.password);
 
@@ -34,7 +29,7 @@ export class AuthPage {
     /**
      * Обработка регистрации клиента
      */
-    async handleClientRegister(data) {
+    async function handleClientRegister(data) {
         try {
             const response = await this.api.registerClient({
                 username: data.username,
@@ -59,7 +54,7 @@ export class AuthPage {
     /**
      * Обработка регистрации тренера
      */
-    async handleTrainerRegister(data) {
+    async function handleTrainerRegister(data) {
         try {
             const response = await this.api.registerTrainer({
                 username: data.username,
@@ -95,7 +90,7 @@ export class AuthPage {
     /**
      * Переключение режима формы
      */
-    async switchMode(newMode) {
+    async function switchMode(newMode) {
         this.currentMode = newMode;
         await this.render();
     }
@@ -103,7 +98,7 @@ export class AuthPage {
     /**
      * Рендер страницы
      */
-    async render() {
+    async function render() {
         this.container.innerHTML = '';
 
         const template = Handlebars.templates['AuthPage.hbs'];
