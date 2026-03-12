@@ -25,7 +25,7 @@ export async function renderProfilePage(container, {
   ],
   posts = [],
   popularPosts = [],
-  activeTab = 'main', // ← ДОБАВЛЕНО: активная вкладка
+  activeTab = 'main',
   onLogout = null
 } = {}) {
   const template = Handlebars.templates['ProfilePage.hbs'];
@@ -61,8 +61,7 @@ export async function renderProfilePage(container, {
     role: profile.role,
     avatar: profile.avatar,
     isOwnProfile: profile.isOwnProfile,
-    onEdit: () => console.log('Редактировать профиль')
-    // Убрали onSubscribe
+    onEdit: () => {} 
   });
 
   // Рендерим контент с активной вкладкой
@@ -70,8 +69,7 @@ export async function renderProfilePage(container, {
     activeTab: activeTab,
     posts,
     popularPosts,
-    canAddPost: profile.isOwnProfile, // Только свой профиль может добавлять посты
-    onAddPost: () => console.log('Добавить публикацию')
+    canAddPost: profile.isOwnProfile,
   });
   
   container.appendChild(page);
