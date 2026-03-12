@@ -1,5 +1,5 @@
 import { ApiClient } from '/src/utils/api.js';
-import { API_BASE_URL } from '../config/constants';
+import { API_BASE_URL } from '/src/config/constants.js';
 
 // ===== РЕГИСТРАЦИЯ ШАБЛОНОВ HANDLEBARS =====
 Handlebars.templates = {};
@@ -246,11 +246,10 @@ class App {
         console.log('Showing auth page');
         this.app.innerHTML = '';
         document.body.classList.add('auth-page');
-        const authPage = new AuthPage(this.app, this.api);
 
         try {
             const { AuthPage } = await import('/pages/AuthPage/AuthPage.js');
-            const authPage = new AuthPage(this.app);
+            const authPage = new AuthPage(this.app, this.api);
             await authPage.render();
             this.currentPage = authPage;
         } catch (error) {
@@ -269,7 +268,8 @@ class App {
         console.log('Showing profile page');
         this.app.innerHTML = '';
         document.body.classList.remove('auth-page');
-        await demoProfilePage();
+        //await demoProfilePage();
+        const { renderProfilePage } = await import('/pages/ProfilePage/ProfilePage.js');
         const currentUser = await this.api.getCurrentUser();
         await renderProfilePage(this.api, this.app, currentUser);
     }
