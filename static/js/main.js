@@ -25,7 +25,6 @@ async function loadTemplates() {
             const response = await fetch(path);
             const source = await response.text();
             Handlebars.templates[`${name}.hbs`] = Handlebars.compile(source);
-            console.log(`✅ Loaded template: ${name}`);
         } catch (error) {
             console.error(`❌ Failed to load template ${name}:`, error);
         }
@@ -57,25 +56,20 @@ function mapProfileData(apiData, currentUser) {
 
 async function loadProfilePageData(userId = 1) {
     try {
-        console.log(`📦 Loading profile data for user ${userId}...`);
-
         const profileData = await api.getProfile(userId);
-        console.log('📊 Profile data:', profileData);
 
         let currentUser = null;
         try {
             currentUser = await api.getCurrentUser();
-            console.log('👤 Current user:', currentUser);
         } catch (e) {
-            console.log('User not logged in');
+            // User not logged in
         }
 
         let postsData = { posts: [] };
         try {
             postsData = await api.getUserPosts(userId);
-            console.log('📝 Posts data:', postsData);
         } catch (e) {
-            console.log('No posts or error loading posts');
+            // No posts or error loading posts
         }
 
         const posts = postsData.posts.map(post => ({
@@ -156,8 +150,6 @@ async function demoProfilePage() {
                 }
             }
         });
-
-        console.log('✅ Profile page rendered with real data');
     } catch (error) {
         console.error('❌ Failed to render profile page:', error);
         app.innerHTML = `
@@ -180,8 +172,6 @@ class App {
     }
 
     async init() {
-        console.log('App initializing...');
-
         await loadTemplates();
 
         let path = window.location.pathname;
@@ -189,8 +179,6 @@ class App {
         if (path === '/' || path === '/index.html') {
             path = '/auth';
         }
-
-        console.log('Current path:', path);
 
         if (path === '/auth') {
             await this.showAuthPage();
@@ -202,7 +190,6 @@ class App {
     }
 
     async showAuthPage() {
-        console.log('Showing auth page');
         this.app.innerHTML = '';
         document.body.classList.add('auth-page');
 
@@ -224,14 +211,12 @@ class App {
     }
 
     async showProfilePage() {
-        console.log('Showing profile page');
         this.app.innerHTML = '';
         document.body.classList.remove('auth-page');
         await demoProfilePage();
     }
 
     async showMainPage() {
-        console.log('Showing main page');
         this.app.innerHTML = '';
         document.body.classList.remove('auth-page');
 
@@ -270,8 +255,6 @@ class App {
 
 // ===== ЗАПУСК =====
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOM loaded');
-
     const app = new App();
     window.app = app;
     await app.init();

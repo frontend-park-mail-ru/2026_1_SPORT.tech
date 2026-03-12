@@ -41,7 +41,6 @@ export async function renderPostCard(container, {
   const element = wrapper.firstElementChild;
   element.querySelectorAll('.post-card__action').forEach(action => {
     action.addEventListener('click', () => {
-      console.log('Action clicked');
     });
   });
   
