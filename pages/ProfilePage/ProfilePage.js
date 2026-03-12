@@ -63,7 +63,6 @@ export async function renderProfilePage(api, container, {
     role: profile.role,
     avatar: profile.avatar,
     isOwnProfile: profile.isOwnProfile,
-    onEdit: () => console.log('Редактировать профиль')
     // Убрали onSubscribe
   });
 
@@ -74,7 +73,6 @@ export async function renderProfilePage(api, container, {
     popularPosts,
     api,
     canAddPost: profile.isOwnProfile, // Только свой профиль может добавлять посты
-    onAddPost: () => console.log('Добавить публикацию')
   });
 
   container.appendChild(page);

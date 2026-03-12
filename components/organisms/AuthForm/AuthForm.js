@@ -243,9 +243,6 @@ export async function renderAuthForm(container, config = {}) {
         break;
       case 'password':
         result = validatePassword(value);
-        console.log(
-            'Password validation:',
-            {value, isValid: result.isValid, errors: result.errors});
         break;
       case 'username':
         result = validateUsername(value);

@@ -94,7 +94,6 @@ export async function renderSidebar(container, {
     item.addEventListener('click', (e) => {
       e.preventDefault();
       const page = item.dataset.page;
-      console.log('Navigate to:', page);
     });
   });
 
@@ -102,7 +101,6 @@ export async function renderSidebar(container, {
   element.querySelectorAll('.sidebar__user-item').forEach(item => {
     item.addEventListener('click', () => {
       const userId = item.dataset.userId;
-      console.log('Open user profile:', userId);
     });
   });
 

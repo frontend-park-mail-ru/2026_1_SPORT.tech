@@ -58,7 +58,6 @@ export async function renderProfileContent(container, {
   element.querySelectorAll('.profile-content__tab').forEach(tab => {
     tab.addEventListener('click', () => {
       const tabId = tab.dataset.tab;
-      console.log('Switch to tab:', tabId);
     });
   });
 

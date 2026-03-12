@@ -58,7 +58,6 @@ export async function renderProfileHeader(container, {
   const statBtn = element.querySelector(`#stat-btn-${id}`);
   if (statBtn) {
     statBtn.addEventListener('click', () => {
-      console.log('📊 Statistics clicked');
       statBtn.classList.add('button--active');
       setTimeout(() => statBtn.classList.remove('button--active'), 100);
     });
@@ -67,7 +66,6 @@ export async function renderProfileHeader(container, {
   const subsBtn = element.querySelector(`#subscriptions-btn-${id}`);
   if (subsBtn) {
     subsBtn.addEventListener('click', () => {
-      console.log('👥 Subscriptions clicked');
       subsBtn.classList.add('button--active');
       setTimeout(() => subsBtn.classList.remove('button--active'), 100);
     });

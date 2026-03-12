@@ -7,7 +7,6 @@ export class ApiClient {
 
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
-        console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
 
         try {
             const response = await fetch(url, {
@@ -31,7 +30,6 @@ export class ApiClient {
                 throw new Error(data.error?.message || `HTTP ${response.status}`);
             }
 
-            console.log('✅ API Response:', data);
             return data;
         } catch (error) {
             console.error(`❌ API Request failed: ${endpoint}`, error);
@@ -66,7 +64,6 @@ export class ApiClient {
             return await this.request('/auth/me');
         } catch (error) {
             if (error.message === 'Не авторизован') {
-                console.log('User not logged in (expected for first load)');
                 return null; // Возвращаем null вместо ошибки
             }
             throw error;

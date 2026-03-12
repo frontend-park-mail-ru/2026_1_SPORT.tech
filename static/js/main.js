@@ -28,7 +28,6 @@ async function loadTemplates() {
             const response = await fetch(path);
             const source = await response.text();
             Handlebars.templates[`${name}.hbs`] = Handlebars.compile(source);
-            console.log(`✅ Loaded template: ${name}`);
         } catch (error) {
             console.error(`❌ Failed to load template ${name}:`, error);
         }
@@ -89,19 +88,15 @@ async function loadProfilePageData(userId, currentUser = null) {
             throw new Error('Пользователь не авторизован');
         }
 
-        console.log(`📦 Loading profile data for user ${resolvedUserId}...`);
-        console.log('👤 Current user:', currentUser);
 
         const [profileData, postsData] = await Promise.all([
             api.getProfile(resolvedUserId),
             api.getUserPosts(resolvedUserId).catch((error) => {
-                console.log('No posts or error loading posts', error);
                 return { posts: [] };
             })
         ]);
 
-        console.log('📊 Profile data:', profileData);
-        console.log('📝 Posts data:', postsData);
+
 
         const authorName = getFullName(profileData.profile);
         const authorRole = getUserRoleLabel(profileData.is_trainer);
@@ -115,7 +110,6 @@ async function loadProfilePageData(userId, currentUser = null) {
                     try {
                         fullPost = await api.getPost(post.post_id);
                     } catch (error) {
-                        console.log(`Failed to load full post ${post.post_id}`, error);
                     }
                 }
 
@@ -191,7 +185,6 @@ async function demoProfilePage() {
             }
         });
 
-        console.log('✅ Profile page rendered with real data');
     } catch (error) {
         console.error('❌ Failed to render profile page:', error);
         app.innerHTML = `
@@ -215,7 +208,6 @@ class App {
     }
 
     async init() {
-        console.log('App initializing...');
 
         await loadTemplates();
 
@@ -231,7 +223,6 @@ class App {
             path = '/auth';
         }
 
-        console.log('Current path:', path);
 
         if (path === '/auth') {
             await this.showAuthPage();
@@ -243,7 +234,6 @@ class App {
     }
 
     async showAuthPage() {
-        console.log('Showing auth page');
         this.app.innerHTML = '';
         document.body.classList.add('auth-page');
 
@@ -265,7 +255,7 @@ class App {
     }
 
     async showProfilePage() {
-        console.log('Showing profile page');
+
         this.app.innerHTML = '';
         document.body.classList.remove('auth-page');
         //await demoProfilePage();
@@ -275,7 +265,6 @@ class App {
     }
 
     async showMainPage() {
-        console.log('Showing main page');
         this.app.innerHTML = '';
         document.body.classList.remove('auth-page');
 
@@ -320,7 +309,6 @@ window.addEventListener('hashchange', async () => {
 
 // ===== ЗАПУСК =====
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOM loaded');
     const apiClient = new ApiClient(API_BASE_URL);
 
     // 2. Передаем его в конструктор App
