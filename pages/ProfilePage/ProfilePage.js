@@ -7,7 +7,7 @@ import { renderProfileContent } from '../../components/organisms/ProfileContent/
  * @param {HTMLElement} container
  * @param {Object} params
  */
-export async function renderProfilePage(container, {
+export async function renderProfilePage(api, container, {
   profile = {
     name: 'Абдурахман Гасанов',
     role: 'Фитнес-тренер',
@@ -30,32 +30,33 @@ export async function renderProfilePage(container, {
 } = {}) {
   const template = Handlebars.templates['ProfilePage.hbs'];
   const html = template({});
-  
+
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const page = wrapper.firstElementChild;
-  
+
   // Саидбар
   const sidebarContainer = page.querySelector('#sidebar-container');
   await renderSidebar(sidebarContainer, {
     activePage: 'profile',
     currentUser,
     users: subscriptions,
+    api,
     onLogout
   });
-  
+
   // Контейнер для контента профиля
   const profileContainer = page.querySelector('#profile-container');
-  
+
   // Создаем отдельные контейнеры для шапки и контента
   const headerContainer = document.createElement('div');
   headerContainer.className = 'profile-page__header';
   profileContainer.appendChild(headerContainer);
-  
+
   const contentContainer = document.createElement('div');
   contentContainer.className = 'profile-page__content';
   profileContainer.appendChild(contentContainer);
-  
+
   // Рендерим шапку
   await renderProfileHeader(headerContainer, {
     name: profile.name,
@@ -71,10 +72,11 @@ export async function renderProfilePage(container, {
     activeTab: activeTab,
     posts,
     popularPosts,
+    api,
     canAddPost: profile.isOwnProfile, // Только свой профиль может добавлять посты
     onAddPost: () => console.log('Добавить публикацию')
   });
-  
+
   container.appendChild(page);
   return page;
 }

@@ -5,8 +5,8 @@ import { renderButton } from '../../atoms/Button/Button.js';
  * Рендерит контент профиля с вкладками
  * @param {HTMLElement} container
  * @param {Object} params
- * @param {string} params.activeTab 
- * @param {Array} params.posts 
+ * @param {string} params.activeTab
+ * @param {Array} params.posts
  * @param {Array} params.popularPosts
  * @param {boolean} params.canAddPost - может ли пользователь добавлять посты
  * @param {Function} params.onAddPost - callback для добавления поста
@@ -16,30 +16,31 @@ export async function renderProfileContent(container, {
   posts = [],
   popularPosts = [],
   canAddPost = false,
+  api,
   onAddPost = null
 }) {
   const template = Handlebars.templates['ProfileContent.hbs'];
-  
+
   const tabs = [
     { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
     { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
     { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
     { id: 'about', label: 'О тренере', active: activeTab === 'about' }
   ];
-  
+
   const sectionTitles = {
     main: 'Недавние публикации',
     publications: 'Все публикации',
     subscriptions: 'Подписки',
     about: 'О тренере'
   };
-  
+
   // Добавляем описания для популярных постов
   const popularWithDescriptions = popularPosts.map(post => ({
     ...post,
     description: post.description || 'Практические советы и рекомендации'
   }));
-  
+
   const html = template({
     tabs,
     activeTab,
@@ -48,11 +49,11 @@ export async function renderProfileContent(container, {
     popularPosts: popularWithDescriptions,
     canAddPost: canAddPost && activeTab === 'publications' // Показываем только на вкладке "Публикации"
   });
-  
+
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild;
-  
+
   // Обработчики вкладок
   element.querySelectorAll('.profile-content__tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -60,7 +61,7 @@ export async function renderProfileContent(container, {
       console.log('Switch to tab:', tabId);
     });
   });
-  
+
   // Рендерим кнопку "Добавить публикацию" если нужно
   if (canAddPost && activeTab === 'publications') {
     const addButtonContainer = element.querySelector('#add-post-button-container');
@@ -74,10 +75,10 @@ export async function renderProfileContent(container, {
       });
     }
   }
-  
+
   // Рендерим посты
   const postsContainer = element.querySelector('#posts-container');
-  
+
   if (posts.length === 0 && activeTab !== 'about') {
     postsContainer.innerHTML = `
       <div class="profile-content__empty">
@@ -94,7 +95,7 @@ export async function renderProfileContent(container, {
       await renderPostCard(postsContainer, post);
     }
   }
-  
+
   container.appendChild(element);
   return element;
 }

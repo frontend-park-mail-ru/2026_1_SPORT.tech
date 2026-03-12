@@ -2,19 +2,20 @@
  * Рендерит боковое меню
  * @param {HTMLElement} container
  * @param {Object} params
- * @param {string} params.activePage 
- * @param {Object} params.currentUser 
- * @param {Array} params.users 
- * @param {Function} params.onLogout 
+ * @param {string} params.activePage
+ * @param {Object} params.currentUser
+ * @param {Array} params.users
+ * @param {Function} params.onLogout
  */
 export async function renderSidebar(container, {
   activePage = 'home',
   currentUser = {},
   users = [],
+  api,
   onLogout = null
 }) {
   const template = Handlebars.templates['Sidebar.hbs'];
-  
+
   const navItems = [
     {
       id: 'home',
@@ -66,28 +67,28 @@ export async function renderSidebar(container, {
       active: activePage === 'settings'
     }
   ];
-  
+
   // Добавляем инициалы пользователям
   const usersWithInitials = users.map(u => ({
     ...u,
     initials: u.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }));
-  
+
   const currentWithInitials = {
     ...currentUser,
     initials: currentUser.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'
   };
-  
+
   const html = template({
     navItems,
     users: usersWithInitials,
     currentUser: currentWithInitials
   });
-  
+
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild;
-  
+
   // Обработчики навигации
   element.querySelectorAll('.sidebar__nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
@@ -96,7 +97,7 @@ export async function renderSidebar(container, {
       console.log('Navigate to:', page);
     });
   });
-  
+
   // Обработчики подписок
   element.querySelectorAll('.sidebar__user-item').forEach(item => {
     item.addEventListener('click', () => {
@@ -104,11 +105,11 @@ export async function renderSidebar(container, {
       console.log('Open user profile:', userId);
     });
   });
-  
+
   // Обработчик для меню с тремя точками
   const menuBtn = element.querySelector('.sidebar__menu-btn');
   const dropdown = element.querySelector('.sidebar__dropdown');
-  
+
   if (menuBtn && dropdown) {
     // Открытие/закрытие меню
     menuBtn.addEventListener('click', (e) => {
@@ -116,7 +117,7 @@ export async function renderSidebar(container, {
       e.preventDefault();
       dropdown.classList.toggle('sidebar__dropdown--active');
     });
-    
+
     // Обработчик кнопки выхода
     const logoutBtn = dropdown.querySelector('.sidebar__logout-option');
     if (logoutBtn && onLogout) {
@@ -127,7 +128,7 @@ export async function renderSidebar(container, {
         await onLogout();
       });
     }
-    
+
     // Закрытие меню при клике вне его
     document.addEventListener('click', (e) => {
       if (!menuBtn.contains(e.target) && !dropdown.contains(e.target)) {
@@ -135,7 +136,7 @@ export async function renderSidebar(container, {
       }
     });
   }
-  
+
   container.appendChild(element);
   return element;
 }

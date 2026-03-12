@@ -1,3 +1,6 @@
+import { ApiClient } from '/src/utils/api.js';
+import { API_BASE_URL } from '../config/constants';
+
 // ===== РЕГИСТРАЦИЯ ШАБЛОНОВ HANDLEBARS =====
 Handlebars.templates = {};
 
@@ -205,7 +208,8 @@ async function demoProfilePage() {
 
 // ===== НАВИГАЦИЯ =====
 class App {
-    constructor() {
+    constructor(api) {
+        this.api = api;
         this.currentPage = null;
         this.app = document.getElementById('app');
     }
@@ -242,6 +246,7 @@ class App {
         console.log('Showing auth page');
         this.app.innerHTML = '';
         document.body.classList.add('auth-page');
+        const authPage = new AuthPage(this.app, this.api);
 
         try {
             const { AuthPage } = await import('/pages/AuthPage/AuthPage.js');
@@ -265,6 +270,8 @@ class App {
         this.app.innerHTML = '';
         document.body.classList.remove('auth-page');
         await demoProfilePage();
+        const currentUser = await this.api.getCurrentUser();
+        await renderProfilePage(this.api, this.app, currentUser);
     }
 
     async showMainPage() {
@@ -314,8 +321,9 @@ window.addEventListener('hashchange', async () => {
 // ===== ЗАПУСК =====
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM loaded');
+    const apiClient = new ApiClient(API_BASE_URL);
 
-    const app = new App();
-    window.app = app;
+    // 2. Передаем его в конструктор App
+    const app = new App(apiClient);
     await app.init();
 });

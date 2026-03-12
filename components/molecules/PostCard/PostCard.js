@@ -2,12 +2,12 @@
  * Рендерит карточку публикации
  * @param {HTMLElement} container
  * @param {Object} post
- * @param {string} post.title 
- * @param {string} post.content 
- * @param {string} post.authorName 
- * @param {string} post.authorRole 
- * @param {number} post.likes 
- * @param {number} post.comments 
+ * @param {string} post.title
+ * @param {string} post.content
+ * @param {string} post.authorName
+ * @param {string} post.authorRole
+ * @param {number} post.likes
+ * @param {number} post.comments
  */
 export async function renderPostCard(container, {
   title,
@@ -15,17 +15,19 @@ export async function renderPostCard(container, {
   authorName,
   authorRole,
   likes = 0,
-  comments = 0
+  comments = 0,
+  api,
+  postId = null
 }) {
   const template = Handlebars.templates['PostCard.hbs'];
-  
+
   const initials = authorName
     .split(' ')
     .map(n => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
-  
+
   const html = template({
     title,
     content,
@@ -35,7 +37,7 @@ export async function renderPostCard(container, {
     likes,
     comments
   });
-  
+
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild;
@@ -44,7 +46,7 @@ export async function renderPostCard(container, {
       console.log('Action clicked');
     });
   });
-  
+
   container.appendChild(element);
   return element;
 }

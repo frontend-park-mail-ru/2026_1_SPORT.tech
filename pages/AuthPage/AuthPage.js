@@ -6,8 +6,9 @@
 import { renderAuthForm, AUTH_MODES } from '../../components/organisms/AuthForm/AuthForm.js';
 
 export class AuthPage {
-    constructor(container) {
+    constructor(container, api) {
         this.container = container;
+        this.api = api;
         this.form = null;
         this.currentMode = AUTH_MODES.LOGIN;
     }
@@ -17,7 +18,7 @@ export class AuthPage {
      */
     async handleLogin(data) {
         try {
-            const response = await api.login(data.email, data.password);
+            const response = await this.api.login(data.email, data.password);
 
             if (response?.user) {
                 localStorage.setItem('user', JSON.stringify(response.user));
@@ -35,7 +36,7 @@ export class AuthPage {
      */
     async handleClientRegister(data) {
         try {
-            const response = await api.registerClient({
+            const response = await this.api.registerClient({
                 username: data.username,
                 email: data.email,
                 password: data.password,
@@ -60,7 +61,7 @@ export class AuthPage {
      */
     async handleTrainerRegister(data) {
         try {
-            const response = await api.registerTrainer({
+            const response = await this.api.registerTrainer({
                 username: data.username,
                 email: data.email,
                 password: data.password,
@@ -121,6 +122,7 @@ export class AuthPage {
 
         this.form = await renderAuthForm(formContainer, {
             mode: this.currentMode,
+            api: this.api,
             onSubmit: async (data, mode) => {
                 if (mode === AUTH_MODES.LOGIN) {
                     await this.handleLogin(data);

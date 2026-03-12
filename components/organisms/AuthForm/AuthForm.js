@@ -42,7 +42,7 @@ function formatDateInput(value) {
  * @returns {Promise<Object>} API формы
  */
 export async function renderAuthForm(container, config = {}) {
-  const {mode = AUTH_MODES.LOGIN, onSubmit = null, onSwitchMode = null} =
+  const {mode = AUTH_MODES.LOGIN, onSubmit = null, onSwitchMode = null, api} =
       config;
 
   const template = Handlebars.templates['AuthForm.hbs'];
