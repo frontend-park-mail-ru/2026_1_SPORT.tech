@@ -79,7 +79,7 @@ function mapProfileData(apiData, currentUser) {
   };
 }
 
-async function loadProfilePageData(userId, currentUser = null) {
+async function loadProfilePageData(api, userId, currentUser = null) {
   try {
     const resolvedUserId = userId || currentUser?.user?.user_id;
 
@@ -138,168 +138,135 @@ async function loadProfilePageData(userId, currentUser = null) {
   }
 }
 
-async function demoProfilePage() {
-  const app = document.getElementById('app');
-  if (!app) {
-    console.error('❌ Element with id "app" not found');
-    return;
+
+
+// ===== ФАБРИКА РОУТЕРА  =====
+function createRouter(api) {
+  // Функция навигации
+  function navigateTo(path) {
+    history.pushState({}, '', path);
+    handleRouting();
   }
 
-  try {
-    const { renderProfilePage } =
-        await import('/pages/ProfilePage/ProfilePage.js');
-    const currentUser = await api.getCurrentUser();
-    const userId = currentUser?.user?.user_id;
-
-    if (!userId) {
-      window.location.hash = '#/auth';
-      return;
-    }
-
-    const data = await loadProfilePageData(userId, currentUser);
-
-    await renderProfilePage(app, {
-      profile: data.profile,
-      currentUser: data.currentUser,
-      subscriptions: [],
-      posts: data.posts,
-      activeTab: 'publications',
-      popularPosts: [],
-      onLogout: async () => {
-        try {
-          await api.logout();
-          localStorage.removeItem('user');
-          alert('Вы вышли из системы');
-          window.location.hash = '#/auth';
-        } catch (error) {
-          alert('Ошибка при выходе');
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Failed to render profile page:', error);
-    app.innerHTML = `
-            <div style="color: red; padding: 20px; text-align: center;">
-                <h3>Ошибка загрузки</h3>
-                <p>${error.message}</p>
-                <button onclick="window.location.reload()" style="padding: 8px 16px; margin-top: 16px;">
-                    Повторить
-                </button>
-            </div>
-        `;
-  }
-}
-
-// ===== НАВИГАЦИЯ =====
-class App {
-  constructor(api) {
-    this.api = api;
-    this.currentPage = null;
-    this.app = document.getElementById('app');
-  }
-
-  async init() {
-    await loadTemplates();
-
-    // let path = window.location.pathname;
-
-    // if (path === '/' || path === '/index.html') {
-    //     path = '/auth';
-    // }
-
-    let path = window.location.hash.slice(1);
-
-    if (!path || path === '/') {
-      path = '/auth';
-    }
-
-
-    if (path === '/auth') {
-      await this.showAuthPage();
-    } else if (path === '/profile') {
-      await this.showProfilePage();
-    } else {
-      await this.showMainPage();
-    }
-  }
-
-  async showAuthPage() {
-    this.app.innerHTML = '';
+  async function showAuthPage() {
+    const app = document.getElementById('app');
+    app.innerHTML = '';
     document.body.classList.add('auth-page');
 
     try {
       const { renderAuthPage } = await import('/pages/AuthPage/AuthPage.js');
-      await renderAuthPage(this.app, this.api);
+      await renderAuthPage(app, api);
     } catch (error) {
       console.error('Failed to load AuthPage:', error);
-      this.app.innerHTML = `
-            <div style="color: red; padding: 20px;">
-                <h2>Ошибка загрузки страницы авторизации</h2>
-                <p>${error.message}</p>
-                <pre>${error.stack}</pre>
-            </div>
-        `;
+      app.innerHTML = `
+        <div style="color: red; padding: 20px;">
+          <h2>Ошибка загрузки страницы авторизации</h2>
+          <p>${error.message}</p>
+        </div>
+      `;
     }
   }
-  async showProfilePage() {
-    this.app.innerHTML = '';
-    document.body.classList.remove('auth-page');
-    // await demoProfilePage();
-    const { renderProfilePage } =
-        await import('/pages/ProfilePage/ProfilePage.js');
-    const currentUser = await this.api.getCurrentUser();
-    await renderProfilePage(this.api, this.app, currentUser);
-  }
 
-  async showMainPage() {
-    this.app.innerHTML = '';
+  async function showProfilePage() {
+    const app = document.getElementById('app');
+    app.innerHTML = '';
     document.body.classList.remove('auth-page');
 
-    this.app.innerHTML = `
-            <div style="padding: 40px; text-align: center;">
-                <h1 style="color: var(--primary-orange);">SPORT.tech</h1>
-                <p style="margin-top: 20px;">Главная страница</p>
-                <div style="margin-top: 20px;">
-                    <button onclick="window.location.hash='#/auth'" style="
-                        margin: 10px;
-                        padding: 10px 20px;
-                        background: var(--primary-orange);
-                        color: white;
-                        border: none;
-                        border-radius: var(--radius-md);
-                        cursor: pointer;
-                    ">
-                        Перейти к авторизации
-                    </button>
-                    <button onclick="window.location.hash='#/profile'" style="
-                        margin: 10px;
-                        padding: 10px 20px;
-                        background: var(--primary-orange);
-                        color: white;
-                        border: none;
-                        border-radius: var(--radius-md);
-                        cursor: pointer;
-                    ">
-                        Перейти в профиль
-                    </button>
-                </div>
-            </div>
-        `;
+    try {
+      const { renderProfilePage } = await import('/pages/ProfilePage/ProfilePage.js');
+      const currentUser = await api.getCurrentUser();
+
+      const userId = currentUser?.user?.user_id;
+      const data = await loadProfilePageData(api, userId, currentUser);
+
+      await renderProfilePage(api, app, {
+        profile: data.profile,
+        currentUser: data.currentUser,
+        subscriptions: [],
+        posts: data.posts,
+        activeTab: 'publications',
+        popularPosts: [],
+        onLogout: async () => {
+          try {
+            await api.logout();
+            localStorage.removeItem('user');
+            alert('Вы вышли из системы');
+            navigateTo('/auth');
+          } catch (error) {
+            alert('Ошибка при выходе');
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Failed to load ProfilePage:', error);
+      app.innerHTML = `
+        <div style="color: red; padding: 20px; text-align: center;">
+          <h3>Ошибка загрузки профиля</h3>
+          <p>${error.message}</p>
+          <button onclick="window.router.navigateTo('/auth')" style="
+            margin-top: 16px;
+            padding: 8px 16px;
+            background: var(--primary-orange);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+          ">
+            Вернуться к авторизации
+          </button>
+        </div>
+      `;
+    }
   }
+
+  async function handleRouting() {
+    await loadTemplates();
+
+    const currentUser = await api.getCurrentUser();
+    const isAuthenticated = !!currentUser;
+
+    let path = window.location.pathname;
+
+    console.log('Route:', { path, isAuthenticated });
+
+    if (path === '/' || path === '/index.html') {
+      navigateTo(isAuthenticated ? '/profile' : '/auth');
+      return;
+    }
+
+    if (path === '/auth') {
+      if (isAuthenticated) {
+        navigateTo('/profile');
+      } else {
+        await showAuthPage();
+      }
+      return;
+    }
+
+    if (path === '/profile') {
+      if (!isAuthenticated) {
+        navigateTo('/auth');
+      } else {
+        await showProfilePage();
+      }
+      return;
+    }
+
+    console.log(`Маршрут ${path} не найден, редирект`);
+    navigateTo(isAuthenticated ? '/profile' : '/auth');
+  }
+
+  return { handleRouting, navigateTo };
 }
 
-window.addEventListener('hashchange', async () => {
-  if (window.app) {
-    await window.app.init();
-  }
-});
-
-// ===== ЗАПУСК =====
+// ===== ЗАПУСК ПРИЛОЖЕНИЯ =====
 document.addEventListener('DOMContentLoaded', async () => {
   const apiClient = new ApiClient(API_BASE_URL);
 
-  // 2. Передаем его в конструктор App
-  const app = new App(apiClient);
-  await app.init();
+  const router = createRouter(apiClient);
+  window.router = router;
+  await router.handleRouting();
+  window.addEventListener('popstate', () => {
+    router.handleRouting();
+  });
 });

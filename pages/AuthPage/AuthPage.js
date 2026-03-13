@@ -3,15 +3,15 @@
  * Объединяет форму и API
  */
 
-import { renderAuthForm, AUTH_MODES } from '../../components/organisms/AuthForm/AuthForm.js';
+import {AUTH_MODES, renderAuthForm} from '../../components/organisms/AuthForm/AuthForm.js';
 
 export async function renderAuthPage(container, api) {
   let currentMode = AUTH_MODES.LOGIN;
   let form = null;
 
   /**
-     * Обработка входа
-     */
+   * Обработка входа
+   */
   async function handleLogin(data) {
     try {
       const response = await api.login(data.email, data.password);
@@ -20,7 +20,7 @@ export async function renderAuthPage(container, api) {
         localStorage.setItem('user', JSON.stringify(response.user));
       }
 
-      window.location.hash = '#/profile';
+      window.router.navigateTo('/profile');
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -28,8 +28,8 @@ export async function renderAuthPage(container, api) {
   }
 
   /**
-     * Обработка регистрации клиента
-     */
+   * Обработка регистрации клиента
+   */
   async function handleClientRegister(data) {
     try {
       const response = await api.registerClient({
@@ -45,7 +45,7 @@ export async function renderAuthPage(container, api) {
         localStorage.setItem('user', JSON.stringify(response.user));
       }
 
-      window.location.hash = '#/profile';
+      window.router.navigateTo('/profile');
     } catch (error) {
       console.error('Register error:', error);
       throw error;
@@ -53,8 +53,8 @@ export async function renderAuthPage(container, api) {
   }
 
   /**
-     * Обработка регистрации тренера
-     */
+   * Обработка регистрации тренера
+   */
   async function handleTrainerRegister(data) {
     try {
       const response = await api.registerTrainer({
@@ -67,13 +67,7 @@ export async function renderAuthPage(container, api) {
         trainer_details: {
           education_degree: data.education_degree || '',
           career_since_date: data.career_since_date,
-          sports: [
-            {
-              sport_type_id: 1,
-              experience_years: 0,
-              sports_rank: ''
-            }
-          ]
+          sports: [{sport_type_id: 1, experience_years: 0, sports_rank: ''}]
         }
       });
 
@@ -81,7 +75,7 @@ export async function renderAuthPage(container, api) {
         localStorage.setItem('user', JSON.stringify(response.user));
       }
 
-      window.location.hash = '#/profile';
+      window.router.navigateTo('/profile');
     } catch (error) {
       console.error('Trainer register error:', error);
       throw error;
@@ -89,16 +83,16 @@ export async function renderAuthPage(container, api) {
   }
 
   /**
-     * Переключение режима формы
-     */
+   * Переключение режима формы
+   */
   async function switchMode(newMode) {
     currentMode = newMode;
     await render();
   }
 
   /**
-     * Рендер страницы
-     */
+   * Рендер страницы
+   */
   async function render() {
     container.innerHTML = '';
 

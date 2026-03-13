@@ -90,19 +90,32 @@ export async function renderSidebar(container, {
   const element = wrapper.firstElementChild;
 
   // Обработчики навигации
-  element.querySelectorAll('.sidebar__nav-item').forEach(item => {
-    item.addEventListener('click', e => {
-      e.preventDefault();
-      const page = item.dataset.page;
-    });
-  });
+element.querySelectorAll('.sidebar__nav-item').forEach(item => {
+  item.addEventListener('click', e => {
+    e.preventDefault();
+    const page = item.dataset.page;
 
-  // Обработчики подписок
-  element.querySelectorAll('.sidebar__user-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const userId = item.dataset.userId;
-    });
+    // Маппинг страниц в URL
+    const urls = {
+      'profile': '/profile',
+      'home': '/',
+      'auth': '/auth'
+    };
+
+    if (urls[page]) {
+      window.router.navigateTo(urls[page]);
+    }
   });
+});
+
+// Обработчики подписок
+element.querySelectorAll('.sidebar__user-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const userId = item.dataset.userId;
+    // Можно перейти на профиль другого пользователя
+    // window.router.navigateTo(`/profile/${userId}`);
+  });
+});
 
   // Обработчик для меню с тремя точками
   const menuBtn = element.querySelector('.sidebar__menu-btn');
@@ -116,16 +129,15 @@ export async function renderSidebar(container, {
       dropdown.classList.toggle('sidebar__dropdown--active');
     });
 
-    // Обработчик кнопки выхода
-    const logoutBtn = dropdown.querySelector('.sidebar__logout-option');
-    if (logoutBtn && onLogout) {
-      logoutBtn.addEventListener('click', async e => {
-        e.stopPropagation();
-        e.preventDefault();
-        dropdown.classList.remove('sidebar__dropdown--active');
-        await onLogout();
-      });
-    }
+const logoutBtn = dropdown.querySelector('.sidebar__logout-option');
+if (logoutBtn && onLogout) {
+  logoutBtn.addEventListener('click', async e => {
+    e.stopPropagation();
+    e.preventDefault();
+    dropdown.classList.remove('sidebar__dropdown--active');
+    await onLogout();
+  });
+}
 
     // Закрытие меню при клике вне его
     document.addEventListener('click', e => {
