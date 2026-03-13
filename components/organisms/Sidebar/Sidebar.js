@@ -91,7 +91,7 @@ export async function renderSidebar(container, {
 
   // Обработчики навигации
   element.querySelectorAll('.sidebar__nav-item').forEach(item => {
-    item.addEventListener('click', (e) => {
+    item.addEventListener('click', e => {
       e.preventDefault();
       const page = item.dataset.page;
     });
@@ -110,7 +110,7 @@ export async function renderSidebar(container, {
 
   if (menuBtn && dropdown) {
     // Открытие/закрытие меню
-    menuBtn.addEventListener('click', (e) => {
+    menuBtn.addEventListener('click', e => {
       e.stopPropagation();
       e.preventDefault();
       dropdown.classList.toggle('sidebar__dropdown--active');
@@ -119,7 +119,7 @@ export async function renderSidebar(container, {
     // Обработчик кнопки выхода
     const logoutBtn = dropdown.querySelector('.sidebar__logout-option');
     if (logoutBtn && onLogout) {
-      logoutBtn.addEventListener('click', async (e) => {
+      logoutBtn.addEventListener('click', async e => {
         e.stopPropagation();
         e.preventDefault();
         dropdown.classList.remove('sidebar__dropdown--active');
@@ -128,7 +128,7 @@ export async function renderSidebar(container, {
     }
 
     // Закрытие меню при клике вне его
-    document.addEventListener('click', (e) => {
+    document.addEventListener('click', e => {
       if (!menuBtn.contains(e.target) && !dropdown.contains(e.target)) {
         dropdown.classList.remove('sidebar__dropdown--active');
       }

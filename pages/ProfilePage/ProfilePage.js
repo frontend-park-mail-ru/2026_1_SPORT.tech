@@ -1,6 +1,6 @@
-import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar.js';
 import { renderProfileHeader } from '../../components/molecules/ProfileHeader/ProfileHeader.js';
 import { renderProfileContent } from '../../components/organisms/ProfileContent/ProfileContent.js';
+import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar.js';
 
 /**
  * Рендерит страницу профиля тренера
@@ -62,7 +62,7 @@ export async function renderProfilePage(api, container, {
     name: profile.name,
     role: profile.role,
     avatar: profile.avatar,
-    isOwnProfile: profile.isOwnProfile,
+    isOwnProfile: profile.isOwnProfile
     // Убрали onSubscribe
   });
 
@@ -72,7 +72,7 @@ export async function renderProfilePage(api, container, {
     posts,
     popularPosts,
     api,
-    canAddPost: profile.isOwnProfile, // Только свой профиль может добавлять посты
+    canAddPost: profile.isOwnProfile // Только свой профиль может добавлять посты
   });
 
   container.appendChild(page);

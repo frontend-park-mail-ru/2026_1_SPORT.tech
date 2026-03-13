@@ -1,22 +1,22 @@
-import {API_BASE_URL} from '/src/config/constants.js';
-import {ApiClient} from '/src/utils/api.js';
+import { API_BASE_URL } from '/src/config/constants.js';
+import { ApiClient } from '/src/utils/api.js';
 
 // ===== РЕГИСТРАЦИЯ ШАБЛОНОВ HANDLEBARS =====
 Handlebars.templates = {};
 
 async function loadTemplates() {
   const templates = [
-    {name: 'Button', folder: 'atoms'}, {name: 'Input', folder: 'atoms'},
-    {name: 'Avatar', folder: 'atoms'}, {name: 'UserPhotoItem', folder: 'atoms'},
-    {name: 'AuthForm', folder: 'organisms'},
-    {name: 'ProfileHeader', folder: 'molecules'},
-    {name: 'PostCard', folder: 'molecules'},
-    {name: 'Sidebar', folder: 'organisms'},
-    {name: 'ProfileContent', folder: 'organisms'},
-    {name: 'AuthPage', folder: 'pages'}, {name: 'ProfilePage', folder: 'pages'}
+    { name: 'Button', folder: 'atoms' }, { name: 'Input', folder: 'atoms' },
+    { name: 'Avatar', folder: 'atoms' }, { name: 'UserPhotoItem', folder: 'atoms' },
+    { name: 'AuthForm', folder: 'organisms' },
+    { name: 'ProfileHeader', folder: 'molecules' },
+    { name: 'PostCard', folder: 'molecules' },
+    { name: 'Sidebar', folder: 'organisms' },
+    { name: 'ProfileContent', folder: 'organisms' },
+    { name: 'AuthPage', folder: 'pages' }, { name: 'ProfilePage', folder: 'pages' }
   ];
 
-  for (const {name, folder} of templates) {
+  for (const { name, folder } of templates) {
     try {
       const path = folder === 'pages' ?
           `/pages/${name}/${name}.hbs` :
@@ -43,11 +43,11 @@ function getFullName(profile = {}) {
 
 function escapeHtml(value = '') {
   return String(value)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll('\'', '&#39;');
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('\'', '&#39;');
 }
 
 function formatPostContent(textContent) {
@@ -75,7 +75,7 @@ function mapProfileData(apiData, currentUser) {
       role: getUserRoleLabel(currentUser.user.is_trainer),
       avatar: currentUser.user.profile.avatar_url
     } :
-                                     null
+      null
   };
 }
 
@@ -90,8 +90,8 @@ async function loadProfilePageData(userId, currentUser = null) {
 
     const [profileData, postsData] = await Promise.all([
       api.getProfile(resolvedUserId),
-      api.getUserPosts(resolvedUserId).catch((error) => {
-        return {posts: []};
+      api.getUserPosts(resolvedUserId).catch(error => {
+        return { posts: [] };
       })
     ]);
 
@@ -101,7 +101,7 @@ async function loadProfilePageData(userId, currentUser = null) {
     const authorRole = getUserRoleLabel(profileData.is_trainer);
     const postList = Array.isArray(postsData?.posts) ? postsData.posts : [];
 
-    const posts = await Promise.all(postList.map(async (post) => {
+    const posts = await Promise.all(postList.map(async post => {
       let fullPost = null;
 
       if (post.can_view) {
@@ -117,7 +117,7 @@ async function loadProfilePageData(userId, currentUser = null) {
         post_id: post.post_id,
         title: post.title,
         content: post.can_view ? formatPostContent(textContent) :
-                                 'Нет доступа к содержимому поста',
+          'Нет доступа к содержимому поста',
         authorName,
         authorRole,
         likes: 0,
@@ -131,7 +131,7 @@ async function loadProfilePageData(userId, currentUser = null) {
 
     const mappedData = mapProfileData(profileData, currentUser);
 
-    return {...mappedData, posts, subscriptions: [], popularPosts: []};
+    return { ...mappedData, posts, subscriptions: [], popularPosts: [] };
   } catch (error) {
     console.error('❌ Failed to load profile data:', error);
     throw error;
@@ -146,7 +146,7 @@ async function demoProfilePage() {
   }
 
   try {
-    const {renderProfilePage} =
+    const { renderProfilePage } =
         await import('/pages/ProfilePage/ProfilePage.js');
     const currentUser = await api.getCurrentUser();
     const userId = currentUser?.user?.user_id;
@@ -229,11 +229,11 @@ class App {
     document.body.classList.add('auth-page');
 
     try {
-        const { renderAuthPage } = await import('/pages/AuthPage/AuthPage.js');
-        await renderAuthPage(this.app, this.api);
+      const { renderAuthPage } = await import('/pages/AuthPage/AuthPage.js');
+      await renderAuthPage(this.app, this.api);
     } catch (error) {
-        console.error('Failed to load AuthPage:', error);
-        this.app.innerHTML = `
+      console.error('Failed to load AuthPage:', error);
+      this.app.innerHTML = `
             <div style="color: red; padding: 20px;">
                 <h2>Ошибка загрузки страницы авторизации</h2>
                 <p>${error.message}</p>
@@ -241,12 +241,12 @@ class App {
             </div>
         `;
     }
-}
+  }
   async showProfilePage() {
     this.app.innerHTML = '';
     document.body.classList.remove('auth-page');
     // await demoProfilePage();
-    const {renderProfilePage} =
+    const { renderProfilePage } =
         await import('/pages/ProfilePage/ProfilePage.js');
     const currentUser = await this.api.getCurrentUser();
     await renderProfilePage(this.api, this.app, currentUser);
