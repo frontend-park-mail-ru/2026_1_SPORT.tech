@@ -1,5 +1,5 @@
-import { renderPostCard } from '../../molecules/PostCard/PostCard.js';
 import { renderButton } from '../../atoms/Button/Button.js';
+import { renderPostCard } from '../../molecules/PostCard/PostCard.js';
 
 /**
  * Рендерит контент профиля с вкладками

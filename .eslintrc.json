@@ -1,0 +1,108 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "node": true
+  },
+  "globals": {
+    "Handlebars": "readonly",
+    "api": "readonly"
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:import/recommended"
+  ],
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "plugins": [
+    "import"
+  ],
+  "rules": {
+    // Возможные ошибки
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-debugger": "warn",
+    "no-duplicate-imports": "error",
+    "no-unused-vars": ["warn", { 
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_"
+    }],
+    "no-constant-condition": "warn",
+    "no-prototype-builtins": "off",
+
+    "no-case-declarations": "off",      // Для case-блоков в AuthForm
+    "no-empty": "warn",                 // Для пустых catch-блоков
+    "no-ex-assign": "error",             // Для ошибки в api.js
+    
+    // Стиль кода
+    "indent": ["error", 2, { 
+      "SwitchCase": 1,
+      "ignoredNodes": ["TemplateLiteral *"]
+    }],
+    "quotes": ["error", "single", { 
+      "avoidEscape": true,
+      "allowTemplateLiterals": true 
+    }],
+    "semi": ["error", "always"],
+    "comma-dangle": ["error", "never"],
+    "arrow-parens": ["error", "as-needed"],
+    "brace-style": ["error", "1tbs"],
+    "object-curly-spacing": ["error", "always"],
+    "array-bracket-spacing": ["error", "never"],
+    "space-infix-ops": "error",
+    "space-before-blocks": "error",
+    "keyword-spacing": ["error", { "before": true, "after": true }],
+    "key-spacing": ["error", { "beforeColon": false, "afterColon": true }],
+    "comma-spacing": ["error", { "before": false, "after": true }],
+    
+    // ES6+
+    "prefer-const": "error",
+    "no-var": "error",
+    "arrow-spacing": ["error", { "before": true, "after": true }],
+    "template-curly-spacing": ["error", "never"],
+    
+    // Импорты
+    "import/order": ["error", {
+      "groups": [
+        "builtin",
+        "external",
+        "internal",
+        "parent",
+        "sibling",
+        "index",
+        "object",
+        "type"
+      ],
+      "newlines-between": "always",
+      "alphabetize": { "order": "asc", "caseInsensitive": true }
+    }],
+    "import/first": "error",
+    "import/no-duplicates": "error",
+    "import/no-unresolved": "off",
+    
+    // Максимальная длина строки
+    "max-len": ["warn", { 
+      "code": 100, 
+      "ignoreUrls": true, 
+      "ignoreStrings": true,
+      "ignoreTemplateLiterals": true,
+      "ignoreRegExpLiterals": true
+    }]
+    
+  },
+  "settings": {
+    "import/resolver": {
+      "node": {
+        "paths": ["."],
+        "extensions": [".js"]
+      }
+    }
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "dist/",
+    "build/",
+    "*.min.js"
+  ]
+}

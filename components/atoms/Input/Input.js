@@ -132,7 +132,7 @@ export async function renderInput(container, config = {}) {
   /**
    * Установить состояние поля
    */
-  const setState = (newState) => {
+  const setState = newState => {
     // Удаляем все классы состояний
     field.classList.remove(
         `input-field--${INPUT_STATES.NORMAL}`,
@@ -155,12 +155,12 @@ export async function renderInput(container, config = {}) {
   /**
    * Установить сообщение под полем
    */
-const setMessage = (text, newState = null) => {
+  const setMessage = (text, newState = null) => {
 
     if (!messageEl) {
-        messageEl = document.createElement('span');
-        messageEl.className = 'input-field__message';
-        field.appendChild(messageEl);
+      messageEl = document.createElement('span');
+      messageEl.className = 'input-field__message';
+      field.appendChild(messageEl);
     }
 
 
@@ -169,17 +169,17 @@ const setMessage = (text, newState = null) => {
     messageEl.style.visibility = 'visible';
 
     if (newState) {
-        setState(newState);
+      setState(newState);
     } else {
-        if (!text) {
-            setState(INPUT_STATES.NORMAL);
-        }
+      if (!text) {
+        setState(INPUT_STATES.NORMAL);
+      }
     }
-};
+  };
   /**
    * Установить значение поля
    */
-  const setValue = (newValue) => {
+  const setValue = newValue => {
     input.value = newValue;
     onChange?.(newValue);
   };
@@ -192,18 +192,18 @@ const setMessage = (text, newState = null) => {
   /**
    * Установить состояние глазка
    */
-  const setEyeState = (newEyeState) => {
+  const setEyeState = newEyeState => {
     if (!eyeButton) return;
 
     // Обновляем класс глазка
     eyeButton.classList.remove(
-        'input-field__eye--active', 'input-field__eye--non-active');
+      'input-field__eye--active', 'input-field__eye--non-active');
     eyeButton.classList.add(`input-field__eye--${newEyeState}`);
 
     // Обновляем aria-label
     const isVisible = newEyeState === EYE_STATES.ACTIVE;
     eyeButton.setAttribute(
-        'aria-label', isVisible ? 'Скрыть пароль' : 'Показать пароль');
+      'aria-label', isVisible ? 'Скрыть пароль' : 'Показать пароль');
 
     // Меняем тип input для пароля
     if (type === INPUT_TYPES.PASSWORD) {
@@ -234,11 +234,11 @@ const setMessage = (text, newState = null) => {
 
     const currentState =
         eyeButton.classList.contains('input-field__eye--active') ?
-        EYE_STATES.ACTIVE :
-        EYE_STATES.NON_ACTIVE;
+          EYE_STATES.ACTIVE :
+          EYE_STATES.NON_ACTIVE;
     const newState = currentState === EYE_STATES.ACTIVE ?
-        EYE_STATES.NON_ACTIVE :
-        EYE_STATES.ACTIVE;
+      EYE_STATES.NON_ACTIVE :
+      EYE_STATES.ACTIVE;
 
     setEyeState(newState);
 
@@ -262,25 +262,25 @@ const setMessage = (text, newState = null) => {
 
   // ===== ОБРАБОТЧИКИ СОБЫТИЙ =====
 
-  input.addEventListener('input', (e) => {
+  input.addEventListener('input', e => {
     onChange?.(e.target.value);
   });
 
-  input.addEventListener('focus', (e) => {
+  input.addEventListener('focus', e => {
     if (!disabled && state !== INPUT_STATES.DISABLED) {
       field.classList.add('input-field--active');
       onFocus?.(e);
     }
   });
 
-  input.addEventListener('blur', (e) => {
+  input.addEventListener('blur', e => {
     field.classList.remove('input-field--active');
     onBlur?.(e);
   });
 
   // ВАЖНО: обработчик для глазка
   if (eyeButton) {
-    eyeButton.addEventListener('click', (e) => {
+    eyeButton.addEventListener('click', e => {
       e.preventDefault();
       e.stopPropagation();  // Предотвращаем всплытие
       togglePasswordVisibility();
@@ -302,15 +302,15 @@ const setMessage = (text, newState = null) => {
     focus,
     blur,
     // Хелперы для конкретных состояний
-    setError: (msg) => setMessage(msg, INPUT_STATES.ERROR),
-    setWarning: (msg) => setMessage(msg, INPUT_STATES.WARNING),
-    setCorrect: (msg) => setMessage(msg, INPUT_STATES.CORRECT),
+    setError: msg => setMessage(msg, INPUT_STATES.ERROR),
+    setWarning: msg => setMessage(msg, INPUT_STATES.WARNING),
+    setCorrect: msg => setMessage(msg, INPUT_STATES.CORRECT),
     setNormal: () => {
-            setMessage('', INPUT_STATES.NORMAL);  // Очищаем сообщение и ставим normal
-        },
-        // Новый метод для явной очистки ошибки
-        clearError: () => {
-            setMessage('', INPUT_STATES.NORMAL);
-        }
+      setMessage('', INPUT_STATES.NORMAL);  // Очищаем сообщение и ставим normal
+    },
+    // Новый метод для явной очистки ошибки
+    clearError: () => {
+      setMessage('', INPUT_STATES.NORMAL);
+    }
   };
 }

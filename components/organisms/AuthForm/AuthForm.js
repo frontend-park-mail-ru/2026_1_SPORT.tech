@@ -8,10 +8,10 @@
  * - Интеграцию с API
  */
 
-import {validateEmail, validateFirstName, validateLastName, validatePassword, validatePasswordWithConfirmation, validateUsername} from '/src/utils/validator.js';
+import { validateEmail, validateFirstName, validateLastName, validatePassword, validatePasswordWithConfirmation, validateUsername } from '/src/utils/validator.js';
 
-import {BUTTON_SIZES, BUTTON_VARIANTS, renderButton} from '../../atoms/Button/Button.js';
-import {INPUT_STATES, INPUT_TYPES, renderInput} from '../../atoms/Input/Input.js';
+import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button.js';
+import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input.js';
 
 export const AUTH_MODES = {
   LOGIN: 'login',
@@ -42,7 +42,7 @@ function formatDateInput(value) {
  * @returns {Promise<Object>} API формы
  */
 export async function renderAuthForm(container, config = {}) {
-  const {mode = AUTH_MODES.LOGIN, onSubmit = null, onSwitchMode = null} =
+  const { mode = AUTH_MODES.LOGIN, onSubmit = null, onSwitchMode = null } =
       config;
 
   const template = Handlebars.templates['AuthForm.hbs'];
@@ -205,7 +205,7 @@ export async function renderAuthForm(container, config = {}) {
           required: false
         }
       ]
-    },
+    }
   };
 
   const currentMode = modeConfig[mode];
@@ -244,8 +244,8 @@ export async function renderAuthForm(container, config = {}) {
       case 'password':
         result = validatePassword(value);
         console.log(
-            'Password validation:',
-            {value, isValid: result.isValid, errors: result.errors});
+          'Password validation:',
+          { value, isValid: result.isValid, errors: result.errors });
         break;
       case 'username':
         result = validateUsername(value);
@@ -264,44 +264,44 @@ export async function renderAuthForm(container, config = {}) {
         const eduValid = !value || value.length <= 255;
         result = {
           isValid: eduValid,
-          errors: eduValid ? [] : [{field: 'education_degree', message: 'Максимум 255 символов'}]
+          errors: eduValid ? [] : [{ field: 'education_degree', message: 'Максимум 255 символов' }]
         };
         break;
       case 'career_since_date':
         if (!value) {
           result = {
             isValid: false,
-            errors: [{field: 'career_since_date', message: 'Дата начала деятельности обязательна'}]
+            errors: [{ field: 'career_since_date', message: 'Дата начала деятельности обязательна' }]
           };
         } else if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
           result = {
             isValid: false,
-            errors: [{field: 'career_since_date', message: 'Дата должна быть в формате ГГГГ-ММ-ДД'}]
+            errors: [{ field: 'career_since_date', message: 'Дата должна быть в формате ГГГГ-ММ-ДД' }]
           };
         } else {
-          result = {isValid: true, errors: []};
+          result = { isValid: true, errors: [] };
         }
         break;
       case 'sport_discipline':
         if (!value || value.trim().length === 0) {
           result = {
             isValid: false,
-            errors: [{field: 'sport_discipline', message: 'Вид спорта обязателен'}]
+            errors: [{ field: 'sport_discipline', message: 'Вид спорта обязателен' }]
           };
         } else if (value.length > 100) {
           result = {
             isValid: false,
-            errors: [{field: 'sport_discipline', message: 'Максимум 100 символов'}]
+            errors: [{ field: 'sport_discipline', message: 'Максимум 100 символов' }]
           };
         } else {
-          result = {isValid: true, errors: []};
+          result = { isValid: true, errors: [] };
         }
         break;
       case 'bio':
         const bioValid = !value || value.length <= 1000;
         result = {
           isValid: bioValid,
-          errors: bioValid ? [] : [{field: 'bio', message: 'Максимум 1000 символов'}]
+          errors: bioValid ? [] : [{ field: 'bio', message: 'Максимум 1000 символов' }]
         };
         break;
       default:
@@ -329,11 +329,11 @@ export async function renderAuthForm(container, config = {}) {
         name: fieldConfig.name,
         required: fieldConfig.required,
         showEye: fieldConfig.showEye,
-        onChange: (value) => validateField(fieldConfig.name, value)
+        onChange: value => validateField(fieldConfig.name, value)
       });
 
       const input = inputApi.input;
-      input.addEventListener('input', (e) => {
+      input.addEventListener('input', e => {
         const formatted = formatDateInput(e.target.value);
         if (formatted !== e.target.value) {
           e.target.value = formatted;
@@ -343,8 +343,7 @@ export async function renderAuthForm(container, config = {}) {
 
       inputs.set(fieldConfig.name, fieldContainer);
       inputsApi.set(fieldConfig.name, inputApi);
-    }
-    else if (fieldConfig.name === 'sport_discipline') {
+    } else if (fieldConfig.name === 'sport_discipline') {
       const inputApi = await renderInput(fieldContainer, {
         type: fieldConfig.type,
         label: fieldConfig.label,
@@ -352,7 +351,7 @@ export async function renderAuthForm(container, config = {}) {
         name: fieldConfig.name,
         required: fieldConfig.required,
         showEye: fieldConfig.showEye,
-        onChange: (value) => validateField(fieldConfig.name, value)
+        onChange: value => validateField(fieldConfig.name, value)
       });
 
       const helpText = document.createElement('small');
@@ -367,8 +366,7 @@ export async function renderAuthForm(container, config = {}) {
 
       inputs.set(fieldConfig.name, fieldContainer);
       inputsApi.set(fieldConfig.name, inputApi);
-    }
-    else {
+    } else {
       const inputApi = await renderInput(fieldContainer, {
         type: fieldConfig.type,
         label: fieldConfig.label,
@@ -376,7 +374,7 @@ export async function renderAuthForm(container, config = {}) {
         name: fieldConfig.name,
         required: fieldConfig.required,
         showEye: fieldConfig.showEye,
-        onChange: (value) => validateField(fieldConfig.name, value)
+        onChange: value => validateField(fieldConfig.name, value)
       });
 
       inputs.set(fieldConfig.name, fieldContainer);
@@ -432,7 +430,7 @@ export async function renderAuthForm(container, config = {}) {
   /**
    * Установить ошибки из API
    */
-  const setApiErrors = (errors) => {
+  const setApiErrors = errors => {
     if (!errors || !Array.isArray(errors)) return;
 
     errors.forEach(error => {
@@ -456,7 +454,7 @@ export async function renderAuthForm(container, config = {}) {
   /**
    * Показать глобальную ошибку
    */
-  const setGlobalError = (message) => {
+  const setGlobalError = message => {
     let globalError = form.querySelector('.auth-form__global-error');
     if (!globalError) {
       globalError = document.createElement('div');
@@ -485,7 +483,7 @@ export async function renderAuthForm(container, config = {}) {
     }
   };
 
-  submitBtn.element.addEventListener('click', async (e) => {
+  submitBtn.element.addEventListener('click', async e => {
     e.preventDefault();
 
     clearGlobalError();
@@ -511,10 +509,10 @@ export async function renderAuthForm(container, config = {}) {
 
   const altLink = form.querySelector('.auth-form__link--alt');
   if (altLink && onSwitchMode) {
-    altLink.addEventListener('click', (e) => {
+    altLink.addEventListener('click', e => {
       e.preventDefault();
       const newMode = mode === AUTH_MODES.LOGIN ? AUTH_MODES.REGISTER_CLIENT :
-                                                  AUTH_MODES.LOGIN;
+        AUTH_MODES.LOGIN;
       onSwitchMode(newMode);
     });
   }

@@ -1,0 +1,17 @@
+{
+  "name": "sportech-frontend",
+  "version": "1.0.0",
+  "description": "SPORT.tech frontend components",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:watch": "eslint . --watch"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "eslint-plugin-import": "^2.29.1"
+  },
+  "author": "",
+  "license": "ISC"
+}
