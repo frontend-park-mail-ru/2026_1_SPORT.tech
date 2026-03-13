@@ -79,7 +79,7 @@ export async function renderAvatar(container, config = {}) {
   const avatar = wrapper.firstElementChild;
 
   if (onClick) {
-    avatar.addEventListener('click', (_e) => {
+    avatar.addEventListener('click', _e => {
       onClick({ userId, name, src });
     });
   }

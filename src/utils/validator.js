@@ -90,7 +90,7 @@ const checks = {
   nonNegative: value => typeof value === 'number' && value >= 0
 };
 
-class Validator {
+export class Validator {
   constructor() {
     this.errors = [];
     this.rules = rules;
@@ -384,26 +384,3 @@ class Validator {
   }
 }
 
-const validator = new Validator();
-
-export const validateUsername = username =>
-  validator.validateUsername(username);
-export const validateEmail = email => validator.validateEmail(email);
-export const validatePassword = password =>
-  validator.validatePassword(password);
-export const validatePasswordWithConfirmation = (password, repeat) =>
-  validator.validatePasswordWithConfirmation(password, repeat);
-export const validateFirstName = firstName =>
-  validator.validateFirstName(firstName);
-export const validateLastName = lastName =>
-  validator.validateLastName(lastName);
-export const validateBio = bio => validator.validateBio(bio);
-export const validateClientRegister = data =>
-  validator.validateClientRegister(data);
-export const validateTrainerRegister = data =>
-  validator.validateTrainerRegister(data);
-export const validateTrainerDetails = details =>
-  validator.validateTrainerDetails(details);
-export const formatErrorsForAPI = () => validator.formatErrorsForAPI();
-
-export default Validator;
