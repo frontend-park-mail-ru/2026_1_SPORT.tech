@@ -1,14 +1,32 @@
+/**
+ * @fileoverview Компонент шапки профиля
+ * Отображает обложку, аватар, имя и кнопки действий
+ * 
+ * @module components/molecules/ProfileHeader
+ */
+
 import { renderButton } from '../../atoms/Button/Button.js';
 
 /**
  * Рендерит шапку профиля
- * @param {HTMLElement} container
- * @param {Object} profile
- * @param {string} profile.name
- * @param {string} profile.role
- * @param {string} profile.avatar
- * @param {boolean} profile.isOwnProfile
- * @param {Function} profile.onEdit
+ * @async
+ * @param {HTMLElement} container - DOM элемент для вставки
+ * @param {Object} profile - Данные профиля
+ * @param {string} profile.name - Имя пользователя
+ * @param {string} profile.role - Роль пользователя
+ * @param {string} [profile.avatar=null] - URL аватара
+ * @param {boolean} [profile.isOwnProfile=false] - Свой ли это профиль
+ * @param {Object} [profile.api] - API клиент
+ * @param {Function} [profile.onEdit=null] - Обработчик редактирования профиля
+ * @returns {Promise<HTMLElement>} DOM элемент шапки
+ * 
+ * @example
+ * // Чужой профиль
+ * await renderProfileHeader(container, {
+ *   name: 'Иван Петров',
+ *   role: 'Тренер',
+ *   isOwnProfile: false
+ * });
  */
 export async function renderProfileHeader(container, {
   name,
@@ -20,6 +38,11 @@ export async function renderProfileHeader(container, {
 }) {
   const template = Handlebars.templates['ProfileHeader.hbs'];
 
+  /**
+   * Получить инициалы пользователя
+   * @param {string} fullName - Полное имя
+   * @returns {string} Инициалы
+   */
   const initials = name
     .split(' ')
     .map(n => n[0])
@@ -27,6 +50,10 @@ export async function renderProfileHeader(container, {
     .toUpperCase()
     .slice(0, 2);
 
+  /**
+   * Уникальный ID для элементов шапки
+   * @type {string}
+   */
   const id = 'header-' + Date.now();
 
   const html = template({
@@ -47,14 +74,17 @@ export async function renderProfileHeader(container, {
   if (isOwnProfile && actionsContainer) {
     await renderButton(actionsContainer, {
       text: 'Редактировать',
-      variant: 'primary-orange', // Оранжевая кнопка
+      variant: 'primary-orange',
       state: 'normal',
-      size: 'medium', // Средний размер
+      size: 'medium',
       onClick: onEdit
     });
   }
 
-  // Обработчики для статистики и подписок
+  /**
+   * Обработчик клика по кнопке статистики
+   * @param {MouseEvent} _event - Событие клика (не используется)
+   */
   const statBtn = element.querySelector(`#stat-btn-${id}`);
   if (statBtn) {
     statBtn.addEventListener('click', () => {
@@ -63,6 +93,10 @@ export async function renderProfileHeader(container, {
     });
   }
 
+  /**
+   * Обработчик клика по кнопке подписок
+   * @param {MouseEvent} _event - Событие клика (не используется)
+   */
   const subsBtn = element.querySelector(`#subscriptions-btn-${id}`);
   if (subsBtn) {
     subsBtn.addEventListener('click', () => {

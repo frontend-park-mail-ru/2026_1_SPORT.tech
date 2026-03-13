@@ -1,16 +1,35 @@
 /**
- * Страница авторизации
- * Объединяет форму и API
+ * @fileoverview Страница авторизации
+ * Объединяет форму авторизации и API
+ * 
+ * @module pages/AuthPage
  */
 
 import { AUTH_MODES, renderAuthForm } from '../../components/organisms/AuthForm/AuthForm.js';
 
+/**
+ * Рендерит страницу авторизации
+ * @async
+ * @param {HTMLElement} container - DOM элемент для вставки
+ * @param {Object} api - API клиент
+ * @returns {Promise<void>}
+ * 
+ * @example
+ * await renderAuthPage(document.getElementById('app'), apiClient);
+ */
 export async function renderAuthPage(container, api) {
+  /** @type {string} Текущий режим формы */
   let currentMode = AUTH_MODES.LOGIN;
+  /** @type {Object} API формы */
   let form = null;
 
   /**
    * Обработка входа
+   * @async
+   * @param {Object} data - Данные формы
+   * @param {string} data.email - Email пользователя
+   * @param {string} data.password - Пароль
+   * @throws {Error} Ошибка авторизации
    */
   async function handleLogin(data) {
     try {
@@ -29,6 +48,9 @@ export async function renderAuthPage(container, api) {
 
   /**
    * Обработка регистрации клиента
+   * @async
+   * @param {Object} data - Данные формы
+   * @throws {Error} Ошибка регистрации
    */
   async function handleClientRegister(data) {
     try {
@@ -54,6 +76,9 @@ export async function renderAuthPage(container, api) {
 
   /**
    * Обработка регистрации тренера
+   * @async
+   * @param {Object} data - Данные формы
+   * @throws {Error} Ошибка регистрации
    */
   async function handleTrainerRegister(data) {
     try {
@@ -84,6 +109,8 @@ export async function renderAuthPage(container, api) {
 
   /**
    * Переключение режима формы
+   * @async
+   * @param {string} newMode - Новый режим из AUTH_MODES
    */
   async function switchMode(newMode) {
     currentMode = newMode;
@@ -92,6 +119,7 @@ export async function renderAuthPage(container, api) {
 
   /**
    * Рендер страницы
+   * @async
    */
   async function render() {
     container.innerHTML = '';
@@ -113,6 +141,11 @@ export async function renderAuthPage(container, api) {
     form = await renderAuthForm(formContainer, {
       mode: currentMode,
       api: api,
+      /**
+       * Обработчик отправки формы
+       * @param {Object} data - Данные формы
+       * @param {string} mode - Режим формы
+       */
       onSubmit: async (data, mode) => {
         try {
           if (mode === AUTH_MODES.LOGIN) {
@@ -131,6 +164,10 @@ export async function renderAuthPage(container, api) {
       }
     });
 
+    /**
+     * Обработчики кнопок выбора роли
+     * @param {MouseEvent} e - Событие клика
+     */
     const roleButtons = pageElement.querySelectorAll('.auth-page__role-btn');
     roleButtons.forEach(btn => {
       btn.addEventListener('click', e => {
