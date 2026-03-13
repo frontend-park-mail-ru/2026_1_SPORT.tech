@@ -8,10 +8,9 @@
  * - Интеграцию с API
  */
 
-import { validateEmail, validateFirstName, validateLastName, validatePassword, validatePasswordWithConfirmation, validateUsername } from '/src/utils/validator.js';
-
+import { Validator } from '/src/utils/validator.js';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button.js';
-import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input.js';
+import { INPUT_STATES, INPUT_TYPES, renderInput } from '../../atoms/Input/Input.js';
 
 export const AUTH_MODES = {
   LOGIN: 'login',
@@ -42,9 +41,10 @@ function formatDateInput(value) {
  * @returns {Promise<Object>} API формы
  */
 export async function renderAuthForm(container, config = {}) {
-  const { mode = AUTH_MODES.LOGIN, onSubmit = null, onSwitchMode = null } =
+  const { mode = AUTH_MODES.LOGIN, onSubmit = null, onSwitchMode = null, api } =
       config;
 
+  const validator = new Validator();
   const template = Handlebars.templates['AuthForm.hbs'];
 
   const modeConfig = {
@@ -239,26 +239,23 @@ export async function renderAuthForm(container, config = {}) {
     let result;
     switch (fieldName) {
       case 'email':
-        result = validateEmail(value);
+        result = validator.validateEmail(value);
         break;
       case 'password':
-        result = validatePassword(value);
-        console.log(
-          'Password validation:',
-          { value, isValid: result.isValid, errors: result.errors });
+        result = validator.validatePassword(value);
         break;
       case 'username':
-        result = validateUsername(value);
+        result = validator.validateUsername(value);
         break;
       case 'first_name':
-        result = validateFirstName(value);
+        result = validator.validateFirstName(value);
         break;
       case 'last_name':
-        result = validateLastName(value);
+        result = validator.validateLastName(value);
         break;
       case 'password_repeat':
         const password = inputsApi.get('password')?.getValue() || '';
-        result = validatePasswordWithConfirmation(password, value);
+        result = validator.validatePasswordWithConfirmation(password, value);
         break;
       case 'education_degree':
         const eduValid = !value || value.length <= 255;

@@ -3,30 +3,24 @@
  * Объединяет форму и API
  */
 
-import { renderAuthForm, AUTH_MODES } from '../../components/organisms/AuthForm/AuthForm.js';
-import { post } from '/src/utils/api.js';
+import { AUTH_MODES, renderAuthForm } from '../../components/organisms/AuthForm/AuthForm.js';
 
-export class AuthPage {
-  constructor(container) {
-    this.container = container;
-    this.form = null;
-    this.currentMode = AUTH_MODES.LOGIN;
-  }
+export async function renderAuthPage(container, api) {
+  let currentMode = AUTH_MODES.LOGIN;
+  let form = null;
 
   /**
-     * Обработка входа
-     */
-  async handleLogin(data) {
+   * Обработка входа
+   */
+  async function handleLogin(data) {
     try {
-      const response = await post('/auth/login', {
-        email: data.email,
-        password: data.password
-      });
+      const response = await api.login(data.email, data.password);
 
-      if (response.user) {
+      if (response?.user) {
         localStorage.setItem('user', JSON.stringify(response.user));
-        window.location.href = '/';
       }
+
+      window.router.navigateTo('/profile');
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -34,11 +28,11 @@ export class AuthPage {
   }
 
   /**
-     * Обработка регистрации клиента
-     */
-  async handleClientRegister(data) {
+   * Обработка регистрации клиента
+   */
+  async function handleClientRegister(data) {
     try {
-      const response = await post('/auth/register/client', {
+      const response = await api.registerClient({
         username: data.username,
         email: data.email,
         password: data.password,
@@ -47,10 +41,11 @@ export class AuthPage {
         last_name: data.last_name
       });
 
-      if (response.user) {
+      if (response?.user) {
         localStorage.setItem('user', JSON.stringify(response.user));
-        window.location.href = '/';
       }
+
+      window.router.navigateTo('/profile');
     } catch (error) {
       console.error('Register error:', error);
       throw error;
@@ -58,11 +53,11 @@ export class AuthPage {
   }
 
   /**
-     * Обработка регистрации тренера
-     */
-  async handleTrainerRegister(data) {
+   * Обработка регистрации тренера
+   */
+  async function handleTrainerRegister(data) {
     try {
-      const response = await post('/auth/register/trainer', {
+      const response = await api.registerTrainer({
         username: data.username,
         email: data.email,
         password: data.password,
@@ -70,22 +65,17 @@ export class AuthPage {
         first_name: data.first_name,
         last_name: data.last_name,
         trainer_details: {
-          education_degree: data.education || '',
-          career_since_date: data.career_start_date,
-          sports: [
-            {
-              sport_type_id: 1,
-              experience_years: 0,
-              sports_rank: ''
-            }
-          ]
+          education_degree: data.education_degree || '',
+          career_since_date: data.career_since_date,
+          sports: [{ sport_type_id: 1, experience_years: 0, sports_rank: '' }]
         }
       });
 
-      if (response.user) {
+      if (response?.user) {
         localStorage.setItem('user', JSON.stringify(response.user));
-        window.location.href = '/';
       }
+
+      window.router.navigateTo('/profile');
     } catch (error) {
       console.error('Trainer register error:', error);
       throw error;
@@ -93,25 +83,25 @@ export class AuthPage {
   }
 
   /**
-     * Переключение режима формы
-     */
-  async switchMode(newMode) {
-    this.currentMode = newMode;
-    await this.render();
+   * Переключение режима формы
+   */
+  async function switchMode(newMode) {
+    currentMode = newMode;
+    await render();
   }
 
   /**
-     * Рендер страницы
-     */
-  async render() {
-    this.container.innerHTML = '';
+   * Рендер страницы
+   */
+  async function render() {
+    container.innerHTML = '';
 
     const template = Handlebars.templates['AuthPage.hbs'];
 
     const html = template({
-      showRoleSelector: this.currentMode !== AUTH_MODES.LOGIN,
-      isClientActive: this.currentMode === AUTH_MODES.REGISTER_CLIENT,
-      isTrainerActive: this.currentMode === AUTH_MODES.REGISTER_TRAINER
+      showRoleSelector: currentMode !== AUTH_MODES.LOGIN,
+      isClientActive: currentMode === AUTH_MODES.REGISTER_CLIENT,
+      isTrainerActive: currentMode === AUTH_MODES.REGISTER_TRAINER
     });
 
     const wrapper = document.createElement('div');
@@ -120,19 +110,24 @@ export class AuthPage {
 
     const formContainer = pageElement.querySelector('.auth-form-container');
 
-    this.form = await renderAuthForm(formContainer, {
-      mode: this.currentMode,
+    form = await renderAuthForm(formContainer, {
+      mode: currentMode,
+      api: api,
       onSubmit: async (data, mode) => {
-        if (mode === AUTH_MODES.LOGIN) {
-          await this.handleLogin(data);
-        } else if (mode === AUTH_MODES.REGISTER_CLIENT) {
-          await this.handleClientRegister(data);
-        } else if (mode === AUTH_MODES.REGISTER_TRAINER) {
-          await this.handleTrainerRegister(data);
+        try {
+          if (mode === AUTH_MODES.LOGIN) {
+            await handleLogin(data);
+          } else if (mode === AUTH_MODES.REGISTER_CLIENT) {
+            await handleClientRegister(data);
+          } else if (mode === AUTH_MODES.REGISTER_TRAINER) {
+            await handleTrainerRegister(data);
+          }
+        } catch (error) {
+          console.error('Form submission error:', error);
         }
       },
       onSwitchMode: newMode => {
-        this.switchMode(newMode);
+        switchMode(newMode);
       }
     });
 
@@ -141,13 +136,15 @@ export class AuthPage {
       btn.addEventListener('click', e => {
         const role = e.target.dataset.role;
         if (role === 'client') {
-          this.switchMode(AUTH_MODES.REGISTER_CLIENT);
+          switchMode(AUTH_MODES.REGISTER_CLIENT);
         } else if (role === 'trainer') {
-          this.switchMode(AUTH_MODES.REGISTER_TRAINER);
+          switchMode(AUTH_MODES.REGISTER_TRAINER);
         }
       });
     });
 
-    this.container.appendChild(pageElement);
+    container.appendChild(pageElement);
   }
+
+  await render();
 }

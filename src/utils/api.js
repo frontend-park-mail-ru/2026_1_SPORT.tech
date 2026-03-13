@@ -1,247 +1,95 @@
-/**
- * Модуль для работы с API
- * @module utils/api
- */
+import { API_BASE_URL } from '../config/constants.js';
 
-const API_CONFIG = {
-  baseURL: 'http://212.233.99.79:8080',
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  },
-  credentials: 'include',
-  mode: 'cors',
-  timeout: 30000
-};
-
-const HTTP_METHODS = {
-  GET: 'GET',
-  POST: 'POST',
-  PUT: 'PUT',
-  PATCH: 'PATCH',
-  DELETE: 'DELETE'
-};
-
-/**
- * Класс для работы с API
- */
-class ApiClient {
-  constructor(config = {}) {
-    this.config = { ...API_CONFIG, ...config };
-    this.defaultHeaders = { ...this.config.headers };
-
-    this.requestInterceptors = [];
-    this.responseInterceptors = [];
-    this.errorInterceptors = [];
+export class ApiClient {
+  constructor(baseURL = API_BASE_URL) {
+    this.baseURL = baseURL;
   }
 
-  /**
-   * Добавление интерсептора запроса
-   */
-  addRequestInterceptor(fn) {
-    this.requestInterceptors.push(fn);
-    return () => {
-      this.requestInterceptors = this.requestInterceptors.filter(i => i !== fn);
-    };
-  }
-
-  /**
-   * Добавление интерсептора ответа
-   */
-  addResponseInterceptor(fn) {
-    this.responseInterceptors.push(fn);
-    return () => {
-      this.responseInterceptors = this.responseInterceptors.filter(i => i !== fn);
-    };
-  }
-
-  /**
-   * Добавление интерсептора ошибки
-   */
-  addErrorInterceptor(fn) {
-    this.errorInterceptors.push(fn);
-    return () => {
-      this.errorInterceptors = this.errorInterceptors.filter(i => i !== fn);
-    };
-  }
-
-  /**
-   * Формирование полного URL
-   */
-  buildUrl(url) {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    const base = this.config.baseURL.replace(/\/$/, '');
-    const path = url.replace(/^\//, '');
-    return `${base}/${path}`;
-  }
-
-  /**
-   * Обработка ответа сервера
-   */
-  async handleResponse(response) {
-    const contentType = response.headers.get('content-type');
-    const isJson = contentType && contentType.includes('application/json');
-
-    let data;
-    if (isJson) {
-      data = await response.json();
-    } else {
-      data = await response.text();
-    }
-
-    if (!response.ok) {
-      const error = new Error(data?.error?.message || response.statusText);
-      error.status = response.status;
-      error.statusText = response.statusText;
-      error.data = data;
-
-      if (data?.error?.fields) {
-        error.validationErrors = data.error.fields;
-      }
-
-      if (data?.error?.code) {
-        error.code = data.error.code;
-      }
-
-      throw error;
-    }
-
-    return data;
-  }
-
-  /**
-   * Основной метод для выполнения запросов
-   */
   async request(endpoint, options = {}) {
-    const {
-      method = HTTP_METHODS.GET,
-      headers = {},
-      body,
-      params = {},
-      timeout = this.config.timeout,
-      ...customOptions
-    } = options;
-
-    let modifiedOptions = { method, headers, body, params, ...customOptions };
-    for (const interceptor of this.requestInterceptors) {
-      const result = interceptor({ url: endpoint, options: modifiedOptions });
-      if (result) modifiedOptions = result.options || modifiedOptions;
-    }
-
-    let url = this.buildUrl(endpoint);
-    if (Object.keys(params).length > 0) {
-      const searchParams = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          searchParams.append(key, value);
-        }
-      });
-      const queryString = searchParams.toString();
-      if (queryString) {
-        url += `?${queryString}`;
-      }
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    const requestHeaders = {
-      ...this.defaultHeaders,
-      ...modifiedOptions.headers
-    };
-
-    let requestBody = modifiedOptions.body;
-    if (requestBody && typeof requestBody === 'object' && !(requestBody instanceof FormData)) {
-      requestBody = JSON.stringify(requestBody);
-    }
-    if (requestBody instanceof FormData) {
-      delete requestHeaders['Content-Type'];
-    }
+    const url = `${this.baseURL}${endpoint}`;
 
     try {
       const response = await fetch(url, {
-        method: modifiedOptions.method,
-        headers: requestHeaders,
-        body: requestBody,
-        credentials: this.config.credentials,
-        mode: this.config.mode,
-        signal: controller.signal,
-        ...customOptions
+        ...options,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers
+        }
       });
 
-      clearTimeout(timeoutId);
-      const data = await this.handleResponse(response);
-
-      let result = data;
-      for (const interceptor of this.responseInterceptors) {
-        const intercepted = interceptor(result);
-        if (intercepted !== undefined) result = intercepted;
+      // Для 204 No Content
+      if (response.status === 204) {
+        return null;
       }
 
-      return result;
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('❌ API Error:', data);
+        throw new Error(data.error?.message || `HTTP ${response.status}`);
+      }
+
+      return data;
     } catch (error) {
-      const enhancedError = new Error(error.message);
-      enhancedError.code = 'timeout';
-
-      if (error.name === 'AbortError') {
-        error.code = 'timeout';
-        error.message = `Запрос превысил время ожидания (${timeout}мс)`;
-      }
-
-      for (const interceptor of this.errorInterceptors) {
-        try {
-          const result = interceptor(error);
-          if (result && !(result instanceof Error)) {
-            return result;
-          }
-          if (result instanceof Error) {
-            const interceptedError = result;
-            throw interceptedError;
-          }
-        } catch (e) {
-          // Ignore
-        }
-      }
-
+      console.error(`❌ API Request failed: ${endpoint}`, error);
       throw error;
     }
   }
 
-  async get(endpoint, options = {}) {
-    return this.request(endpoint, { method: HTTP_METHODS.GET, ...options });
+  // ===== AUTH =====
+  async login(email, password) {
+    return this.request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
   }
 
-  async post(endpoint, body, options = {}) {
-    return this.request(endpoint, { method: HTTP_METHODS.POST, body, ...options });
+  async registerClient(userData) {
+    return this.request('/auth/register/client', {
+      method: 'POST',
+      body: JSON.stringify(userData)
+    });
   }
 
-  async put(endpoint, body, options = {}) {
-    return this.request(endpoint, { method: HTTP_METHODS.PUT, body, ...options });
+  async registerTrainer(userData) {
+    return this.request('/auth/register/trainer', {
+      method: 'POST',
+      body: JSON.stringify(userData)
+    });
   }
 
-  async patch(endpoint, body, options = {}) {
-    return this.request(endpoint, { method: HTTP_METHODS.PATCH, body, ...options });
+  async getCurrentUser() {
+    try {
+      return await this.request('/auth/me');
+    } catch (error) {
+      if (error.message === 'Не авторизован') {
+        return null; // Возвращаем null вместо ошибки
+      }
+      throw error;
+    }
   }
 
-  async delete(endpoint, options = {}) {
-    return this.request(endpoint, { method: HTTP_METHODS.DELETE, ...options });
+  async logout() {
+    return this.request('/auth/logout', { method: 'POST' });
+  }
+
+  // ===== PROFILE =====
+  async getProfile(userId) {
+    return this.request(`/profiles/${userId}`);
+  }
+
+  async getUserPosts(userId) {
+    return this.request(`/profiles/${userId}/posts`);
+  }
+
+  // ===== POSTS =====
+  async getPost(postId) {
+    return this.request(`/posts/${postId}`);
+  }
+
+  // ===== SPORT TYPES =====
+  async getSportTypes() {
+    return this.request('/sport-types');
   }
 }
-
-const api = new ApiClient();
-
-export const setApiConfig = config => api.setConfig(config);
-export const setApiHeaders = headers => api.setHeaders(headers);
-export const addRequestInterceptor = fn => api.addRequestInterceptor(fn);
-export const addResponseInterceptor = fn => api.addResponseInterceptor(fn);
-export const addErrorInterceptor = fn => api.addErrorInterceptor(fn);
-
-export const get = (endpoint, options) => api.get(endpoint, options);
-export const post = (endpoint, body, options) => api.post(endpoint, body, options);
-export const put = (endpoint, body, options) => api.put(endpoint, body, options);
-export const patch = (endpoint, body, options) => api.patch(endpoint, body, options);
-export const del = (endpoint, options) => api.delete(endpoint, options);
-
-export default api;

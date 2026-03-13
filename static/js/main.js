@@ -1,31 +1,30 @@
+import { API_BASE_URL } from '/src/config/constants.js';
+import { ApiClient } from '/src/utils/api.js';
+
 // ===== РЕГИСТРАЦИЯ ШАБЛОНОВ HANDLEBARS =====
 Handlebars.templates = {};
 
 async function loadTemplates() {
   const templates = [
-    { name: 'Button', folder: 'atoms' },
-    { name: 'Input', folder: 'atoms' },
-    { name: 'Avatar', folder: 'atoms' },
-    { name: 'UserPhotoItem', folder: 'atoms' },
+    { name: 'Button', folder: 'atoms' }, { name: 'Input', folder: 'atoms' },
+    { name: 'Avatar', folder: 'atoms' }, { name: 'UserPhotoItem', folder: 'atoms' },
     { name: 'AuthForm', folder: 'organisms' },
     { name: 'ProfileHeader', folder: 'molecules' },
     { name: 'PostCard', folder: 'molecules' },
     { name: 'Sidebar', folder: 'organisms' },
     { name: 'ProfileContent', folder: 'organisms' },
-    { name: 'AuthPage', folder: 'pages' },
-    { name: 'ProfilePage', folder: 'pages' }
+    { name: 'AuthPage', folder: 'pages' }, { name: 'ProfilePage', folder: 'pages' }
   ];
 
   for (const { name, folder } of templates) {
     try {
-      const path = folder === 'pages'
-        ? `/pages/${name}/${name}.hbs`
-        : `/components/${folder}/${name}/${name}.hbs`;
+      const path = folder === 'pages' ?
+          `/pages/${name}/${name}.hbs` :
+          `/components/${folder}/${name}/${name}.hbs`;
 
       const response = await fetch(path);
       const source = await response.text();
       Handlebars.templates[`${name}.hbs`] = Handlebars.compile(source);
-      console.log(`✅ Loaded template: ${name}`);
     } catch (error) {
       console.error(`❌ Failed to load template ${name}:`, error);
     }
@@ -33,246 +32,241 @@ async function loadTemplates() {
 }
 
 // ===== ПРОФИЛЬ =====
+function getUserRoleLabel(isTrainer) {
+  return isTrainer ? 'Тренер' : 'Клиент';
+}
+
+function getFullName(profile = {}) {
+  return `${profile.first_name || ''} ${profile.last_name || ''}`.trim() ||
+      profile.username || 'Пользователь';
+}
+
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('\'', '&#39;');
+}
+
+function formatPostContent(textContent) {
+  if (!textContent) {
+    return 'Нет доступа к содержимому поста';
+  }
+
+  return escapeHtml(textContent).replace(/\n/g, '<br>');
+}
+
 function mapProfileData(apiData, currentUser) {
   const isOwnProfile = apiData.is_me;
-  const firstName = apiData.profile.first_name || '';
-  const lastName = apiData.profile.last_name || '';
-  const fullName = `${firstName} ${lastName}`.trim() || 'Пользователь';
+  const fullName = getFullName(apiData.profile);
 
   return {
     profile: {
       name: fullName,
-      role: apiData.is_trainer ? 'Тренер' : 'Клиент',
+      role: getUserRoleLabel(apiData.is_trainer),
       avatar: apiData.profile.avatar_url,
       isOwnProfile: isOwnProfile
     },
-    currentUser: currentUser ? {
+    currentUser: currentUser?.user ? {
       id: currentUser.user.user_id,
-      name: `${currentUser.user.profile.first_name} ${currentUser.user.profile.last_name}`.trim(),
-      role: currentUser.user.is_trainer ? 'Тренер' : 'Клиент',
+      name: getFullName(currentUser.user.profile),
+      role: getUserRoleLabel(currentUser.user.is_trainer),
       avatar: currentUser.user.profile.avatar_url
-    } : null
+    } :
+      null
   };
 }
 
-async function loadProfilePageData(userId = 1) {
+async function loadProfilePageData(api, userId, currentUser = null) {
   try {
-    console.log(`📦 Loading profile data for user ${userId}...`);
+    const resolvedUserId = userId || currentUser?.user?.user_id;
 
-    const profileData = await api.getProfile(userId);
-    console.log('📊 Profile data:', profileData);
-
-    let currentUser = null;
-    try {
-      currentUser = await api.getCurrentUser();
-      console.log('👤 Current user:', currentUser);
-    } catch (e) {
-      console.log('User not logged in');
+    if (!resolvedUserId) {
+      throw new Error('Пользователь не авторизован');
     }
 
-    let postsData = { posts: [] };
-    try {
-      postsData = await api.getUserPosts(userId);
-      console.log('📝 Posts data:', postsData);
-    } catch (e) {
-      console.log('No posts or error loading posts');
-    }
 
-    const posts = postsData.posts.map(post => ({
-      post_id: post.post_id,
-      title: post.title,
-      content: 'Загрузите пост для просмотра',
-      authorName: `${profileData.profile.first_name || ''} ${profileData.profile.last_name || ''}`.trim(),
-      authorRole: profileData.is_trainer ? 'Тренер' : 'Клиент',
-      likes: 0,
-      comments: 0,
-      can_view: post.can_view
+    const [profileData, postsData] = await Promise.all([
+      api.getProfile(resolvedUserId),
+      api.getUserPosts(resolvedUserId).catch(error => {
+        return { posts: [] };
+      })
+    ]);
+
+
+
+    const authorName = getFullName(profileData.profile);
+    const authorRole = getUserRoleLabel(profileData.is_trainer);
+    const postList = Array.isArray(postsData?.posts) ? postsData.posts : [];
+
+    const posts = await Promise.all(postList.map(async post => {
+      let fullPost = null;
+
+      if (post.can_view) {
+        try {
+          fullPost = await api.getPost(post.post_id);
+        } catch (error) {
+        }
+      }
+
+      const textContent = fullPost?.text_content || '';
+
+      return {
+        post_id: post.post_id,
+        title: post.title,
+        content: post.can_view ? formatPostContent(textContent) :
+          'Нет доступа к содержимому поста',
+        authorName,
+        authorRole,
+        likes: 0,
+        comments: 0,
+        can_view: post.can_view,
+        created_at: post.created_at,
+        min_tier_id: post.min_tier_id ?? null,
+        attachments: fullPost?.attachments || []
+      };
     }));
 
     const mappedData = mapProfileData(profileData, currentUser);
 
-    return {
-      ...mappedData,
-      posts
-    };
+    return { ...mappedData, posts, subscriptions: [], popularPosts: [] };
   } catch (error) {
     console.error('❌ Failed to load profile data:', error);
     throw error;
   }
 }
 
-async function demoProfilePage() {
-  const app = document.getElementById('app');
-  if (!app) {
-    console.error('❌ Element with id "app" not found');
-    return;
+
+
+// ===== ФАБРИКА РОУТЕРА  =====
+function createRouter(api) {
+  // Функция навигации
+  function navigateTo(path) {
+    history.pushState({}, '', path);
+    handleRouting();
   }
 
-  app.innerHTML = '<div style="text-align: center; padding: 50px;">⏳ Загрузка данных...</div>';
-
-  try {
-    const { renderProfilePage } = await import('/pages/ProfilePage/ProfilePage.js');
-
-    const userId = 1;
-    const data = await loadProfilePageData(userId);
-
-    const subscriptions = [
-      { id: 1, name: 'Ярослав-Лют... Владимиров', role: 'Физиолог' },
-      { id: 2, name: 'Антон Переславль-З...', role: 'Тренер ОФП' },
-      { id: 3, name: 'Ксения Бортникова', role: 'Тренер по КОНК...' },
-      { id: 4, name: 'Сергей Генц', role: 'Диетолог' },
-      { id: 5, name: 'Мария Иванова', role: 'Йога-инструктор' },
-      { id: 6, name: 'Алексей Петров', role: 'Персональный тренер' },
-      { id: 7, name: 'Елена Смирнова', role: 'Нутрициолог' },
-      { id: 8, name: 'Дмитрий Козлов', role: 'Тренер по боксу' }
-    ];
-
-    const popularPosts = [
-      { title: 'Топ упражнений на грудные мышцы', description: 'Лучшие упражнения для развития грудных мышц' },
-      { title: 'Топ упражнений на мышцы спины', description: 'Как накачать широкую спину' },
-      { title: 'Питание для набора массы', description: 'Что есть чтобы мышцы росли' },
-      { title: 'Кардио для жиросжигания', description: 'Интервальные тренировки' },
-      { title: 'Растяжка после тренировки', description: 'Комплекс упражнений для заминки' }
-    ];
-
-    await renderProfilePage(app, {
-      profile: data.profile,
-      currentUser: data.currentUser || {
-        id: userId,
-        name: data.profile.name,
-        role: data.profile.role
-      },
-      subscriptions,
-      posts: data.posts,
-      activeTab: 'publications',
-      popularPosts,
-      onLogout: async () => {
-        try {
-          await api.logout();
-          alert('Вы вышли из системы');
-          window.location.reload();
-        } catch (error) {
-          alert('Ошибка при выходе');
-        }
-      }
-    });
-
-    console.log('✅ Profile page rendered with real data');
-  } catch (error) {
-    console.error('❌ Failed to render profile page:', error);
-    app.innerHTML = `
-            <div style="color: red; padding: 20px; text-align: center;">
-                <h3>Ошибка загрузки</h3>
-                <p>${error.message}</p>
-                <button onclick="window.location.reload()" style="padding: 8px 16px; margin-top: 16px;">
-                    Повторить
-                </button>
-            </div>
-        `;
-  }
-}
-
-// ===== НАВИГАЦИЯ =====
-class App {
-  constructor() {
-    this.currentPage = null;
-    this.app = document.getElementById('app');
-  }
-
-  async init() {
-    console.log('App initializing...');
-
-    await loadTemplates();
-
-    let path = window.location.pathname;
-
-    if (path === '/' || path === '/index.html') {
-      path = '/auth';
-    }
-
-    console.log('Current path:', path);
-
-    if (path === '/auth') {
-      await this.showAuthPage();
-    } else if (path === '/profile') {
-      await this.showProfilePage();
-    } else {
-      await this.showMainPage();
-    }
-  }
-
-  async showAuthPage() {
-    console.log('Showing auth page');
-    this.app.innerHTML = '';
+  async function showAuthPage() {
+    const app = document.getElementById('app');
+    app.innerHTML = '';
     document.body.classList.add('auth-page');
 
     try {
-      const { AuthPage } = await import('/pages/AuthPage/AuthPage.js');
-      const authPage = new AuthPage(this.app);
-      await authPage.render();
-      this.currentPage = authPage;
+      const { renderAuthPage } = await import('/pages/AuthPage/AuthPage.js');
+      await renderAuthPage(app, api);
     } catch (error) {
       console.error('Failed to load AuthPage:', error);
-      this.app.innerHTML = `
-                <div style="color: red; padding: 20px;">
-                    <h2>Ошибка загрузки страницы авторизации</h2>
-                    <p>${error.message}</p>
-                    <pre>${error.stack}</pre>
-                </div>
-            `;
+      app.innerHTML = `
+        <div style="color: red; padding: 20px;">
+          <h2>Ошибка загрузки страницы авторизации</h2>
+          <p>${error.message}</p>
+        </div>
+      `;
     }
   }
 
-  async showProfilePage() {
-    console.log('Showing profile page');
-    this.app.innerHTML = '';
-    document.body.classList.remove('auth-page');
-    await demoProfilePage();
-  }
-
-  async showMainPage() {
-    console.log('Showing main page');
-    this.app.innerHTML = '';
+  async function showProfilePage() {
+    const app = document.getElementById('app');
+    app.innerHTML = '';
     document.body.classList.remove('auth-page');
 
-    this.app.innerHTML = `
-            <div style="padding: 40px; text-align: center;">
-                <h1 style="color: var(--primary-orange);">SPORT.tech</h1>
-                <p style="margin-top: 20px;">Главная страница</p>
-                <div style="margin-top: 20px;">
-                    <button onclick="window.location.href='/auth'" style="
-                        margin: 10px;
-                        padding: 10px 20px;
-                        background: var(--primary-orange);
-                        color: white;
-                        border: none;
-                        border-radius: var(--radius-md);
-                        cursor: pointer;
-                    ">
-                        Перейти к авторизации
-                    </button>
-                    <button onclick="window.location.href='/profile'" style="
-                        margin: 10px;
-                        padding: 10px 20px;
-                        background: var(--primary-orange);
-                        color: white;
-                        border: none;
-                        border-radius: var(--radius-md);
-                        cursor: pointer;
-                    ">
-                        Перейти в профиль
-                    </button>
-                </div>
-            </div>
-        `;
+    try {
+      const { renderProfilePage } = await import('/pages/ProfilePage/ProfilePage.js');
+      const currentUser = await api.getCurrentUser();
+
+      const userId = currentUser?.user?.user_id;
+      const data = await loadProfilePageData(api, userId, currentUser);
+
+      await renderProfilePage(api, app, {
+        profile: data.profile,
+        currentUser: data.currentUser,
+        subscriptions: [],
+        posts: data.posts,
+        activeTab: 'publications',
+        popularPosts: [],
+        onLogout: async () => {
+          try {
+            await api.logout();
+            localStorage.removeItem('user');
+            alert('Вы вышли из системы');
+            navigateTo('/auth');
+          } catch (error) {
+            alert('Ошибка при выходе');
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Failed to load ProfilePage:', error);
+      app.innerHTML = `
+        <div style="color: red; padding: 20px; text-align: center;">
+          <h3>Ошибка загрузки профиля</h3>
+          <p>${error.message}</p>
+          <button onclick="window.router.navigateTo('/auth')" style="
+            margin-top: 16px;
+            padding: 8px 16px;
+            background: var(--primary-orange);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+          ">
+            Вернуться к авторизации
+          </button>
+        </div>
+      `;
+    }
   }
+
+  async function handleRouting() {
+    await loadTemplates();
+
+    const currentUser = await api.getCurrentUser();
+    const isAuthenticated = !!currentUser;
+
+    const path = window.location.pathname;
+
+    console.log('Route:', { path, isAuthenticated });
+
+    if (path === '/' || path === '/index.html') {
+      navigateTo(isAuthenticated ? '/profile' : '/auth');
+      return;
+    }
+
+    if (path === '/auth') {
+      if (isAuthenticated) {
+        navigateTo('/profile');
+      } else {
+        await showAuthPage();
+      }
+      return;
+    }
+
+    if (path === '/profile') {
+      if (!isAuthenticated) {
+        navigateTo('/auth');
+      } else {
+        await showProfilePage();
+      }
+      return;
+    }
+
+    console.log(`Маршрут ${path} не найден, редирект`);
+    navigateTo(isAuthenticated ? '/profile' : '/auth');
+  }
+
+  return { handleRouting, navigateTo };
 }
 
-// ===== ЗАПУСК =====
+// ===== ЗАПУСК ПРИЛОЖЕНИЯ =====
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('DOM loaded');
+  const apiClient = new ApiClient(API_BASE_URL);
 
-  const app = new App();
-  window.app = app;
-  await app.init();
+  const router = createRouter(apiClient);
+  window.router = router;
+  await router.handleRouting();
+  window.addEventListener('popstate', () => {
+    router.handleRouting();
+  });
 });

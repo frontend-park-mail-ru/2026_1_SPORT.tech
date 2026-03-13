@@ -7,7 +7,7 @@ import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar.js';
  * @param {HTMLElement} container
  * @param {Object} params
  */
-export async function renderProfilePage(container, {
+export async function renderProfilePage(api, container, {
   profile = {
     name: 'Абдурахман Гасанов',
     role: 'Фитнес-тренер',
@@ -29,38 +29,39 @@ export async function renderProfilePage(container, {
 } = {}) {
   const template = Handlebars.templates['ProfilePage.hbs'];
   const html = template({});
-  
+
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const page = wrapper.firstElementChild;
-  
+
   // Саидбар
   const sidebarContainer = page.querySelector('#sidebar-container');
   await renderSidebar(sidebarContainer, {
     activePage: 'profile',
     currentUser,
-    users: subscriptions
+    users: subscriptions,
+    api,
+    onLogout
   });
-  
+
   // Контейнер для контента профиля
   const profileContainer = page.querySelector('#profile-container');
-  
+
   // Создаем отдельные контейнеры для шапки и контента
   const headerContainer = document.createElement('div');
   headerContainer.className = 'profile-page__header';
   profileContainer.appendChild(headerContainer);
-  
+
   const contentContainer = document.createElement('div');
   contentContainer.className = 'profile-page__content';
   profileContainer.appendChild(contentContainer);
-  
+
   // Рендерим шапку
   await renderProfileHeader(headerContainer, {
     name: profile.name,
     role: profile.role,
     avatar: profile.avatar,
-    isOwnProfile: profile.isOwnProfile,
-    onEdit: () => console.log('Редактировать профиль')
+    isOwnProfile: profile.isOwnProfile
     // Убрали onSubscribe
   });
 
@@ -69,10 +70,10 @@ export async function renderProfilePage(container, {
     activeTab: activeTab,
     posts,
     popularPosts,
-    canAddPost: profile.isOwnProfile, // Только свой профиль может добавлять посты
-    onAddPost: () => console.log('Добавить публикацию')
+    api,
+    canAddPost: profile.isOwnProfile // Только свой профиль может добавлять посты
   });
-  
+
   container.appendChild(page);
   return page;
 }
