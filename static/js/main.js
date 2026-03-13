@@ -300,8 +300,6 @@ function createRouter(api) {
 
     const path = window.location.pathname;
 
-    console.log('Route:', { path, isAuthenticated });
-
     if (path === '/' || path === '/index.html') {
       navigateTo(isAuthenticated ? '/profile' : '/auth');
       return;
@@ -325,7 +323,6 @@ function createRouter(api) {
       return;
     }
 
-    console.log(`Маршрут ${path} не найден, редирект`);
     navigateTo(isAuthenticated ? '/profile' : '/auth');
   }
 
