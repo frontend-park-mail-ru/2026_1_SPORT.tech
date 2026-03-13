@@ -3,7 +3,7 @@
  * Объединяет форму и API
  */
 
-import {AUTH_MODES, renderAuthForm} from '../../components/organisms/AuthForm/AuthForm.js';
+import { AUTH_MODES, renderAuthForm } from '../../components/organisms/AuthForm/AuthForm.js';
 
 export async function renderAuthPage(container, api) {
   let currentMode = AUTH_MODES.LOGIN;
@@ -67,7 +67,7 @@ export async function renderAuthPage(container, api) {
         trainer_details: {
           education_degree: data.education_degree || '',
           career_since_date: data.career_since_date,
-          sports: [{sport_type_id: 1, experience_years: 0, sports_rank: ''}]
+          sports: [{ sport_type_id: 1, experience_years: 0, sports_rank: '' }]
         }
       });
 

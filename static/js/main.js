@@ -225,7 +225,7 @@ function createRouter(api) {
     const currentUser = await api.getCurrentUser();
     const isAuthenticated = !!currentUser;
 
-    let path = window.location.pathname;
+    const path = window.location.pathname;
 
     console.log('Route:', { path, isAuthenticated });
 
