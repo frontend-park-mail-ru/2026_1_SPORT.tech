@@ -1,12 +1,21 @@
 /**
- * БАЗОВЫЙ КОМПОНЕНТ АВАТАРА
+ * @fileoverview Базовый компонент аватара
  * Умеет:
  * - Рендерить аватар с фото или инициалами
  * - Обрабатывать длинные имена (берёт первые буквы)
  * - Поддерживать разные размеры
  * - Обрабатывать клики
+ * 
+ * @module components/atoms/Avatar
  */
 
+/**
+ * @constant {Object} AVATAR_SIZES - Доступные размеры аватара
+ * @property {string} SMALL - Маленький размер (40x40)
+ * @property {string} MEDIUM - Средний размер (60x60)
+ * @property {string} LARGE - Большой размер (80x80)
+ * @property {string} XLARGE - Очень большой размер (100x100)
+ */
 export const AVATAR_SIZES = {
   SMALL: 'small',
   MEDIUM: 'medium',
@@ -16,8 +25,13 @@ export const AVATAR_SIZES = {
 
 /**
  * Получить инициалы из имени
- * @param {string} name - Полное имя
- * @returns {string} - Инициалы (макс 2 буквы)
+ * @param {string} name - Полное имя пользователя
+ * @returns {string} Инициалы (макс 2 буквы) или '?' если имя пустое
+ * 
+ * @example
+ * getInitials('Иван Петров') // 'ИП'
+ * getInitials('Александр') // 'А'
+ * getInitials('') // '?'
  */
 function getInitials(name) {
   if (!name) return '?';
@@ -38,16 +52,34 @@ function getInitials(name) {
 
 /**
  * Рендерит аватар
- * @param {HTMLElement} container - Контейнер для вставки
+ * @async
+ * @param {HTMLElement} container - DOM элемент, в который будет вставлен аватар
  * @param {Object} config - Конфигурация аватара
- * @param {string} config.src - URL фото (опционально)
- * @param {string} config.name - Имя пользователя (для инициалов)
- * @param {string} config.alt - Alt текст
- * @param {string} config.size - small | medium | large | xlarge
- * @param {number} config.userId - ID пользователя (для data-атрибута)
- * @param {Function} config.onClick - Обработчик клика
- * @param {string} config.ariaLabel - Для доступности
- * @returns {Promise<HTMLElement>} DOM элемент аватара
+ * @param {string} [config.src=null] - URL изображения (опционально)
+ * @param {string} [config.name=''] - Имя пользователя (для инициалов)
+ * @param {string} [config.alt=''] - Alt текст для изображения
+ * @param {string} [config.size=AVATAR_SIZES.MEDIUM] - Размер аватара
+ * @param {number} [config.userId=null] - ID пользователя (для data-атрибута)
+ * @param {Function} [config.onClick=null] - Обработчик клика по аватару
+ * @param {string} [config.ariaLabel=null] - ARIA метка для доступности
+ * @returns {Promise<HTMLElement>} DOM элемент созданного аватара
+ * @throws {Error} Если шаблон Avatar.hbs не найден
+ * 
+ * @example
+ * // Аватар с инициалами
+ * await renderAvatar(container, {
+ *   name: 'Иван Петров',
+ *   size: AVATAR_SIZES.LARGE,
+ *   onClick: (user) => console.log('Clicked:', user)
+ * });
+ * 
+ * @example
+ * // Аватар с фото
+ * await renderAvatar(container, {
+ *   src: '/images/avatar.jpg',
+ *   name: 'Иван Петров',
+ *   size: AVATAR_SIZES.MEDIUM
+ * });
  */
 export async function renderAvatar(container, config = {}) {
   const {
@@ -78,6 +110,10 @@ export async function renderAvatar(container, config = {}) {
   wrapper.innerHTML = html.trim();
   const avatar = wrapper.firstElementChild;
 
+  /**
+   * Обработчик клика по аватару
+   * @param {Event} _e - Событие клика (не используется)
+   */
   if (onClick) {
     avatar.addEventListener('click', _e => {
       onClick({ userId, name, src });

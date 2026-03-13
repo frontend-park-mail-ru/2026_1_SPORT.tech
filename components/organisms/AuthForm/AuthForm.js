@@ -1,52 +1,75 @@
 /**
- * КОМПОНЕНТ ФОРМЫ АВТОРИЗАЦИИ
+ * @fileoverview Компонент формы авторизации
  * Поддерживает:
  * - Вход (login)
  * - Регистрацию клиента
  * - Регистрацию тренера
  * - Валидацию всех полей
  * - Интеграцию с API
+ * 
+ * @module components/organisms/AuthForm
  */
 
 import { Validator } from '/src/utils/validator.js';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button.js';
-import { INPUT_STATES, INPUT_TYPES, renderInput } from '../../atoms/Input/Input.js';
+import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input.js';
 
+/**
+ * @constant {Object} AUTH_MODES - Режимы работы формы авторизации
+ * @property {string} LOGIN - Режим входа
+ * @property {string} REGISTER_CLIENT - Регистрация клиента
+ * @property {string} REGISTER_TRAINER - Регистрация тренера
+ */
 export const AUTH_MODES = {
   LOGIN: 'login',
   REGISTER_CLIENT: 'register-client',
   REGISTER_TRAINER: 'register-trainer'
 };
 
-// Функция форматирования даты
+/**
+ * Форматирует ввод даты в формате ГГГГ-ММ-ДД
+ * @private
+ * @param {string} value - Введенное значение
+ * @returns {string} Отформатированная дата
+ * 
+ * @example
+ * formatDateInput('2024') // '2024'
+ * formatDateInput('202412') // '2024-12'
+ * formatDateInput('20241225') // '2024-12-25'
+ */
 function formatDateInput(value) {
   const digits = value.replace(/\D/g, '');
-  if (digits.length <= 4) {
-    return digits;
-  } else if (digits.length <= 6) {
-    return `${digits.slice(0, 4)}-${digits.slice(4)}`;
-  } else {
-    return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
-  }
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
 }
 
 /**
  * Рендерит форму авторизации
- * @param {HTMLElement} container - Контейнер для вставки
- * @param {Object} config - Конфигурация
- * @param {string} config.mode - Режим (login, register-client,
- *     register-trainer)
- * @param {Function} config.onSubmit - Обработчик отправки формы
- * @param {Function} config.onSwitchMode - Обработчик переключения режима
- * @returns {Promise<Object>} API формы
+ * @async
+ * @param {HTMLElement} container - DOM элемент для вставки
+ * @param {Object} config - Конфигурация формы
+ * @param {string} [config.mode=AUTH_MODES.LOGIN] - Режим работы формы
+ * @param {Function} [config.onSubmit=null] - Обработчик отправки формы
+ * @param {Function} [config.onSwitchMode=null] - Обработчик переключения режима
+ * @param {Object} [config.api] - API клиент
+ * @returns {Promise<Object>} API для управления формой
  */
 export async function renderAuthForm(container, config = {}) {
-  const { mode = AUTH_MODES.LOGIN, onSubmit = null, onSwitchMode = null, api } =
-      config;
+  const { mode = AUTH_MODES.LOGIN, onSubmit = null, onSwitchMode = null, api } = config;
 
   const validator = new Validator();
   const template = Handlebars.templates['AuthForm.hbs'];
 
+  /**
+   * @constant {Object} modeConfig - Конфигурация для текущего режима
+   * @property {string} title - Заголовок формы
+   * @property {string} subtitle - Подзаголовок
+   * @property {string} submitText - Текст кнопки отправки
+   * @property {string} altText - Текст альтернативного действия
+   * @property {string} altLinkText - Текст ссылки альтернативного действия
+   * @property {Array} fields - Массив полей формы
+   */
   const modeConfig = {
     [AUTH_MODES.LOGIN]: {
       title: 'Вход в Sporteon',
@@ -226,11 +249,16 @@ export async function renderAuthForm(container, config = {}) {
   const fieldsContainer = form.querySelector('.auth-form__fields');
   const submitContainer = form.querySelector('.auth-form__submit-container');
 
+  /** @type {Map<string, HTMLElement>} */
   const inputs = new Map();
+  /** @type {Map<string, Object>} */
   const inputsApi = new Map();
 
   /**
    * Валидация поля
+   * @param {string} fieldName - Имя поля
+   * @param {string} value - Значение поля
+   * @returns {boolean} true если валидно
    */
   const validateField = (fieldName, value) => {
     const api = inputsApi.get(fieldName);
@@ -314,6 +342,10 @@ export async function renderAuthForm(container, config = {}) {
     }
   };
 
+  /**
+   * Создание полей формы
+   * @param {Object} fieldConfig - Конфигурация поля
+   */
   for (const fieldConfig of currentMode.fields) {
     const fieldContainer = document.createElement('div');
     fieldsContainer.appendChild(fieldContainer);
@@ -388,6 +420,7 @@ export async function renderAuthForm(container, config = {}) {
 
   /**
    * Валидация всей формы
+   * @returns {boolean} true если форма валидна
    */
   const validateForm = () => {
     let isValid = true;
@@ -415,6 +448,7 @@ export async function renderAuthForm(container, config = {}) {
 
   /**
    * Получить данные формы
+   * @returns {Object} Объект с данными формы
    */
   const getFormData = () => {
     const data = {};
@@ -426,6 +460,7 @@ export async function renderAuthForm(container, config = {}) {
 
   /**
    * Установить ошибки из API
+   * @param {Array} errors - Массив ошибок
    */
   const setApiErrors = errors => {
     if (!errors || !Array.isArray(errors)) return;
@@ -450,6 +485,7 @@ export async function renderAuthForm(container, config = {}) {
 
   /**
    * Показать глобальную ошибку
+   * @param {string} message - Текст ошибки
    */
   const setGlobalError = message => {
     let globalError = form.querySelector('.auth-form__global-error');
@@ -480,6 +516,10 @@ export async function renderAuthForm(container, config = {}) {
     }
   };
 
+  /**
+   * Обработчик отправки формы
+   * @param {MouseEvent} e - Событие клика
+   */
   submitBtn.element.addEventListener('click', async e => {
     e.preventDefault();
 
@@ -504,12 +544,15 @@ export async function renderAuthForm(container, config = {}) {
     }
   });
 
+  /**
+   * Обработчик переключения режима
+   * @param {MouseEvent} e - Событие клика
+   */
   const altLink = form.querySelector('.auth-form__link--alt');
   if (altLink && onSwitchMode) {
     altLink.addEventListener('click', e => {
       e.preventDefault();
-      const newMode = mode === AUTH_MODES.LOGIN ? AUTH_MODES.REGISTER_CLIENT :
-        AUTH_MODES.LOGIN;
+      const newMode = mode === AUTH_MODES.LOGIN ? AUTH_MODES.REGISTER_CLIENT : AUTH_MODES.LOGIN;
       onSwitchMode(newMode);
     });
   }

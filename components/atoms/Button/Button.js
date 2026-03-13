@@ -1,12 +1,21 @@
 /**
- * БАЗОВЫЙ КОМПОНЕНТ КНОПКИ
- * Умеет:
- * - Рендерить себя в любой контейнер
- * - Управлять состояниями (normal, hover, active, disabled)
- * - Принимать конфиг через пропсы
- * - Обрабатывать клики и наведения
+ * @fileoverview Базовый компонент кнопки
+ * Поддерживает все состояния из UI Kit:
+ * - Типы: primary-orange, secondary-blue, text-orange, text-blue
+ * - Состояния: normal, hover, active, disabled
+ * - Размеры: small (32px), medium (40px), large (48px)
+ * - Модификатор: full-width
+ * 
+ * @module components/atoms/Button
  */
 
+/**
+ * @constant {Object} BUTTON_VARIANTS - Доступные варианты кнопок
+ * @property {string} PRIMARY_ORANGE - Основная оранжевая кнопка
+ * @property {string} SECONDARY_BLUE - Вторичная синяя кнопка
+ * @property {string} TEXT_ORANGE - Текстовая оранжевая кнопка
+ * @property {string} TEXT_BLUE - Текстовая синяя кнопка
+ */
 export const BUTTON_VARIANTS = {
   PRIMARY_ORANGE: 'primary-orange',
   SECONDARY_BLUE: 'secondary-blue',
@@ -14,6 +23,13 @@ export const BUTTON_VARIANTS = {
   TEXT_BLUE: 'text-blue'
 };
 
+/**
+ * @constant {Object} BUTTON_STATES - Состояния кнопки
+ * @property {string} NORMAL - Обычное состояние
+ * @property {string} HOVER - Состояние при наведении
+ * @property {string} ACTIVE - Состояние при нажатии
+ * @property {string} DISABLED - Отключенное состояние
+ */
 export const BUTTON_STATES = {
   NORMAL: 'normal',
   HOVER: 'hover',
@@ -21,6 +37,12 @@ export const BUTTON_STATES = {
   DISABLED: 'disabled'
 };
 
+/**
+ * @constant {Object} BUTTON_SIZES - Размеры кнопки
+ * @property {string} SMALL - Маленькая кнопка (32px)
+ * @property {string} MEDIUM - Средняя кнопка (40px)
+ * @property {string} LARGE - Большая кнопка (48px)
+ */
 export const BUTTON_SIZES = {
   SMALL: 'small',
   MEDIUM: 'medium',
@@ -29,20 +51,21 @@ export const BUTTON_SIZES = {
 
 /**
  * Рендерит кнопку
- * @param {HTMLElement} container - Контейнер для вставки
+ * @async
+ * @param {HTMLElement} container - DOM элемент, в который будет вставлена кнопка
  * @param {Object} config - Конфигурация кнопки
- * @param {string} config.text - Текст кнопки
- * @param {string} config.variant - primary-orange | secondary-blue | text-orange | text-blue
- * @param {string} config.state - normal | hover | active | disabled
- * @param {string} config.size - small | medium | large
- * @param {string} config.type - button | submit | reset
- * @param {boolean} config.fullWidth - Растягивать ли на всю ширину
- * @param {boolean} config.disabled - Отключена ли кнопка
- * @param {string} config.icon - HTML иконки
- * @param {string} config.ariaLabel - Для доступности
- * @param {Function} config.onClick - Обработчик клика
- * @param {Function} config.onHover - Обработчик наведения
- * @param {Function} config.onLeave - Обработчик ухода мыши
+ * @param {string} [config.text=''] - Текст кнопки
+ * @param {string} [config.variant=BUTTON_VARIANTS.PRIMARY_ORANGE] - Вариант кнопки
+ * @param {string} [config.state=BUTTON_STATES.NORMAL] - Начальное состояние
+ * @param {string} [config.size=BUTTON_SIZES.MEDIUM] - Размер кнопки
+ * @param {string} [config.type='button'] - HTML тип кнопки (button|submit|reset)
+ * @param {boolean} [config.fullWidth=false] - Растягивать ли на всю ширину
+ * @param {boolean} [config.disabled=false] - Отключена ли кнопка
+ * @param {string} [config.icon=null] - HTML иконки (SVG)
+ * @param {string} [config.ariaLabel=null] - ARIA метка для доступности
+ * @param {Function} [config.onClick=null] - Обработчик клика
+ * @param {Function} [config.onHover=null] - Обработчик наведения
+ * @param {Function} [config.onLeave=null] - Обработчик ухода мыши
  * @returns {Promise<Object>} API для управления кнопкой
  */
 export async function renderButton(container, config = {}) {
@@ -79,14 +102,16 @@ export async function renderButton(container, config = {}) {
   wrapper.innerHTML = html.trim();
   const button = wrapper.firstElementChild;
 
-  // ===== API ДЛЯ УПРАВЛЕНИЯ =====
-    
+  /**
+   * Установить состояние кнопки
+   * @param {string} newState - Новое состояние из BUTTON_STATES
+   */
   const setState = newState => {
     button.classList.remove(
-            `button--${BUTTON_STATES.NORMAL}`,
-            `button--${BUTTON_STATES.HOVER}`,
-            `button--${BUTTON_STATES.ACTIVE}`,
-            `button--${BUTTON_STATES.DISABLED}`
+      `button--${BUTTON_STATES.NORMAL}`,
+      `button--${BUTTON_STATES.HOVER}`,
+      `button--${BUTTON_STATES.ACTIVE}`,
+      `button--${BUTTON_STATES.DISABLED}`
     );
     button.classList.add(`button--${newState}`);
         
@@ -97,6 +122,10 @@ export async function renderButton(container, config = {}) {
     }
   };
 
+  /**
+   * Включить или отключить кнопку
+   * @param {boolean} isDisabled - true для отключения, false для включения
+   */
   const setDisabled = isDisabled => {
     if (isDisabled) {
       button.disabled = true;
@@ -107,6 +136,10 @@ export async function renderButton(container, config = {}) {
     }
   };
 
+  /**
+   * Получить текущее состояние кнопки
+   * @returns {string} Текущее состояние из BUTTON_STATES
+   */
   const getState = () => {
     if (button.disabled) return BUTTON_STATES.DISABLED;
     if (button.classList.contains(`button--${BUTTON_STATES.HOVER}`)) return BUTTON_STATES.HOVER;
@@ -114,6 +147,10 @@ export async function renderButton(container, config = {}) {
     return BUTTON_STATES.NORMAL;
   };
 
+  /**
+   * Изменить текст кнопки
+   * @param {string} newText - Новый текст
+   */
   const setText = newText => {
     const textSpan = button.querySelector('.button__text');
     if (textSpan) {
@@ -123,6 +160,10 @@ export async function renderButton(container, config = {}) {
 
   // ===== ОБРАБОТЧИКИ СОБЫТИЙ =====
   if (!disabled) {
+    /**
+     * Обработчик наведения мыши
+     * @param {MouseEvent} _event - Событие мыши (не используется)
+     */
     button.addEventListener('mouseenter', () => {
       if (!button.disabled) {
         setState(BUTTON_STATES.HOVER);
@@ -130,6 +171,10 @@ export async function renderButton(container, config = {}) {
       }
     });
 
+    /**
+     * Обработчик ухода мыши
+     * @param {MouseEvent} _event - Событие мыши (не используется)
+     */
     button.addEventListener('mouseleave', () => {
       if (!button.disabled) {
         setState(BUTTON_STATES.NORMAL);
@@ -137,18 +182,30 @@ export async function renderButton(container, config = {}) {
       }
     });
 
+    /**
+     * Обработчик нажатия кнопки мыши
+     * @param {MouseEvent} _event - Событие мыши (не используется)
+     */
     button.addEventListener('mousedown', () => {
       if (!button.disabled) {
         setState(BUTTON_STATES.ACTIVE);
       }
     });
 
+    /**
+     * Обработчик отпускания кнопки мыши
+     * @param {MouseEvent} _event - Событие мыши (не используется)
+     */
     button.addEventListener('mouseup', () => {
       if (!button.disabled) {
         setState(BUTTON_STATES.HOVER);
       }
     });
 
+    /**
+     * Обработчик клика по кнопке
+     * @param {MouseEvent} e - Событие клика
+     */
     if (onClick) {
       button.addEventListener('click', e => {
         if (!button.disabled) {
