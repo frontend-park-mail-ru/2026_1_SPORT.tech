@@ -25,8 +25,7 @@ export async function renderProfilePage(api, container, {
   ],
   posts = [],
   popularPosts = [],
-  activeTab = 'main', // ← ДОБАВЛЕНО: активная вкладка
-  onLogout = null
+  activeTab = 'main' // ← ДОБАВЛЕНО: активная вкладка
 } = {}) {
   const template = Handlebars.templates['ProfilePage.hbs'];
   const html = template({});
