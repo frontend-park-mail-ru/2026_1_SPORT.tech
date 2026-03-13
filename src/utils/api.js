@@ -182,7 +182,8 @@ class ApiClient {
 
       return result;
     } catch (error) {
-      clearTimeout(timeoutId);
+      const enhancedError = new Error(error.message);
+      enhancedError.code = 'timeout';
 
       if (error.name === 'AbortError') {
         error.code = 'timeout';
@@ -196,9 +197,11 @@ class ApiClient {
             return result;
           }
           if (result instanceof Error) {
-            error = result;
+            const interceptedError = result;
+            throw interceptedError;
           }
         } catch (e) {
+          // Ignore
         }
       }
 
@@ -229,11 +232,11 @@ class ApiClient {
 
 const api = new ApiClient();
 
-export const setApiConfig = (config) => api.setConfig(config);
-export const setApiHeaders = (headers) => api.setHeaders(headers);
-export const addRequestInterceptor = (fn) => api.addRequestInterceptor(fn);
-export const addResponseInterceptor = (fn) => api.addResponseInterceptor(fn);
-export const addErrorInterceptor = (fn) => api.addErrorInterceptor(fn);
+export const setApiConfig = config => api.setConfig(config);
+export const setApiHeaders = headers => api.setHeaders(headers);
+export const addRequestInterceptor = fn => api.addRequestInterceptor(fn);
+export const addResponseInterceptor = fn => api.addResponseInterceptor(fn);
+export const addErrorInterceptor = fn => api.addErrorInterceptor(fn);
 
 export const get = (endpoint, options) => api.get(endpoint, options);
 export const post = (endpoint, body, options) => api.post(endpoint, body, options);

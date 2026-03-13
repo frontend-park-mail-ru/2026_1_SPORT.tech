@@ -19,57 +19,57 @@
  * @returns {Promise<HTMLElement>}
  */
 export async function renderUserPhotoItem(container, config = {}) {
-    const {
-        id = null,
-        name = '',
-        role = '',
-        avatar = null,
-        isEmpty = false,
-        emptyMessage = 'Нет пользователей',
-        compact = false,
-        clickable = true,
-        onClick = null,
-        count = null
-    } = config;
+  const {
+    id = null,
+    name = '',
+    role = '',
+    avatar = null,
+    isEmpty = false,
+    emptyMessage = 'Нет пользователей',
+    compact = false,
+    clickable = true,
+    onClick = null,
+    count = null
+  } = config;
 
-    const template = Handlebars.templates['UserPhotoItem.hbs'];
+  const template = Handlebars.templates['UserPhotoItem.hbs'];
     
-    // Получаем инициалы
-    const initials = name
-        .split(' ')
-        .map(n => n.charAt(0))
-        .join('')
-        .toUpperCase()
-        .slice(0, 2) || '?';
+  // Получаем инициалы
+  const initials = name
+    .split(' ')
+    .map(n => n.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || '?';
     
-    const html = template({ 
-        id, 
-        name, 
-        role, 
-        avatar, 
-        initials,
-        isEmpty,
-        emptyMessage,
-        clickable: clickable && !isEmpty,
-        count
-    });
+  const html = template({ 
+    id, 
+    name, 
+    role, 
+    avatar, 
+    initials,
+    isEmpty,
+    emptyMessage,
+    clickable: clickable && !isEmpty,
+    count
+  });
 
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = html.trim();
-    const element = wrapper.firstElementChild;
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = html.trim();
+  const element = wrapper.firstElementChild;
 
-    // Добавляем компактный класс
-    if (compact) {
-        element.classList.add('user-photo-item--compact');
-    }
+  // Добавляем компактный класс
+  if (compact) {
+    element.classList.add('user-photo-item--compact');
+  }
 
-    // Обработчик клика
-    if (onClick && !isEmpty) {
-        element.addEventListener('click', () => onClick({ id, name, role, avatar }));
-    }
+  // Обработчик клика
+  if (onClick && !isEmpty) {
+    element.addEventListener('click', () => onClick({ id, name, role, avatar }));
+  }
 
-    container.appendChild(element);
-    return element;
+  container.appendChild(element);
+  return element;
 }
 
 /**
@@ -80,32 +80,32 @@ export async function renderUserPhotoItem(container, config = {}) {
  * @param {Object} options - Опции
  */
 export async function renderUserPhotoList(container, title, users = [], options = {}) {
-    // Заголовок
-    const titleEl = document.createElement('h3');
-    titleEl.className = 'user-photo-section-title';
-    titleEl.textContent = title;
-    container.appendChild(titleEl);
+  // Заголовок
+  const titleEl = document.createElement('h3');
+  titleEl.className = 'user-photo-section-title';
+  titleEl.textContent = title;
+  container.appendChild(titleEl);
 
-    // Контейнер для списка
-    const listContainer = document.createElement('div');
-    listContainer.className = 'user-photo-list';
-    container.appendChild(listContainer);
+  // Контейнер для списка
+  const listContainer = document.createElement('div');
+  listContainer.className = 'user-photo-list';
+  container.appendChild(listContainer);
 
-    // Рендерим пользователей
-    if (users.length === 0) {
-        await renderUserPhotoItem(listContainer, {
-            isEmpty: true,
-            emptyMessage: options.emptyMessage || 'Нет пользователей'
-        });
-    } else {
-        for (const user of users) {
-            await renderUserPhotoItem(listContainer, {
-                ...user,
-                compact: options.compact,
-                clickable: options.clickable
-            });
-        }
+  // Рендерим пользователей
+  if (users.length === 0) {
+    await renderUserPhotoItem(listContainer, {
+      isEmpty: true,
+      emptyMessage: options.emptyMessage || 'Нет пользователей'
+    });
+  } else {
+    for (const user of users) {
+      await renderUserPhotoItem(listContainer, {
+        ...user,
+        compact: options.compact,
+        clickable: options.clickable
+      });
     }
+  }
 
-    return listContainer;
+  return listContainer;
 }

@@ -1,6 +1,6 @@
-import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar.js';
 import { renderProfileHeader } from '../../components/molecules/ProfileHeader/ProfileHeader.js';
 import { renderProfileContent } from '../../components/organisms/ProfileContent/ProfileContent.js';
+import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar.js';
 
 /**
  * Рендерит страницу профиля тренера
@@ -25,8 +25,7 @@ export async function renderProfilePage(container, {
   ],
   posts = [],
   popularPosts = [],
-  activeTab = 'main', // ← ДОБАВЛЕНО: активная вкладка
-  onLogout = null
+  activeTab = 'main' // ← ДОБАВЛЕНО: активная вкладка
 } = {}) {
   const template = Handlebars.templates['ProfilePage.hbs'];
   const html = template({});
