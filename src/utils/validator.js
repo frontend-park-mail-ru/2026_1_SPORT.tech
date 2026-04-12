@@ -74,7 +74,39 @@ const rules = {
 
   education_degree: { required: false, max: 255, messages: { max: 'Максимум 255 символов' } },
 
-  sports_rank: { required: false, max: 100, messages: { max: 'Максимум 100 символов' } }
+  sports_rank: { required: false, max: 100, messages: { max: 'Максимум 100 символов' } },
+
+  post_title: {
+    required: true,
+    min: 1,
+    max: 200,
+    messages: {
+      required: 'Заголовок обязателен',
+      min: 'Заголовок не может быть пустым',
+      max: 'Максимум 200 символов'
+    }
+  },
+
+  post_body: {
+    required: true,
+    min: 1,
+    max: 10000,
+    messages: {
+      required: 'Текст публикации обязателен',
+      min: 'Текст не может быть пустым',
+      max: 'Максимум 10000 символов'
+    }
+  },
+
+  receipt_email: {
+    required: true,
+    max: 254,
+    pattern: /^[^@\s]+@[^@\s]+\.[^@\s]+$/,
+    messages: {
+      required: 'Укажите почту для чека',
+      pattern: 'Неверный формат email'
+    }
+  }
 };
 
 /**
@@ -477,6 +509,64 @@ export class Validator {
         message: 'Некорректные данные',
         fields: this.getErrors()
       }
+    };
+  }
+
+  /**
+   * Валидация формы создания/редактирования поста
+   * @param {Object} data - Данные
+   * @param {string} data.title - Заголовок
+   * @param {string} data.text_content - Текст
+   * @returns {{ isValid: boolean, errors: Array<{field: string, message: string}> }}
+   */
+  validatePostEditor(data) {
+    this.reset();
+    const title = data?.title ?? '';
+    const textContent = data?.text_content ?? '';
+    this.validateField(title, 'title', this.rules.post_title);
+    this.validateField(textContent, 'text_content', this.rules.post_body);
+    return { isValid: !this.hasErrors(), errors: this.getErrors() };
+  }
+
+  /**
+   * Парсинг суммы пожертвования (поддержка запятой)
+   * @param {string} raw - Строка из поля ввода
+   * @returns {number|null} Число или null
+   */
+  static parseDonationAmount(raw) {
+    if (raw === undefined || raw === null) return null;
+    const s = String(raw).trim().replace(',', '.');
+    if (s === '') return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  /**
+   * Валидация формы пожертвования
+   * @param {Object} data - Данные
+   * @param {string} data.amount - Сумма (строка)
+   * @param {string} data.email - Email для чека
+   * @returns {{ isValid: boolean, errors: Array<{field: string, message: string}>, amountNumber: number|null }}
+   */
+  validateDonationForm(data) {
+    this.reset();
+    const amountNum = Validator.parseDonationAmount(data?.amount);
+    const email = data?.email ?? '';
+
+    if (amountNum === null) {
+      this.addError('amount', 'Введите корректную сумму');
+    } else if (amountNum <= 0) {
+      this.addError('amount', 'Сумма должна быть больше нуля');
+    } else if (amountNum > 1_000_000_000) {
+      this.addError('amount', 'Сумма слишком велика');
+    }
+
+    this.validateField(email, 'email', this.rules.receipt_email);
+
+    return {
+      isValid: !this.hasErrors(),
+      errors: this.getErrors(),
+      amountNumber: amountNum
     };
   }
 }

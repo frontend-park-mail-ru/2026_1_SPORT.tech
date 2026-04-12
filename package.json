@@ -4,6 +4,8 @@
   "description": "SPORT.tech frontend components",
   "type": "module",
   "scripts": {
+    "dev": "python3 -m http.server 5173 --bind 127.0.0.1",
+    "start": "npm run dev",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint:watch": "eslint . --watch"

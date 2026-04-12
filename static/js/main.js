@@ -9,8 +9,10 @@
  * @module static/js/main
  */
 
-import { API_BASE_URL } from '/src/config/constants.js';
+import { API_BASE_URL, getDevMockMode } from '/src/config/constants.js';
 import { ApiClient } from '/src/utils/api.js';
+import { applyDevMockApiOverrides } from '/src/utils/devMockApi.js';
+import { loadProfilePageData } from '/src/utils/profilePageData.js';
 
 // ===== РЕГИСТРАЦИЯ ШАБЛОНОВ HANDLEBARS =====
 
@@ -30,6 +32,8 @@ async function loadTemplates() {
     { name: 'AuthForm', folder: 'organisms' },
     { name: 'ProfileHeader', folder: 'molecules' },
     { name: 'PostCard', folder: 'molecules' },
+    { name: 'DonationModal', folder: 'molecules' },
+    { name: 'PostFormModal', folder: 'molecules' },
     { name: 'Sidebar', folder: 'organisms' },
     { name: 'ProfileContent', folder: 'organisms' },
     { name: 'AuthPage', folder: 'pages' }, { name: 'ProfilePage', folder: 'pages' }
@@ -47,148 +51,6 @@ async function loadTemplates() {
     } catch (error) {
       console.error(`❌ Failed to load template ${name}:`, error);
     }
-  }
-}
-
-// ===== ФУНКЦИИ ДЛЯ РАБОТЫ С ПРОФИЛЕМ =====
-
-/**
- * Получить текстовую метку роли пользователя
- * @param {boolean} isTrainer - Является ли пользователь тренером
- * @returns {string} 'Тренер' или 'Клиент'
- */
-function getUserRoleLabel(isTrainer) {
-  return isTrainer ? 'Тренер' : 'Клиент';
-}
-
-/**
- * Получить полное имя из профиля
- * @param {Object} profile - Профиль пользователя
- * @param {string} [profile.first_name] - Имя
- * @param {string} [profile.last_name] - Фамилия
- * @param {string} [profile.username] - Имя пользователя
- * @returns {string} Полное имя или 'Пользователь'
- */
-function getFullName(profile = {}) {
-  return `${profile.first_name || ''} ${profile.last_name || ''}`.trim() ||
-      profile.username || 'Пользователь';
-}
-
-/**
- * Экранирует HTML-спецсимволы в строке
- * @param {string} value - Исходная строка
- * @returns {string} Экранированная строка
- */
-function escapeHtml(value = '') {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('\'', '&#39;');
-}
-
-/**
- * Форматирует содержимое поста для отображения
- * @param {string} textContent - Текст поста
- * @returns {string} Отформатированный HTML
- */
-function formatPostContent(textContent) {
-  if (!textContent) {
-    return 'Нет доступа к содержимому поста';
-  }
-
-  return escapeHtml(textContent).replace(/\n/g, '<br>');
-}
-
-/**
- * Преобразует данные из API в формат для компонентов
- * @param {Object} apiData - Данные из API
- * @param {Object} currentUser - Текущий пользователь
- * @returns {Object} Отформатированные данные для компонентов
- */
-function mapProfileData(apiData, currentUser) {
-  const isOwnProfile = apiData.is_me;
-  const fullName = getFullName(apiData.profile);
-
-  return {
-    profile: {
-      name: fullName,
-      role: getUserRoleLabel(apiData.is_trainer),
-      avatar: apiData.profile.avatar_url,
-      isOwnProfile: isOwnProfile
-    },
-    currentUser: currentUser?.user ? {
-      id: currentUser.user.user_id,
-      name: getFullName(currentUser.user.profile),
-      role: getUserRoleLabel(currentUser.user.is_trainer),
-      avatar: currentUser.user.profile.avatar_url
-    } : null
-  };
-}
-
-/**
- * Загружает данные для страницы профиля
- * @async
- * @param {Object} api - API клиент
- * @param {number} userId - ID пользователя
- * @param {Object} [currentUser=null] - Текущий пользователь
- * @returns {Promise<Object>} Данные для отображения профиля
- * @throws {Error} Если пользователь не авторизован
- */
-async function loadProfilePageData(api, userId, currentUser = null) {
-  try {
-    const resolvedUserId = userId || currentUser?.user?.user_id;
-
-    if (!resolvedUserId) {
-      throw new Error('Пользователь не авторизован');
-    }
-
-    const [profileData, postsData] = await Promise.all([
-      api.getProfile(resolvedUserId),
-      api.getUserPosts(resolvedUserId).catch(error => {
-        return { posts: [] };
-      })
-    ]);
-
-    const authorName = getFullName(profileData.profile);
-    const authorRole = getUserRoleLabel(profileData.is_trainer);
-    const postList = Array.isArray(postsData?.posts) ? postsData.posts : [];
-
-    const posts = await Promise.all(postList.map(async post => {
-      let fullPost = null;
-
-      if (post.can_view) {
-        try {
-          fullPost = await api.getPost(post.post_id);
-        } catch (error) {
-          // Игнорируем ошибки загрузки отдельных постов
-        }
-      }
-
-      const textContent = fullPost?.text_content || '';
-
-      return {
-        post_id: post.post_id,
-        title: post.title,
-        content: post.can_view ? formatPostContent(textContent) : 'Нет доступа к содержимому поста',
-        authorName,
-        authorRole,
-        likes: 0,
-        comments: 0,
-        can_view: post.can_view,
-        created_at: post.created_at,
-        min_tier_id: post.min_tier_id ?? null,
-        attachments: fullPost?.attachments || []
-      };
-    }));
-
-    const mappedData = mapProfileData(profileData, currentUser);
-
-    return { ...mappedData, posts, subscriptions: [], popularPosts: [] };
-  } catch (error) {
-    console.error('❌ Failed to load profile data:', error);
-    throw error;
   }
 }
 
@@ -255,6 +117,7 @@ function createRouter(api) {
         posts: data.posts,
         activeTab: 'publications',
         popularPosts: [],
+        viewedUserId: data.viewedUserId,
         onLogout: async () => {
           try {
             await api.logout();
@@ -336,12 +199,25 @@ function createRouter(api) {
  * @listens document#DOMContentLoaded
  */
 document.addEventListener('DOMContentLoaded', async () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+  }
+
   const apiClient = new ApiClient(API_BASE_URL);
+  const devMock = getDevMockMode();
+  if (devMock) {
+    console.warn(
+      '[SPORT] Режим mock без бэкенда:',
+      devMock,
+      '(добавьте ?mock=0 в URL чтобы выключить)'
+    );
+    applyDevMockApiOverrides(apiClient, devMock);
+  }
 
   const router = createRouter(apiClient);
   window.router = router;
   await router.handleRouting();
-  
+
   /**
    * Обработчик изменения истории браузера (кнопки назад/вперед)
    * @listens window#popstate

@@ -95,8 +95,26 @@
   transition: color 0.2s;
 }
 
-.post-card__action:hover {
+button.post-card__action {
+  border: none;
+  background: none;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+}
+
+.post-card__action:hover:not(:disabled) {
   color: var(--base-purple);
+}
+
+.post-card__action--liked {
+  color: var(--primary-orange);
+}
+
+.post-card__action--disabled,
+.post-card__action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .post-card__action svg {

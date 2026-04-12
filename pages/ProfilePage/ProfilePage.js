@@ -1,52 +1,43 @@
 /**
  * @fileoverview Страница профиля пользователя
  * Объединяет сайдбар, шапку профиля и контент
- * 
+ *
  * @module pages/ProfilePage
  */
 
+import { openDonationModal } from '../../components/molecules/DonationModal/DonationModal.js';
 import { renderProfileHeader } from '../../components/molecules/ProfileHeader/ProfileHeader.js';
-import { renderProfileContent } from '../../components/organisms/ProfileContent/ProfileContent.js';
+import {
+  fillProfilePostsSection,
+  renderProfileContent
+} from '../../components/organisms/ProfileContent/ProfileContent.js';
 import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar.js';
+import { loadProfilePageData } from '/src/utils/profilePageData.js';
 
 /**
  * Рендерит страницу профиля
  * @async
- * @param {Object} api - API клиент
+ * @param {import('/src/utils/api.js').ApiClient} api - API клиент
  * @param {HTMLElement} container - DOM элемент для вставки
  * @param {Object} params - Параметры страницы
+ * @param {number} params.viewedUserId - ID пользователя, чей профиль открыт
  * @param {Object} [params.profile] - Данные профиля
- * @param {string} [params.profile.name='Абдурахман Гасанов'] - Имя
- * @param {string} [params.profile.role='Фитнес-тренер'] - Роль
- * @param {string|null} [params.profile.avatar=null] - URL аватара
- * @param {boolean} [params.profile.isOwnProfile=false] - Свой ли профиль
  * @param {Object} [params.currentUser] - Текущий пользователь
- * @param {string} [params.currentUser.name='Абдурахман Гасанов'] - Имя
- * @param {string} [params.currentUser.role='Фитнес-тренер'] - Роль
- * @param {Array} [params.subscriptions=[]] - Список подписок
- * @param {Array} [params.posts=[]] - Список постов
- * @param {Array} [params.popularPosts=[]] - Список популярных постов
- * @param {string} [params.activeTab='main'] - Активная вкладка
- * @param {Function} [params.onLogout=null] - Обработчик выхода
- * @returns {Promise<HTMLElement>} DOM элемент страницы
- * 
- * @example
- * await renderProfilePage(api, container, {
- *   profile: {
- *     name: 'Иван Петров',
- *     role: 'Тренер',
- *     isOwnProfile: true
- *   },
- *   posts: [...],
- *   activeTab: 'publications'
- * });
+ * @param {Array} [params.subscriptions=[]] - Подписки для сайдбара
+ * @param {Array} [params.posts=[]] - Посты
+ * @param {Array} [params.popularPosts=[]] - Популярные посты
+ * @param {string} [params.activeTab='publications'] - Вкладка
+ * @param {Function} [params.onLogout=null] - Выход
+ * @returns {Promise<HTMLElement>} Корневой элемент страницы
  */
 export async function renderProfilePage(api, container, {
+  viewedUserId,
   profile = {
     name: 'Абдурахман Гасанов',
     role: 'Фитнес-тренер',
     avatar: null,
-    isOwnProfile: false
+    isOwnProfile: false,
+    isTrainer: false
   },
   currentUser = {
     name: 'Абдурахман Гасанов',
@@ -59,7 +50,7 @@ export async function renderProfilePage(api, container, {
   ],
   posts = [],
   popularPosts = [],
-  activeTab = 'main',
+  activeTab = 'publications',
   onLogout = null
 } = {}) {
   const template = Handlebars.templates['ProfilePage.hbs'];
@@ -69,9 +60,6 @@ export async function renderProfilePage(api, container, {
   wrapper.innerHTML = html.trim();
   const page = wrapper.firstElementChild;
 
-  /**
-   * Рендеринг сайдбара
-   */
   const sidebarContainer = page.querySelector('#sidebar-container');
   await renderSidebar(sidebarContainer, {
     activePage: 'profile',
@@ -81,14 +69,8 @@ export async function renderProfilePage(api, container, {
     onLogout
   });
 
-  /**
-   * Контейнер для контента профиля
-   */
   const profileContainer = page.querySelector('#profile-container');
 
-  /**
-   * Отдельные контейнеры для шапки и контента
-   */
   const headerContainer = document.createElement('div');
   headerContainer.className = 'profile-page__header';
   profileContainer.appendChild(headerContainer);
@@ -98,24 +80,43 @@ export async function renderProfilePage(api, container, {
   profileContainer.appendChild(contentContainer);
 
   /**
-   * Рендеринг шапки профиля
+   * Перезагрузка списка постов после лайка, редактирования и т.д.
    */
+  async function reloadPosts() {
+    const current = await api.getCurrentUser();
+    const data = await loadProfilePageData(api, viewedUserId, current);
+    const postsContainer = contentContainer.querySelector('#posts-container');
+    if (!postsContainer) return;
+    await fillProfilePostsSection(postsContainer, {
+      activeTab: 'publications',
+      posts: data.posts,
+      api,
+      canManagePosts: profile.isOwnProfile,
+      onPostsUpdated: reloadPosts
+    });
+  }
+
   await renderProfileHeader(headerContainer, {
     name: profile.name,
     role: profile.role,
     avatar: profile.avatar,
-    isOwnProfile: profile.isOwnProfile
+    isOwnProfile: profile.isOwnProfile,
+    showDonate: profile.isTrainer,
+    onDonate: () =>
+      openDonationModal({
+        api,
+        recipientUserId: viewedUserId
+      })
   });
 
-  /**
-   * Рендеринг контента с активной вкладкой
-   */
   await renderProfileContent(contentContainer, {
-    activeTab: activeTab,
+    activeTab,
     posts,
     popularPosts,
     api,
-    canAddPost: profile.isOwnProfile
+    canAddPost: profile.isOwnProfile,
+    canManagePosts: profile.isOwnProfile,
+    onPostsUpdated: reloadPosts
   });
 
   container.appendChild(page);
