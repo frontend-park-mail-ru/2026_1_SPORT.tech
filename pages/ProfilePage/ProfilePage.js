@@ -1,11 +1,45 @@
+/**
+ * @fileoverview Страница профиля пользователя
+ * Объединяет сайдбар, шапку профиля и контент
+ * 
+ * @module pages/ProfilePage
+ */
+
 import { renderProfileHeader } from '../../components/molecules/ProfileHeader/ProfileHeader.js';
 import { renderProfileContent } from '../../components/organisms/ProfileContent/ProfileContent.js';
 import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar.js';
 
 /**
- * Рендерит страницу профиля тренера
- * @param {HTMLElement} container
- * @param {Object} params
+ * Рендерит страницу профиля
+ * @async
+ * @param {Object} api - API клиент
+ * @param {HTMLElement} container - DOM элемент для вставки
+ * @param {Object} params - Параметры страницы
+ * @param {Object} [params.profile] - Данные профиля
+ * @param {string} [params.profile.name='Абдурахман Гасанов'] - Имя
+ * @param {string} [params.profile.role='Фитнес-тренер'] - Роль
+ * @param {string|null} [params.profile.avatar=null] - URL аватара
+ * @param {boolean} [params.profile.isOwnProfile=false] - Свой ли профиль
+ * @param {Object} [params.currentUser] - Текущий пользователь
+ * @param {string} [params.currentUser.name='Абдурахман Гасанов'] - Имя
+ * @param {string} [params.currentUser.role='Фитнес-тренер'] - Роль
+ * @param {Array} [params.subscriptions=[]] - Список подписок
+ * @param {Array} [params.posts=[]] - Список постов
+ * @param {Array} [params.popularPosts=[]] - Список популярных постов
+ * @param {string} [params.activeTab='main'] - Активная вкладка
+ * @param {Function} [params.onLogout=null] - Обработчик выхода
+ * @returns {Promise<HTMLElement>} DOM элемент страницы
+ * 
+ * @example
+ * await renderProfilePage(api, container, {
+ *   profile: {
+ *     name: 'Иван Петров',
+ *     role: 'Тренер',
+ *     isOwnProfile: true
+ *   },
+ *   posts: [...],
+ *   activeTab: 'publications'
+ * });
  */
 export async function renderProfilePage(api, container, {
   profile = {
@@ -25,7 +59,8 @@ export async function renderProfilePage(api, container, {
   ],
   posts = [],
   popularPosts = [],
-  activeTab = 'main' // ← ДОБАВЛЕНО: активная вкладка
+  activeTab = 'main',
+  onLogout = null
 } = {}) {
   const template = Handlebars.templates['ProfilePage.hbs'];
   const html = template({});
@@ -34,7 +69,9 @@ export async function renderProfilePage(api, container, {
   wrapper.innerHTML = html.trim();
   const page = wrapper.firstElementChild;
 
-  // Саидбар
+  /**
+   * Рендеринг сайдбара
+   */
   const sidebarContainer = page.querySelector('#sidebar-container');
   await renderSidebar(sidebarContainer, {
     activePage: 'profile',
@@ -44,10 +81,14 @@ export async function renderProfilePage(api, container, {
     onLogout
   });
 
-  // Контейнер для контента профиля
+  /**
+   * Контейнер для контента профиля
+   */
   const profileContainer = page.querySelector('#profile-container');
 
-  // Создаем отдельные контейнеры для шапки и контента
+  /**
+   * Отдельные контейнеры для шапки и контента
+   */
   const headerContainer = document.createElement('div');
   headerContainer.className = 'profile-page__header';
   profileContainer.appendChild(headerContainer);
@@ -56,22 +97,25 @@ export async function renderProfilePage(api, container, {
   contentContainer.className = 'profile-page__content';
   profileContainer.appendChild(contentContainer);
 
-  // Рендерим шапку
+  /**
+   * Рендеринг шапки профиля
+   */
   await renderProfileHeader(headerContainer, {
     name: profile.name,
     role: profile.role,
     avatar: profile.avatar,
     isOwnProfile: profile.isOwnProfile
-    // Убрали onSubscribe
   });
 
-  // Рендерим контент с активной вкладкой
+  /**
+   * Рендеринг контента с активной вкладкой
+   */
   await renderProfileContent(contentContainer, {
     activeTab: activeTab,
     posts,
     popularPosts,
     api,
-    canAddPost: profile.isOwnProfile // Только свой профиль может добавлять посты
+    canAddPost: profile.isOwnProfile
   });
 
   container.appendChild(page);

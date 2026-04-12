@@ -1,22 +1,38 @@
 /**
- * БАЗОВЫЙ КОМПОНЕНТ ЭЛЕМЕНТА ПОЛЬЗОВАТЕЛЯ
+ * @fileoverview Базовый компонент элемента пользователя
+ * Используется для отображения пользователей в списках:
+ * - Подписки в сайдбаре
+ * - Список друзей
+ * - Участники чата
+ * 
+ * @module components/atoms/UserPhotoItem
  */
 
 /**
  * Рендерит элемент пользователя
- * @param {HTMLElement} container - Контейнер для вставки
- * @param {Object} config - Конфигурация
- * @param {number} config.id - ID пользователя
- * @param {string} config.name - Имя
- * @param {string} config.role - Роль
- * @param {string} config.avatar - URL аватара
- * @param {boolean} config.isEmpty - Пустое состояние
- * @param {string} config.emptyMessage - Сообщение для пустого состояния
- * @param {boolean} config.compact - Компактный режим
- * @param {boolean} config.clickable - Кликабельность
- * @param {Function} config.onClick - Обработчик клика
- * @param {string|number} config.count - Счётчик (для постов)
- * @returns {Promise<HTMLElement>}
+ * @async
+ * @param {HTMLElement} container - DOM элемент для вставки
+ * @param {Object} config - Конфигурация элемента
+ * @param {number} [config.id=null] - ID пользователя
+ * @param {string} [config.name=''] - Имя пользователя
+ * @param {string} [config.role=''] - Роль пользователя
+ * @param {string} [config.avatar=null] - URL аватара
+ * @param {boolean} [config.isEmpty=false] - Пустое состояние (нет пользователей)
+ * @param {string} [config.emptyMessage='Нет пользователей'] - Сообщение для пустого состояния
+ * @param {boolean} [config.compact=false] - Компактный режим отображения
+ * @param {boolean} [config.clickable=true] - Кликабельность элемента
+ * @param {Function} [config.onClick=null] - Обработчик клика
+ * @param {string|number} [config.count=null] - Счётчик (для постов/подписок)
+ * @returns {Promise<HTMLElement>} DOM элемент пользователя
+ * 
+ * @example
+ * // Обычный пользователь
+ * await renderUserPhotoItem(container, {
+ *   id: 123,
+ *   name: 'Иван Петров',
+ *   role: 'Тренер',
+ *   onClick: (user) => console.log('Selected:', user)
+ * });
  */
 export async function renderUserPhotoItem(container, config = {}) {
   const {
@@ -34,7 +50,11 @@ export async function renderUserPhotoItem(container, config = {}) {
 
   const template = Handlebars.templates['UserPhotoItem.hbs'];
     
-  // Получаем инициалы
+  /**
+   * Получить инициалы из имени
+   * @param {string} name - Имя для получения инициалов
+   * @returns {string} Инициалы или '?'
+   */
   const initials = name
     .split(' ')
     .map(n => n.charAt(0))
@@ -58,12 +78,14 @@ export async function renderUserPhotoItem(container, config = {}) {
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild;
 
-  // Добавляем компактный класс
   if (compact) {
     element.classList.add('user-photo-item--compact');
   }
 
-  // Обработчик клика
+  /**
+   * Обработчик клика по элементу
+   * @param {MouseEvent} _event - Событие клика (не используется)
+   */
   if (onClick && !isEmpty) {
     element.addEventListener('click', () => onClick({ id, name, role, avatar }));
   }
@@ -74,24 +96,41 @@ export async function renderUserPhotoItem(container, config = {}) {
 
 /**
  * Рендерит список пользователей с заголовком
- * @param {HTMLElement} container
+ * @async
+ * @param {HTMLElement} container - DOM элемент для вставки
  * @param {string} title - Заголовок секции
  * @param {Array} users - Массив пользователей
- * @param {Object} options - Опции
+ * @param {Object} options - Опции для списка
+ * @param {boolean} [options.compact=false] - Компактный режим
+ * @param {boolean} [options.clickable=true] - Кликабельность элементов
+ * @param {string} [options.emptyMessage='Нет пользователей'] - Сообщение если список пуст
+ * @returns {Promise<HTMLElement>} DOM элемент списка
+ * 
+ * @example
+ * // Список подписок
+ * await renderUserPhotoList(container, 'Подписки', users, {
+ *   compact: true,
+ *   clickable: true
+ * });
  */
 export async function renderUserPhotoList(container, title, users = [], options = {}) {
-  // Заголовок
+  /**
+   * Создать заголовок секции
+   * @type {HTMLElement}
+   */
   const titleEl = document.createElement('h3');
   titleEl.className = 'user-photo-section-title';
   titleEl.textContent = title;
   container.appendChild(titleEl);
 
-  // Контейнер для списка
+  /**
+   * Контейнер для списка пользователей
+   * @type {HTMLElement}
+   */
   const listContainer = document.createElement('div');
   listContainer.className = 'user-photo-list';
   container.appendChild(listContainer);
 
-  // Рендерим пользователей
   if (users.length === 0) {
     await renderUserPhotoItem(listContainer, {
       isEmpty: true,
