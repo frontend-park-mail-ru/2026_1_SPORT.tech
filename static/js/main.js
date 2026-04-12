@@ -190,10 +190,10 @@ function createRouter(api) {
           try {
             await api.logout();
             localStorage.removeItem('user');
-            alert('Вы вышли из системы');
+
             navigateTo('/auth');
           } catch (error) {
-            alert('Ошибка при выходе');
+
           }
         }
       });

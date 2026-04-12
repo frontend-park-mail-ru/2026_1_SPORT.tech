@@ -1,13 +1,18 @@
 /* ===== СТРАНИЦА АВТОРИЗАЦИИ ===== */
 
 .auth-page {
-    min-height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle at center, var(--gradient-start) 35%, var(--gradient-end) 65%);
+    background: radial-gradient(circle at center, var(--gradient-start) 30%, var(--gradient-end) 70%);
     padding: var(--spacing-xl);
     animation: fadeIn 0.5s ease;
+    overflow-y: auto;
 }
 
 .auth-page__container {
