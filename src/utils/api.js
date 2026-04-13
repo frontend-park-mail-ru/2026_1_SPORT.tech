@@ -161,6 +161,101 @@ export class ApiClient {
     return this.request(`/posts/${postId}`);
   }
 
+  /**
+   * Создание поста
+   *
+   * **Эндпоинт:** `POST /posts`
+   *
+   * Тело запроса (JSON): `{ title, text_content, min_tier_id? }`
+   *
+   * @async
+   * @param {Object} payload - Поля поста
+   * @param {string} payload.title - Заголовок
+   * @param {string} payload.text_content - Текст
+   * @param {number|null} [payload.min_tier_id] - Минимальный tier для просмотра
+   * @returns {Promise<Object>} Созданный пост
+   */
+  async createPost(payload) {
+    return this.request('/posts', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  /**
+   * Обновление поста
+   *
+   * **Эндпоинт:** `PATCH /posts/{postId}`
+   *
+   * @async
+   * @param {number} postId - ID поста
+   * @param {Object} payload - Поля для обновления
+   * @returns {Promise<Object>} Обновлённый пост
+   */
+  async updatePost(postId, payload) {
+    return this.request(`/posts/${postId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  /**
+   * Удаление поста
+   *
+   * **Эндпоинт:** `DELETE /posts/{postId}`
+   *
+   * @async
+   * @param {number} postId - ID поста
+   * @returns {Promise<null>}
+   */
+  async deletePost(postId) {
+    return this.request(`/posts/${postId}`, { method: 'DELETE' });
+  }
+
+  /**
+   * Лайк поста
+   *
+   * **Эндпоинт:** `POST /posts/{postId}/like`
+   *
+   * @async
+   * @param {number} postId - ID поста
+   * @returns {Promise<Object| null>}
+   */
+  async likePost(postId) {
+    return this.request(`/posts/${postId}/like`, { method: 'POST' });
+  }
+
+  /**
+   * Снять лайк с поста
+   *
+   * **Эндпоинт:** `DELETE /posts/{postId}/like`
+   *
+   * @async
+   * @param {number} postId - ID поста
+   * @returns {Promise<null>}
+   */
+  async unlikePost(postId) {
+    return this.request(`/posts/${postId}/like`, { method: 'DELETE' });
+  }
+
+  /**
+   * Пожертвование тренеру (если реализовано на бэкенде)
+   *
+   * **Эндпоинт:** `POST /donations`
+   *
+   * Тело (пример): `{ amount_rub, email, recipient_user_id }`
+   *
+   * @async
+   * @param {Object} payload - Данные платежа
+   * @returns {Promise<Object>}
+   */
+  async createDonation(payload) {
+    return this.request('/donations', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
   // ===== SPORT TYPES METHODS =====
 
   /**
