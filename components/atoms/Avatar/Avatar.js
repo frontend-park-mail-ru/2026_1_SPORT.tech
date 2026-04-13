@@ -93,11 +93,13 @@ export async function renderAvatar(container, config = {}) {
   } = config;
 
   const template = Handlebars.templates['Avatar.hbs'];
-    
   const initials = getInitials(name);
-    
+
+  // ПРОВЕРКА ЗДЕСЬ: Если пришел "null" или null, принудительно ставим null для шаблона
+  const validSrc = (src && src !== 'null') ? src : null;
+
   const html = template({ 
-    src, 
+    src: validSrc, // Используем проверенную переменную
     alt, 
     size, 
     initials,
