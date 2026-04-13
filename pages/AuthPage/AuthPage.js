@@ -1,7 +1,7 @@
 /**
  * @fileoverview Страница авторизации
  * Объединяет форму авторизации и API
- * 
+ *
  * @module pages/AuthPage
  */
 
@@ -13,7 +13,7 @@ import { AUTH_MODES, renderAuthForm } from '../../components/organisms/AuthForm/
  * @param {HTMLElement} container - DOM элемент для вставки
  * @param {Object} api - API клиент
  * @returns {Promise<void>}
- * 
+ *
  * @example
  * await renderAuthPage(document.getElementById('app'), apiClient);
  */
@@ -82,6 +82,19 @@ export async function renderAuthPage(container, api) {
    */
   async function handleTrainerRegister(data) {
     try {
+
+console.log('📤 Sending trainer data:', JSON.stringify({
+      username: data.username,
+      email: data.email,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      trainer_details: {
+        education_degree: data.education_degree || '',
+        career_since_date: data.career_since_date,
+        sports: [{ sport_type_id: 1, experience_years: 0, sports_rank: '' }]
+      }
+    }, null, 2));
+
       const response = await api.registerTrainer({
         username: data.username,
         email: data.email,

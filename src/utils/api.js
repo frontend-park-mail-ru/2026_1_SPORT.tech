@@ -1,7 +1,7 @@
 /**
  * @fileoverview API клиент для взаимодействия с бэкендом
  * Предоставляет методы для всех эндпоинтов API
- * 
+ *
  * @module src/utils/api
  */
 
@@ -50,6 +50,7 @@ export class ApiClient {
 
       if (!response.ok) {
         console.error('❌ API Error:', data);
+        console.error('❌ Full error details:', JSON.stringify(data, null, 2)); 
         throw new Error(data.error?.message || `HTTP ${response.status}`);
       }
 
