@@ -1,61 +1,34 @@
 /**
  * @fileoverview Главный файл приложения
- * Отвечает за:
- * - Загрузку Handlebars шаблонов
- * - Инициализацию API клиента
- * - Маршрутизацию между страницами
- * - Загрузку данных профиля
- * 
  * @module static/js/main
  */
 
-import { API_BASE_URL, getDevMockMode } from '/src/config/constants.js';
+import { API_BASE_URL } from '/src/config/constants.js';
 import { ApiClient } from '/src/utils/api.js';
-import { applyDevMockApiOverrides } from '/src/utils/devMockApi.js';
-import { loadProfilePageData } from '/src/utils/profilePageData.js';
-
-// ===== РЕГИСТРАЦИЯ ШАБЛОНОВ HANDLEBARS =====
 
 /** @type {Object} Хранилище скомпилированных Handlebars шаблонов */
 Handlebars.templates = {};
 
-// СЮДА, строго ПЕРЕД всеми функциями:
-Handlebars.registerHelper('isRealValue', function (value) {
-  return value && value !== 'null' && value !== '';
-});
-
 /**
  * Загружает и компилирует все Handlebars шаблоны
  * @async
- * @returns {Promise<void>}
  */
 async function loadTemplates() {
-  /** @constant {Array<{name: string, folder: string}>} Список шаблонов для загрузки */
   const templates = [
     { name: 'Button', folder: 'atoms' }, { name: 'Input', folder: 'atoms' },
     { name: 'Avatar', folder: 'atoms' }, { name: 'UserPhotoItem', folder: 'atoms' },
     { name: 'AuthForm', folder: 'organisms' },
     { name: 'ProfileHeader', folder: 'molecules' },
     { name: 'PostCard', folder: 'molecules' },
-    { name: 'DonationModal', folder: 'molecules' },
-    { name: 'PostFormModal', folder: 'molecules' },
     { name: 'Sidebar', folder: 'organisms' },
     { name: 'ProfileContent', folder: 'organisms' },
     { name: 'AuthPage', folder: 'pages' }, { name: 'ProfilePage', folder: 'pages' }
   ];
 
-  for (const { name, folder } of templates) {
-    try {
-      const path = folder === 'pages'
-        ? `/pages/${name}/${name}.hbs`
-        : `/components/${folder}/${name}/${name}.hbs`;
-
-      const response = await fetch(path);
-      const source = await response.text();
-      Handlebars.templates[`${name}.hbs`] = Handlebars.compile(source);
-    } catch (error) {
-      console.error(`❌ Failed to load template ${name}:`, error);
-    }
+  for (const t of templates) {
+    const response = await fetch(`/components/${t.folder}/${t.name}/${t.name}.hbs`);
+    const hbs = await response.text();
+    Handlebars.templates[`${t.name}.hbs`] = Handlebars.compile(hbs);
   }
 }
 
@@ -204,30 +177,19 @@ function createRouter(api) {
  * @listens document#DOMContentLoaded
  */
 document.addEventListener('DOMContentLoaded', async () => {
+  // Регистрация Service Worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
 
   const apiClient = new ApiClient(API_BASE_URL);
-  const devMock = getDevMockMode();
-  if (devMock) {
-    console.warn(
-      '[SPORT] Режим mock без бэкенда:',
-      devMock,
-      '(добавьте ?mock=0 в URL чтобы выключить)'
-    );
-    applyDevMockApiOverrides(apiClient, devMock);
-  }
-
+  
+  // Инициализация роутера без моков
   const router = createRouter(apiClient);
   window.router = router;
+  
+  // Первая отрисовка
   await router.handleRouting();
 
-  /**
-   * Обработчик изменения истории браузера (кнопки назад/вперед)
-   * @listens window#popstate
-   */
-  window.addEventListener('popstate', () => {
-    router.handleRouting();
-  });
+  window.addEventListener('popstate', () => router.handleRouting());
 });
