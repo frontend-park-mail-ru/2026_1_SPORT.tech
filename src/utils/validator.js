@@ -1,7 +1,7 @@
 /**
  * @fileoverview Модуль валидации данных
  * Содержит правила и методы для проверки пользовательского ввода
- * 
+ *
  * @module src/utils/validator
  */
 
@@ -78,7 +78,7 @@ const rules = {
 
 
   bio: {
-    required: true,
+    required: false,
     max: 1000,
     messages: {
     max: 'Максимум 1000 символов' } },
@@ -99,9 +99,8 @@ const rules = {
         messages: {
         max: 'Максимум 100 символов' ,
       pattern:
-          'Виды спорта могут содержать только буквы, пробелы, дефисы, запятые и точки' }}
+          'Виды спорта могут содержать только буквы, пробелы, дефисы, запятые и точки' }},
 
-  sports_rank: { required: false, max: 100, messages: { max: 'Максимум 100 символов' } },
 
   post_title: {
     required: true,

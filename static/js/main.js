@@ -1,31 +1,16 @@
 /**
- * @fileoverview Главный файл приложения
- * Отвечает за:
- * - Загрузку Handlebars шаблонов
- * - Инициализацию API клиента
- * - Маршрутизацию между страницами
- * - Загрузку данных профиля
- * 
+ * @fileoverview Главный файл приложения (Production версия)
  * @module static/js/main
  */
 
-import { API_BASE_URL, getDevMockMode } from '/src/config/constants.js';
+import { API_BASE_URL } from '/src/config/constants.js';
 import { ApiClient } from '/src/utils/api.js';
-import { applyDevMockApiOverrides } from '/src/utils/devMockApi.js';
-import { loadProfilePageData } from '/src/utils/profilePageData.js';
 
 // ===== РЕГИСТРАЦИЯ ШАБЛОНОВ HANDLEBARS =====
 
-/** @type {Object} Хранилище скомпилированных Handlebars шаблонов */
 Handlebars.templates = {};
 
-/**
- * Загружает и компилирует все Handlebars шаблоны
- * @async
- * @returns {Promise<void>}
- */
 async function loadTemplates() {
-  /** @constant {Array<{name: string, folder: string}>} Список шаблонов для загрузки */
   const templates = [
     { name: 'Button', folder: 'atoms' }, { name: 'Input', folder: 'atoms' },
     { name: 'Avatar', folder: 'atoms' }, { name: 'UserPhotoItem', folder: 'atoms' },
@@ -54,27 +39,111 @@ async function loadTemplates() {
   }
 }
 
+// ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
+
+function getUserRoleLabel(isTrainer) {
+  return isTrainer ? 'Тренер' : 'Клиент';
+}
+
+function getFullName(profile = {}) {
+  return `${profile.first_name || ''} ${profile.last_name || ''}`.trim() ||
+      profile.username || 'Пользователь';
+}
+
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('\'', '&#39;');
+}
+
+function formatPostContent(textContent) {
+  if (!textContent) {
+    return 'Нет доступа к содержимому поста';
+  }
+  return escapeHtml(textContent).replace(/\n/g, '<br>');
+}
+
+function mapProfileData(apiData, currentUser) {
+  const isOwnProfile = apiData.is_me;
+  const fullName = getFullName(apiData.profile);
+
+  return {
+    profile: {
+      name: fullName,
+      role: getUserRoleLabel(apiData.is_trainer),
+      avatar: apiData.profile.avatar_url,
+      isOwnProfile: isOwnProfile
+    },
+    currentUser: currentUser?.user ? {
+      id: currentUser.user.user_id,
+      name: getFullName(currentUser.user.profile),
+      role: getUserRoleLabel(currentUser.user.is_trainer),
+      avatar: currentUser.user.profile.avatar_url
+    } : null
+  };
+}
+
+async function loadProfilePageData(api, userId, currentUser = null) {
+  try {
+    const resolvedUserId = userId || currentUser?.user?.user_id;
+
+    if (!resolvedUserId) {
+      throw new Error('Пользователь не авторизован');
+    }
+
+    const [profileData, postsData] = await Promise.all([
+      api.getProfile(resolvedUserId),
+      api.getUserPosts(resolvedUserId).catch(() => ({ posts: [] }))
+    ]);
+
+    const authorName = getFullName(profileData.profile);
+    const authorRole = getUserRoleLabel(profileData.is_trainer);
+    const postList = Array.isArray(postsData?.posts) ? postsData.posts : [];
+
+    const posts = await Promise.all(postList.map(async post => {
+      let fullPost = null;
+      if (post.can_view) {
+        try {
+          fullPost = await api.getPost(post.post_id);
+        } catch (error) {
+          // Ошибка загрузки поста
+        }
+      }
+      const textContent = fullPost?.text_content || '';
+      return {
+        post_id: post.post_id,
+        title: post.title,
+        content: post.can_view ? formatPostContent(textContent) : 'Нет доступа к содержимому поста',
+        authorName,
+        authorRole,
+        likes: 0,
+        comments: 0,
+        can_view: post.can_view,
+        created_at: post.created_at,
+        min_tier_id: post.min_tier_id ?? null,
+        attachments: fullPost?.attachments || []
+      };
+    }));
+
+    const mappedData = mapProfileData(profileData, currentUser);
+    return { ...mappedData, posts, subscriptions: [], popularPosts: [] };
+  } catch (error) {
+    console.error('❌ Failed to load profile data:', error);
+    throw error;
+  }
+}
+
 // ===== РОУТЕР =====
 
-/**
- * Создает объект роутера для навигации
- * @param {Object} api - API клиент
- * @returns {Object} Объект роутера с методами handleRouting и navigateTo
- */
 function createRouter(api) {
-  /**
-   * Функция навигации
-   * @param {string} path - Путь для перехода
-   */
   function navigateTo(path) {
     history.pushState({}, '', path);
     handleRouting();
   }
 
-  /**
-   * Показывает страницу авторизации
-   * @async
-   */
   async function showAuthPage() {
     const app = document.getElementById('app');
     app.innerHTML = '';
@@ -94,10 +163,6 @@ function createRouter(api) {
     }
   }
 
-  /**
-   * Показывает страницу профиля
-   * @async
-   */
   async function showProfilePage() {
     const app = document.getElementById('app');
     app.innerHTML = '';
@@ -106,7 +171,6 @@ function createRouter(api) {
     try {
       const { renderProfilePage } = await import('/pages/ProfilePage/ProfilePage.js');
       const currentUser = await api.getCurrentUser();
-
       const userId = currentUser?.user?.user_id;
       const data = await loadProfilePageData(api, userId, currentUser);
 
@@ -122,10 +186,9 @@ function createRouter(api) {
           try {
             await api.logout();
             localStorage.removeItem('user');
-
             navigateTo('/auth');
           } catch (error) {
-
+            console.error('Logout error:', error);
           }
         }
       });
@@ -151,16 +214,11 @@ function createRouter(api) {
     }
   }
 
-  /**
-   * Обрабатывает маршрутизацию на основе текущего URL
-   * @async
-   */
   async function handleRouting() {
     await loadTemplates();
 
     const currentUser = await api.getCurrentUser();
     const isAuthenticated = !!currentUser;
-
     const path = window.location.pathname;
 
     if (path === '/' || path === '/index.html') {
@@ -192,36 +250,19 @@ function createRouter(api) {
   return { handleRouting, navigateTo };
 }
 
-// ===== ЗАПУСК ПРИЛОЖЕНИЯ =====
+// ===== ЗАПУСК ПРИЛОЖЕНИЯ (PRODUCTION) =====
 
-/**
- * Инициализация приложения после загрузки DOM
- * @listens document#DOMContentLoaded
- */
 document.addEventListener('DOMContentLoaded', async () => {
+  // Service Worker (опционально - для офлайн режима)
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/static/sw.js').catch(() => {});
   }
 
   const apiClient = new ApiClient(API_BASE_URL);
-  const devMock = getDevMockMode();
-  if (devMock) {
-    console.warn(
-      '[SPORT] Режим mock без бэкенда:',
-      devMock,
-      '(добавьте ?mock=0 в URL чтобы выключить)'
-    );
-    applyDevMockApiOverrides(apiClient, devMock);
-  }
-
   const router = createRouter(apiClient);
   window.router = router;
   await router.handleRouting();
 
-  /**
-   * Обработчик изменения истории браузера (кнопки назад/вперед)
-   * @listens window#popstate
-   */
   window.addEventListener('popstate', () => {
     router.handleRouting();
   });
