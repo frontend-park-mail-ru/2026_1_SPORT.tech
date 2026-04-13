@@ -18,6 +18,8 @@ import { renderButton } from '../../atoms/Button/Button.js';
  * @param {boolean} [profile.isOwnProfile=false] - Свой ли это профиль
  * @param {Object} [profile.api] - API клиент
  * @param {Function} [profile.onEdit=null] - Обработчик редактирования профиля
+ * @param {boolean} [profile.showDonate=false] - Показать кнопку пожертвования
+ * @param {Function} [profile.onDonate=null] - Обработчик пожертвования
  * @returns {Promise<HTMLElement>} DOM элемент шапки
  * 
  * @example
@@ -34,7 +36,9 @@ export async function renderProfileHeader(container, {
   avatar = null,
   isOwnProfile = false,
   api,
-  onEdit = null
+  onEdit = null,
+  showDonate = false,
+  onDonate = null
 }) {
   const template = Handlebars.templates['ProfileHeader.hbs'];
 
@@ -68,7 +72,18 @@ export async function renderProfileHeader(container, {
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild;
+  const donateContainer = element.querySelector(`#profile-donate-${id}`);
   const actionsContainer = element.querySelector(`#profile-actions-${id}`);
+
+  if (showDonate && donateContainer && onDonate) {
+    await renderButton(donateContainer, {
+      text: 'Пожертвовать',
+      variant: 'secondary-blue',
+      state: 'normal',
+      size: 'medium',
+      onClick: onDonate
+    });
+  }
 
   // Кнопка редактирования для своего профиля
   if (isOwnProfile && actionsContainer) {

@@ -1,0 +1,30 @@
+<div class="post-form-modal" role="dialog" aria-modal="true" aria-labelledby="post-form-title" tabindex="-1">
+  <div class="post-form-modal__backdrop" data-post-form-close></div>
+  <div class="post-form-modal__panel">
+    <div class="post-form-modal__head">
+      <h2 class="post-form-modal__title" id="post-form-title">{{modalTitle}}</h2>
+      <button type="button" class="post-form-modal__close" data-post-form-close aria-label="Закрыть окно">
+        <span aria-hidden="true">×</span>
+      </button>
+    </div>
+    <form class="post-form-modal__form" novalidate>
+      <div id="post-form-title-field" class="post-form-modal__field"></div>
+      <div class="post-form-modal__field">
+        <label class="post-form-modal__label" for="post-form-body-input">Текст публикации</label>
+        <textarea
+          id="post-form-body-input"
+          class="post-form-modal__textarea"
+          name="text_content"
+          rows="10"
+          placeholder="Введите текст публикации"
+        ></textarea>
+        <span class="post-form-modal__inline-error" data-post-body-error hidden></span>
+      </div>
+      <p class="post-form-modal__global-error" data-post-form-global-error hidden></p>
+      <div class="post-form-modal__actions">
+        <div id="post-form-cancel-wrap"></div>
+        <div id="post-form-submit-wrap"></div>
+      </div>
+    </form>
+  </div>
+</div>

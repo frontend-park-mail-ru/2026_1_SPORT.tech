@@ -7,6 +7,51 @@
 
 import { renderButton } from '../../atoms/Button/Button.js';
 import { renderPostCard } from '../../molecules/PostCard/PostCard.js';
+import { openPostFormModal } from '../../molecules/PostFormModal/PostFormModal.js';
+
+/**
+ * Заполняет контейнер постов (используется при первой отрисовке и при обновлении)
+ * @async
+ * @param {HTMLElement} postsContainer
+ * @param {Object} opts
+ * @param {string} opts.activeTab
+ * @param {Array} opts.posts
+ * @param {import('/src/utils/api.js').ApiClient|null} opts.api
+ * @param {boolean} [opts.canManagePosts=false]
+ * @param {Function} [opts.onPostsUpdated]
+ * @returns {Promise<void>}
+ */
+export async function fillProfilePostsSection(postsContainer, {
+  activeTab,
+  posts = [],
+  api,
+  canManagePosts = false,
+  onPostsUpdated
+}) {
+  if (posts.length === 0 && activeTab !== 'about') {
+    postsContainer.innerHTML = `
+      <div class="profile-content__empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <line x1="9" y1="9" x2="15" y2="15"/>
+          <line x1="15" y1="9" x2="9" y2="15"/>
+        </svg>
+        <p>Пока нет публикаций</p>
+      </div>
+    `;
+    return;
+  }
+
+  postsContainer.innerHTML = '';
+  for (const post of posts) {
+    await renderPostCard(postsContainer, {
+      ...post,
+      api,
+      isOwner: canManagePosts,
+      onPostsUpdated
+    });
+  }
+}
 
 /**
  * Рендерит контент профиля с вкладками
@@ -18,7 +63,8 @@ import { renderPostCard } from '../../molecules/PostCard/PostCard.js';
  * @param {Array} [params.popularPosts=[]] - Массив популярных постов
  * @param {boolean} [params.canAddPost=false] - Может ли пользователь добавлять посты
  * @param {Object} [params.api] - API клиент
- * @param {Function} [params.onAddPost=null] - Обработчик добавления поста
+ * @param {boolean} [params.canManagePosts=false] - Управление своими постами
+ * @param {Function} [params.onPostsUpdated] - Обновление списка постов
  * @returns {Promise<HTMLElement>} DOM элемент контента
  * 
  * @example
@@ -27,7 +73,8 @@ import { renderPostCard } from '../../molecules/PostCard/PostCard.js';
  *   posts: [...],
  *   popularPosts: [...],
  *   canAddPost: true,
- *   onAddPost: () => console.log('Add post')
+ *   canManagePosts: true,
+ *   onPostsUpdated: async () => {}
  * });
  */
 export async function renderProfileContent(container, {
@@ -36,7 +83,8 @@ export async function renderProfileContent(container, {
   popularPosts = [],
   canAddPost = false,
   api,
-  onAddPost = null
+  canManagePosts = false,
+  onPostsUpdated = null
 }) {
   const template = Handlebars.templates['ProfileContent.hbs'];
 
@@ -108,7 +156,13 @@ export async function renderProfileContent(container, {
         variant: 'primary-orange',
         state: 'normal',
         size: 'medium',
-        onClick: onAddPost
+        onClick: async () => {
+          await openPostFormModal({
+            api,
+            mode: 'create',
+            onSaved: onPostsUpdated
+          });
+        }
       });
     }
   }
@@ -118,22 +172,13 @@ export async function renderProfileContent(container, {
    */
   const postsContainer = element.querySelector('#posts-container');
 
-  if (posts.length === 0 && activeTab !== 'about') {
-    postsContainer.innerHTML = `
-      <div class="profile-content__empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-          <line x1="9" y1="9" x2="15" y2="15"/>
-          <line x1="15" y1="9" x2="9" y2="15"/>
-        </svg>
-        <p>Пока нет публикаций</p>
-      </div>
-    `;
-  } else {
-    for (const post of posts) {
-      await renderPostCard(postsContainer, post);
-    }
-  }
+  await fillProfilePostsSection(postsContainer, {
+    activeTab,
+    posts,
+    api,
+    canManagePosts,
+    onPostsUpdated
+  });
 
   container.appendChild(element);
   return element;

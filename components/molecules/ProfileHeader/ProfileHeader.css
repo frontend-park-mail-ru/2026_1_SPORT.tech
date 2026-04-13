@@ -96,8 +96,15 @@
 
 .profile-header__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-left: auto;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.profile-header__actions-slot {
+  display: inline-flex;
 }
 
 .profile-header__stats {

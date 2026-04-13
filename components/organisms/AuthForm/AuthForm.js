@@ -285,13 +285,25 @@ export async function renderAuthForm(container, config = {}) {
         const password = inputsApi.get('password')?.getValue() || '';
         result = validator.validatePasswordWithConfirmation(password, value);
         break;
-      case 'education_degree':
-        const eduValid = !value || value.length <= 255;
-        result = {
-          isValid: eduValid,
-          errors: eduValid ? [] : [{ field: 'education_degree', message: 'Максимум 255 символов' }]
-        };
-        break;
+      case 'education_degree': {
+  validator.reset();
+  const validationResult = {
+    isValid: true,
+    errors: []
+  };
+
+  if (value && value.trim() !== '') {
+    validator.validateField(value, 'education_degree', validator.rules.education_degree);
+
+    if (validator.hasErrors()) {
+      validationResult.isValid = false;
+      validationResult.errors = validator.getErrors();
+    }
+  }
+
+  result = validationResult;
+  break;
+}
       case 'career_since_date':
         if (!value) {
           result = {
@@ -307,21 +319,29 @@ export async function renderAuthForm(container, config = {}) {
           result = { isValid: true, errors: [] };
         }
         break;
-      case 'sport_discipline':
-        if (!value || value.trim().length === 0) {
-          result = {
-            isValid: false,
-            errors: [{ field: 'sport_discipline', message: 'Вид спорта обязателен' }]
-          };
-        } else if (value.length > 100) {
-          result = {
-            isValid: false,
-            errors: [{ field: 'sport_discipline', message: 'Максимум 100 символов' }]
-          };
-        } else {
-          result = { isValid: true, errors: [] };
-        }
-        break;
+      case 'sport_discipline': {
+  validator.reset();
+  const validationResult = {
+    isValid: true,
+    errors: []
+  };
+
+  if (value && value.trim() !== '') {
+    validator.validateField(value, 'sport_discipline', validator.rules.sports_rank);
+
+    if (validator.hasErrors()) {
+      validationResult.isValid = false;
+      const errors = validator.getErrors().map(err => ({
+        ...err,
+        field: 'sport_discipline'
+      }));
+      validationResult.errors = errors;
+    }
+  }
+
+  result = validationResult;
+  break;
+}
       case 'bio':
         const bioValid = !value || value.length <= 1000;
         result = {
@@ -450,14 +470,26 @@ export async function renderAuthForm(container, config = {}) {
    * Получить данные формы
    * @returns {Object} Объект с данными формы
    */
-  const getFormData = () => {
-    const data = {};
-    for (const [name, api] of inputsApi) {
-      data[name] = api.getValue();
-    }
-    return data;
-  };
+const getFormData = () => {
+  const data = {};
+  for (const [name, api] of inputsApi) {
+    data[name] = api.getValue();
+  }
 
+  if (mode === AUTH_MODES.REGISTER_TRAINER) {
+    data.trainer_details = {
+      education_degree: data.education_degree || '',
+      career_since_date: data.career_since_date,
+      sports: [{
+        sport_type_id: 1,
+        experience_years: 0,
+        sports_rank: data.sports_rank || data.sport_discipline || ''
+      }]
+    };
+  }
+
+  return data;
+};
   /**
    * Установить ошибки из API
    * @param {Array} errors - Массив ошибок
