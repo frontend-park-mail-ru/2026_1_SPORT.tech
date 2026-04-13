@@ -19,6 +19,11 @@ import { loadProfilePageData } from '/src/utils/profilePageData.js';
 /** @type {Object} Хранилище скомпилированных Handlebars шаблонов */
 Handlebars.templates = {};
 
+// ДОБАВЬ ЭТОТ БЛОК:
+Handlebars.registerHelper('isRealValue', function (value) {
+  return value && value !== 'null' && value !== '';
+});
+
 /**
  * Загружает и компилирует все Handlebars шаблоны
  * @async
