@@ -33,7 +33,7 @@ const rules = {
   email: {
     required: true,
     max: 254,
-    pattern: /^[^@\s]+@[^@\s]+\.[^@\s]+$/,
+    pattern: /^[A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}$/ ,
     messages: { required: 'Email обязателен', pattern: 'Неверный формат email (пример: example@smail.ru)' }
   },
 
@@ -52,10 +52,13 @@ const rules = {
     required: true,
     min: 1,
     max: 100,
+    pattern: /^[A-Za-zА-Яа-я]+$/,
     messages: {
       required: 'Имя обязательно',
       min: 'Имя не может быть пустым',
-      max: 'Максимум 100 символов'
+      max: 'Максимум 100 символов',
+       pattern:
+          'Имя может содержать только латинские и кириллические буквы'
     }
   },
 
@@ -63,16 +66,40 @@ const rules = {
     required: true,
     min: 1,
     max: 100,
+    pattern: /^[A-Za-zА-Яа-я]+$/,
     messages: {
       required: 'Фамилия обязательна',
       min: 'Фамилия не может быть пустой',
-      max: 'Максимум 100 символов'
+      max: 'Максимум 100 символов',
+      pattern:
+          'Фамилия может содержать только латинские и кириллические буквы'
     }
   },
 
-  bio: { required: false, max: 1000, messages: { max: 'Максимум 1000 символов' } },
 
-  education_degree: { required: false, max: 255, messages: { max: 'Максимум 255 символов' } },
+  bio: {
+    required: true,
+    max: 1000,
+    messages: {
+    max: 'Максимум 1000 символов' } },
+
+  education_degree: {
+        required: false,
+        max: 255,
+         pattern: /^[A-Za-zА-Яа-я\s\-.,]+$/,
+        messages: {
+        max: 'Максимум 255 символов',
+      pattern:
+          'Образование может содержать только буквы, пробелы, дефисы, запятые и точки'} },
+
+  sports_rank: {
+        required: false,
+        max: 100,
+        pattern: /^[A-Za-zА-Яа-я\s\-.,]+$/,
+        messages: {
+        max: 'Максимум 100 символов' ,
+      pattern:
+          'Виды спорта могут содержать только буквы, пробелы, дефисы, запятые и точки' }}
 
   sports_rank: { required: false, max: 100, messages: { max: 'Максимум 100 символов' } },
 
@@ -378,82 +405,131 @@ export class Validator {
     };
   }
 
+
   /**
    * Валидация спорта тренера
    * @param {Object} sport - Данные о спорте
    * @param {number} index - Индекс в массиве
    * @returns {Array} Массив ошибок
    */
-  validateTrainerSport(sport, index) {
-    const errors = [];
+validateTrainerSport(sport, index) {
+  const errors = [];
 
-    if (!sport.sport_type_id) {
-      errors.push({
-        field: `sports[${index}].sport_type_id`,
-        message: 'ID вида спорта обязателен'
-      });
-    }
+  if (!sport.sport_type_id) {
+    errors.push({
+      field: `sports[${index}].sport_type_id`,
+      message: 'ID вида спорта обязателен'
+    });
+  }
 
-    if (sport.experience_years === undefined || sport.experience_years === null) {
-      errors.push({
-        field: `sports[${index}].experience_years`,
-        message: 'Опыт работы обязателен'
-      });
-    } else if (typeof sport.experience_years !== 'number' || sport.experience_years < 0) {
-      errors.push({
-        field: `sports[${index}].experience_years`,
-        message: 'Опыт работы должен быть неотрицательным числом'
-      });
-    }
+  if (sport.experience_years === undefined || sport.experience_years === null) {
+    errors.push({
+      field: `sports[${index}].experience_years`,
+      message: 'Опыт работы обязателен'
+    });
+  } else if (typeof sport.experience_years !== 'number' || sport.experience_years < 0) {
+    errors.push({
+      field: `sports[${index}].experience_years`,
+      message: 'Опыт работы должен быть неотрицательным числом'
+    });
+  }
 
-    if (sport.sports_rank && sport.sports_rank.length > 100) {
+  // Валидация спортивного разряда (если указан)
+  if (sport.sports_rank !== undefined && sport.sports_rank !== null && sport.sports_rank !== '') {
+    const rank = sport.sports_rank;
+    const rankRules = this.rules.sports_rank;
+
+    // Проверка на эмодзи
+    const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g;
+    if (emojiRegex.test(rank)) {
       errors.push({
         field: `sports[${index}].sports_rank`,
-        message: 'Максимум 100 символов'
+        message: 'Спортивный разряд не может содержать смайлы'
       });
     }
 
-    return errors;
+    // Проверка максимальной длины
+    if (rankRules.max && rank.length > rankRules.max) {
+      errors.push({
+        field: `sports[${index}].sports_rank`,
+        message: rankRules.messages.max
+      });
+    }
+
+    // Проверка паттерна
+    if (rankRules.pattern && !checks.pattern(rank, rankRules.pattern)) {
+      errors.push({
+        field: `sports[${index}].sports_rank`,
+        message: rankRules.messages.pattern
+      });
+    }
   }
 
-  /**
-   * Валидация деталей тренера
-   * @param {Object} details - Детали тренера
-   * @returns {Array} Массив ошибок
-   */
-  validateTrainerDetails(details) {
-    const errors = [];
+  return errors;
+}
 
-    if (!details.career_since_date) {
-      errors.push({
-        field: 'career_since_date',
-        message: 'Дата начала карьеры обязательна'
-      });
-    } else if (!checks.dateFormat(details.career_since_date)) {
-      errors.push({
-        field: 'career_since_date',
-        message: 'Дата должна быть в формате ГГГГ-ММ-ДД'
-      });
-    }
+/**
+ * Валидация деталей тренера (УПРОЩЕННАЯ ВЕРСИЯ)
+ */
+validateTrainerDetails(details) {
+  const errors = [];
 
-    if (details.education_degree && details.education_degree.length > 255) {
-      errors.push({ field: 'education_degree', message: 'Максимум 255 символов' });
-    }
-
-    if (!details.sports || !Array.isArray(details.sports) || details.sports.length === 0) {
-      errors.push({
-        field: 'sports',
-        message: 'Должен быть указан хотя бы один вид спорта'
-      });
-    } else {
-      details.sports.forEach((sport, index) => {
-        errors.push(...this.validateTrainerSport(sport, index));
-      });
-    }
-
-    return errors;
+  if (!details.career_since_date) {
+    errors.push({
+      field: 'career_since_date',
+      message: 'Дата начала карьеры обязательна'
+    });
+  } else if (!checks.dateFormat(details.career_since_date)) {
+    errors.push({
+      field: 'career_since_date',
+      message: 'Дата должна быть в формате ГГГГ-ММ-ДД'
+    });
   }
 
+  // Валидация образования (если указано)
+  if (details.education_degree !== undefined && details.education_degree !== null && details.education_degree !== '') {
+    const degree = details.education_degree;
+    const educationRules = this.rules.education_degree;
+
+    // Проверка на эмодзи
+    const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g;
+    if (emojiRegex.test(degree)) {
+      errors.push({
+        field: 'education_degree',
+        message: 'Степень образования не может содержать смайлы'
+      });
+    }
+
+    // Проверка максимальной длины
+    if (educationRules.max && degree.length > educationRules.max) {
+      errors.push({
+        field: 'education_degree',
+        message: educationRules.messages.max
+      });
+    }
+
+    // Проверка паттерна
+    if (educationRules.pattern && !checks.pattern(degree, educationRules.pattern)) {
+      errors.push({
+        field: 'education_degree',
+        message: educationRules.messages.pattern
+      });
+    }
+  }
+
+  if (!details.sports || !Array.isArray(details.sports) || details.sports.length === 0) {
+    errors.push({
+      field: 'sports',
+      message: 'Должен быть указан хотя бы один вид спорта'
+    });
+  } else {
+    details.sports.forEach((sport, index) => {
+      errors.push(...this.validateTrainerSport(sport, index));
+    });
+  }
+
+  return errors;
+}
   /**
    * Валидация регистрации тренера
    * @param {Object} data - Данные тренера
