@@ -96,10 +96,10 @@ export async function renderAvatar(container, config = {}) {
   const initials = getInitials(name);
 
   // ПРОВЕРКА ЗДЕСЬ: Если пришел "null" или null, принудительно ставим null для шаблона
-  const validSrc = (src && src !== 'null') ? src : null;
+ const cleanSrc = (src === 'null' || src === '') ? null : src;
 
   const html = template({ 
-    src: validSrc, // Используем проверенную переменную
+    src: cleanSrc, // Передаем очищенный src
     alt, 
     size, 
     initials,

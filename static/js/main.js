@@ -19,9 +19,9 @@ import { loadProfilePageData } from '/src/utils/profilePageData.js';
 /** @type {Object} Хранилище скомпилированных Handlebars шаблонов */
 Handlebars.templates = {};
 
-// Проверка: значение не null, не undefined, не строка "null" и не пустое
+// СЮДА, строго ПЕРЕД всеми функциями:
 Handlebars.registerHelper('isRealValue', function (value) {
-  return value !== null && value !== undefined && value !== 'null' && value !== '';
+  return value && value !== 'null' && value !== '';
 });
 
 /**
