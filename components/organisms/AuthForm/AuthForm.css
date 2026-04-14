@@ -75,3 +75,14 @@
 .auth-form__link--alt:hover {
     color: var(--text-orange-hover);
 }
+
+/* components/organisms/AuthForm/AuthForm.css */
+.auth-form__global-error {
+  color: var(--error-red);
+  background: var(--error-light);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
