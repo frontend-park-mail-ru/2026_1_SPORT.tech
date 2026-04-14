@@ -46,8 +46,9 @@ function getUserRoleLabel(isTrainer) {
 }
 
 function getFullName(profile = {}) {
-  return `${profile.first_name || ''} ${profile.last_name || ''}`.trim() ||
-      profile.username || 'Пользователь';
+  const first = profile.first_name || '';
+  const last = profile.last_name || '';
+  return `${first} ${last}`.trim() || profile.username || 'Пользователь';
 }
 
 function escapeHtml(value = '') {
@@ -68,20 +69,21 @@ function formatPostContent(textContent) {
 
 function mapProfileData(apiData, currentUser) {
   const isOwnProfile = apiData.is_me;
-  const fullName = getFullName(apiData.profile);
+  const fullName = getFullName(apiData);
 
   return {
     profile: {
       name: fullName,
       role: getUserRoleLabel(apiData.is_trainer),
-      avatar: apiData.profile.avatar_url,
-      isOwnProfile: isOwnProfile
+      avatar: apiData.avatar_url,
+      isOwnProfile: isOwnProfile,
+      isTrainer: apiData.is_trainer
     },
     currentUser: currentUser?.user ? {
       id: currentUser.user.user_id,
-      name: getFullName(currentUser.user.profile),
+      name: getFullName(currentUser.user),
       role: getUserRoleLabel(currentUser.user.is_trainer),
-      avatar: currentUser.user.profile.avatar_url
+      avatar: currentUser.user.avatar_url
     } : null
   };
 }
@@ -99,7 +101,8 @@ async function loadProfilePageData(api, userId, currentUser = null) {
       api.getUserPosts(resolvedUserId).catch(() => ({ posts: [] }))
     ]);
 
-    const authorName = getFullName(profileData.profile);
+    // profileData — это сам объект профиля
+    const authorName = getFullName(profileData);
     const authorRole = getUserRoleLabel(profileData.is_trainer);
     const postList = Array.isArray(postsData?.posts) ? postsData.posts : [];
 
@@ -109,7 +112,7 @@ async function loadProfilePageData(api, userId, currentUser = null) {
         try {
           fullPost = await api.getPost(post.post_id);
         } catch (error) {
-          // Ошибка загрузки поста
+          // игнорируем
         }
       }
       const textContent = fullPost?.text_content || '';
@@ -119,7 +122,8 @@ async function loadProfilePageData(api, userId, currentUser = null) {
         content: post.can_view ? formatPostContent(textContent) : 'Нет доступа к содержимому поста',
         authorName,
         authorRole,
-        likes: 0,
+        likes: fullPost?.likes_count || 0,
+        liked: fullPost?.is_liked || false,
         comments: 0,
         can_view: post.can_view,
         created_at: post.created_at,
@@ -129,13 +133,12 @@ async function loadProfilePageData(api, userId, currentUser = null) {
     }));
 
     const mappedData = mapProfileData(profileData, currentUser);
-    return { ...mappedData, posts, subscriptions: [], popularPosts: [] };
+    return { ...mappedData, posts, subscriptions: [], popularPosts: [], viewedUserId: resolvedUserId };
   } catch (error) {
     console.error('❌ Failed to load profile data:', error);
     throw error;
   }
 }
-
 // ===== РОУТЕР =====
 
 function createRouter(api) {
@@ -170,6 +173,7 @@ function createRouter(api) {
 
     try {
       const { renderProfilePage } = await import('/pages/ProfilePage/ProfilePage.js');
+      await new Promise(resolve => setTimeout(resolve, 100));
       const currentUser = await api.getCurrentUser();
       const userId = currentUser?.user?.user_id;
       const data = await loadProfilePageData(api, userId, currentUser);
