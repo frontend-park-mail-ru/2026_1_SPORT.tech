@@ -102,6 +102,7 @@ export async function renderProfilePage(api, container, {
     avatar: profile.avatar,
     isOwnProfile: profile.isOwnProfile,
     showDonate: profile.isTrainer,
+    api,
     onDonate: () =>
       openDonationModal({
         api,
