@@ -2,23 +2,22 @@
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button.js';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input.js';
 import { Validator } from '/src/utils/validator.js';
-import { ApiClient } from '/src/utils/api.js';
 
 /**
  * Открывает модальное окно редактирования профиля
  * @param {Object} options
- * @param {ApiClient} options.api
- * @param {Object} options.currentUser - текущий пользователь (из ответа /auth/me)
+ * @param {import('/src/utils/api.js').ApiClient} options.api
+ * @param {Object} options.currentUser - текущий пользователь
  * @param {Function} options.onUpdated - колбэк после успешного обновления
  */
 export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   const template = Handlebars.templates['ProfileEditModal.hbs'];
 
-  // Подготовка данных
-  const user = currentUser?.user || currentUser; // поддержка разных форматов
+  const user = currentUser?.user || currentUser;
   const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
   const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
   const avatarUrl = user.avatar_url || '';
+  const isTrainer = user.is_trainer;
 
   const root = document.createElement('div');
   root.innerHTML = template({ avatar: avatarUrl, initials }).trim();
@@ -41,69 +40,78 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   const validator = new Validator();
   const inputsApi = new Map();
 
-  // Определяем поля в зависимости от роли
-  const isTrainer = user.is_trainer;
-const fields = [
-  { name: 'username', label: 'Имя пользователя', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 30 },
-  { name: 'first_name', label: 'Имя', type: INPUT_TYPES.NAME, required: true, maxlength: 100 },
-  { name: 'last_name', label: 'Фамилия', type: INPUT_TYPES.NAME, required: true, maxlength: 100 },
-  { name: 'bio', label: 'О себе', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 1000 }
-];
+  // Поля как в регистрации
+  const fields = [
+    { name: 'username', label: 'Имя пользователя', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 30 },
+    { name: 'first_name', label: 'Имя', type: INPUT_TYPES.NAME, required: true, maxlength: 100 },
+    { name: 'last_name', label: 'Фамилия', type: INPUT_TYPES.NAME, required: true, maxlength: 100 },
+    { name: 'bio', label: 'О себе', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 1000 }
+  ];
 
-if (isTrainer) {
-  fields.push(
-    { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 255 },
-    { name: 'career_since_date', label: 'Дата начала карьеры', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 10 },
-    { name: 'sport_discipline', label: 'Вид спорта', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 100 }
-  );
-}
-
-  // Для тренера можно добавить дополнительные поля (только отображение, т.к. API нет)
-  // Но пока оставим общие.
-
-  // Рендерим поля
-  for (const field of fields) {
-  const container = document.createElement('div');
-  fieldsContainer.appendChild(container);
-
-  // Определяем значение поля
-  let value = user[field.name] || '';
   if (isTrainer) {
-    if (field.name === 'education_degree' || field.name === 'career_since_date') {
-      value = user.trainer_details?.[field.name] || '';
-    } else if (field.name === 'sport_discipline') {
-      value = user.trainer_details?.sports?.[0]?.sports_rank || '';
-    }
+    fields.push(
+      { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 255 },
+      { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 10 },
+      { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 100 }
+    );
   }
 
-  const api = await renderInput(container, {
-    type: field.type,
-    label: field.label,
-    name: field.name,
-    value: value,
-    required: field.required,
-    maxlength: field.maxlength,
-    onChange: () => api.setNormal()
-  });
+  // Рендер полей
+  for (const field of fields) {
+    const container = document.createElement('div');
+    fieldsContainer.appendChild(container);
 
-  // Маска для даты
-  if (field.name === 'career_since_date') {
-    const input = api.input;
-    input.addEventListener('input', e => {
-      let val = e.target.value.replace(/\D/g, '');
-      if (val.length >= 4) {
-        let formatted = val.substring(0, 4);
-        if (val.length > 4) formatted += '-' + val.substring(4, 6);
-        if (val.length > 6) formatted += '-' + val.substring(6, 8);
-        e.target.value = formatted;
-      } else {
-        e.target.value = val;
+    let value = user[field.name] || '';
+    if (isTrainer) {
+      if (field.name === 'education_degree' || field.name === 'career_since_date') {
+        value = user.trainer_details?.[field.name] || '';
+      } else if (field.name === 'sport_discipline') {
+        value = user.trainer_details?.sports?.[0]?.sports_rank || '';
       }
-    });
-  }
+    }
 
-  inputsApi.set(field.name, api);
-}
+    const api = await renderInput(container, {
+      type: field.type,
+      label: field.label,
+      name: field.name,
+      value: value,
+      placeholder: field.placeholder || '',
+      required: field.required,
+      maxlength: field.maxlength,
+      onChange: () => api.setNormal()
+    });
+
+    // Маска для даты (как в регистрации)
+    if (field.name === 'career_since_date') {
+      const input = api.input;
+      input.addEventListener('input', e => {
+        let val = e.target.value.replace(/\D/g, '');
+        if (val.length >= 4) {
+          let formatted = val.substring(0, 4);
+          if (val.length > 4) formatted += '-' + val.substring(4, 6);
+          if (val.length > 6) formatted += '-' + val.substring(6, 8);
+          e.target.value = formatted;
+        } else {
+          e.target.value = val;
+        }
+      });
+    }
+
+    // Подсказка для sport_discipline (как в регистрации)
+    if (field.name === 'sport_discipline') {
+      const helpText = document.createElement('small');
+      helpText.textContent = 'Можно указать несколько через запятую';
+      helpText.style.cssText = `
+        font-size: var(--font-size-xs);
+        color: var(--text-placeholder);
+        margin-top: 2px;
+        display: block;
+      `;
+      container.appendChild(helpText);
+    }
+
+    inputsApi.set(field.name, api);
+  }
 
   // Управление аватаром
   const updateAvatarPreview = () => {
@@ -155,7 +163,7 @@ if (isTrainer) {
     el.addEventListener('click', close);
   });
 
-  // Кнопки
+  // Кнопки (как в регистрации)
   await renderButton(cancelWrap, {
     text: 'Отмена',
     variant: BUTTON_VARIANTS.TEXT_ORANGE,
@@ -171,26 +179,71 @@ if (isTrainer) {
     type: 'submit'
   });
 
-  // Валидация формы
+  // Валидация (как в регистрации)
+  const validateField = (fieldName, value) => {
+    const api = inputsApi.get(fieldName);
+    if (!api) return true;
+
+    let result;
+    switch (fieldName) {
+      case 'username':
+        result = validator.validateUsername(value);
+        break;
+      case 'first_name':
+        result = validator.validateFirstName(value);
+        break;
+      case 'last_name':
+        result = validator.validateLastName(value);
+        break;
+      case 'bio':
+        result = { isValid: !value || value.length <= 1000, errors: [] };
+        break;
+      case 'education_degree':
+        validator.reset();
+        validator.validateField(value, 'education_degree', validator.rules.education_degree);
+        result = { isValid: !validator.hasErrors(), errors: validator.getErrors() };
+        break;
+      case 'career_since_date':
+        if (!value) {
+          result = { isValid: false, errors: [{ field: 'career_since_date', message: 'Дата обязательна' }] };
+        } else {
+          const isValidFormat = /^\d{4}-\d{2}-\d{2}$/.test(value);
+          result = {
+            isValid: isValidFormat,
+            errors: isValidFormat ? [] : [{ field: 'career_since_date', message: 'Формат ГГГГ-ММ-ДД' }]
+          };
+        }
+        break;
+      case 'sport_discipline':
+        validator.reset();
+        validator.validateField(value, 'sports_rank', validator.rules.sports_rank);
+        result = { isValid: !validator.hasErrors(), errors: validator.getErrors() };
+        break;
+      default:
+        return true;
+    }
+
+    if (!result.isValid && result.errors.length > 0) {
+      api.setError(result.errors[0].message);
+      return false;
+    } else {
+      api.setNormal();
+      return true;
+    }
+  };
+
   const validateForm = () => {
     let isValid = true;
     for (const [name, api] of inputsApi) {
       const value = api.getValue();
-      const fieldRules = validator.rules[name];
-      if (fieldRules) {
-        validator.reset();
-        validator.validateField(value, name, fieldRules);
-        if (validator.hasErrors()) {
-          api.setError(validator.getErrors()[0].message);
-          isValid = false;
-        } else {
-          api.setNormal();
-        }
+      if (!validateField(name, value)) {
+        isValid = false;
       }
     }
     return isValid;
   };
 
+  // Отправка
   form.addEventListener('submit', async e => {
     e.preventDefault();
     globalErr.hidden = true;
@@ -199,18 +252,25 @@ if (isTrainer) {
 
     saveBtn.setDisabled(true);
     try {
-      // 1. Обновление текстовых данных
+      // Обновление профиля
       const profileData = {};
       for (const [name, api] of inputsApi) {
         profileData[name] = api.getValue().trim();
       }
 
+      // TODO: если тренер, нужно отправлять trainer_details отдельно или в этом же запросе
+      // Пока шлём только базовые поля
       await api.request('/profiles/me', {
         method: 'PATCH',
-        body: JSON.stringify(profileData)
+        body: JSON.stringify({
+          username: profileData.username,
+          first_name: profileData.first_name,
+          last_name: profileData.last_name,
+          bio: profileData.bio || ''
+        })
       });
 
-      // 2. Загрузка аватара, если есть изменения
+      // Аватар
       if (avatarFile) {
         const formData = new FormData();
         formData.append('avatar', avatarFile);
@@ -219,9 +279,6 @@ if (isTrainer) {
           credentials: 'include',
           body: formData
         });
-      } else if (avatarRemoved) {
-        // API не предоставляет удаление аватара? Возможно, нужно отправить null или пустую строку.
-        // Пока пропустим.
       }
 
       onUpdated?.();
@@ -246,7 +303,5 @@ if (isTrainer) {
   document.addEventListener('keydown', onKey);
   document.body.appendChild(modal);
   modal.focus({ preventScroll: true });
-
-  // Установка начального состояния аватара
   updateAvatarPreview();
 }

@@ -176,3 +176,29 @@
   display: inline-flex;
   align-items: center;
 }
+/* Поля как в форме авторизации */
+.profile-edit-modal__fields .input-field {
+  margin-bottom: var(--spacing-md);
+}
+
+/* Выравнивание кнопок */
+.profile-edit-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: var(--spacing-lg);
+}
+
+.profile-edit-modal__actions .button--text-orange {
+  height: 40px;
+  padding: 0 var(--spacing-lg);
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Ширина модалки */
+.profile-edit-modal__panel {
+  max-width: 560px;
+}
