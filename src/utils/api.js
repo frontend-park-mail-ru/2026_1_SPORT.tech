@@ -50,7 +50,7 @@ export class ApiClient {
 
       if (!response.ok) {
         console.error('❌ API Error:', data);
-        console.error('❌ Full error details:', JSON.stringify(data, null, 2)); 
+        console.error('❌ Full error details:', JSON.stringify(data, null, 2));
         throw new Error(data.error?.message || `HTTP ${response.status}`);
       }
 
@@ -223,7 +223,7 @@ export class ApiClient {
    * @returns {Promise<Object| null>}
    */
   async likePost(postId) {
-    return this.request(`/posts/${postId}/like`, { method: 'POST' });
+    return this.request(`/posts/${postId}/likes`, { method: 'POST' });
   }
 
   /**
@@ -236,7 +236,7 @@ export class ApiClient {
    * @returns {Promise<null>}
    */
   async unlikePost(postId) {
-    return this.request(`/posts/${postId}/like`, { method: 'DELETE' });
+    return this.request(`/posts/${postId}/likes`, { method: 'DELETE' });
   }
 
   /**

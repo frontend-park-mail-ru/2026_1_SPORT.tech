@@ -401,29 +401,51 @@ export async function renderAuthForm(container, config = {}) {
     const fieldContainer = document.createElement('div');
     fieldsContainer.appendChild(fieldContainer);
 
-    if (fieldConfig.name === 'career_since_date') {
-      const inputApi = await renderInput(fieldContainer, {
+    // AuthForm.js - в цикле создания полей
+
+if (fieldConfig.name === 'career_since_date') {
+    const inputApi = await renderInput(fieldContainer, {
         type: fieldConfig.type,
         label: fieldConfig.label,
         placeholder: fieldConfig.placeholder,
         name: fieldConfig.name,
         required: fieldConfig.required,
-        showEye: fieldConfig.showEye,
         onChange: value => validateField(fieldConfig.name, value)
-      });
+    });
 
-      const input = inputApi.input;
-      input.addEventListener('input', e => {
-        const formatted = formatDateInput(e.target.value);
-        if (formatted !== e.target.value) {
-          e.target.value = formatted;
-          validateField(fieldConfig.name, formatted);
+    const input = inputApi.input;
+
+    // Маска для автоматического форматирования
+    input.addEventListener('input', e => {
+        let value = e.target.value;
+
+        // Удаляем все не-цифры
+        value = value.replace(/\D/g, '');
+
+        // Форматируем как ГГГГ-ММ-ДД
+        if (value.length >= 4) {
+            let formatted = value.substring(0, 4);
+
+            if (value.length > 4) {
+                formatted += '-' + value.substring(4, 6);
+            }
+
+            if (value.length > 6) {
+                formatted += '-' + value.substring(6, 8);
+            }
+
+            e.target.value = formatted;
+        } else {
+            e.target.value = value;
         }
-      });
 
-      inputs.set(fieldConfig.name, fieldContainer);
-      inputsApi.set(fieldConfig.name, inputApi);
-    } else if (fieldConfig.name === 'sport_discipline') {
+        validateField(fieldConfig.name, e.target.value);
+    });
+
+    inputs.set(fieldConfig.name, fieldContainer);
+    inputsApi.set(fieldConfig.name, inputApi);
+}
+    else if (fieldConfig.name === 'sport_discipline') {
       const inputApi = await renderInput(fieldContainer, {
         type: fieldConfig.type,
         label: fieldConfig.label,

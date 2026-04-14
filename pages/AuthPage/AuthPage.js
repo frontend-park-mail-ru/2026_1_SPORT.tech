@@ -111,46 +111,41 @@ function normalizeDate(dateString) {
   return dateString;
 }
 
+// AuthPage.js - handleTrainerRegister
+
 async function handleTrainerRegister(data) {
-  try {
-    // Нормализуем дату!
-    const normalizedDate = normalizeDate(data.career_since_date);
+    try {
+        // НЕ ИСПОЛЬЗУЕМ normalizeDate!
+        // Просто берём дату как есть из формы
 
-    console.log('📤 Sending trainer data:', JSON.stringify({
-      username: data.username,
-      email: data.email,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      trainer_details: {
-        education_degree: data.education_degree || '',
-        career_since_date: normalizedDate,  // ← исправленная дата
-        sports: [{ sport_type_id: 1, experience_years: 0, sports_rank: data.sport_discipline || '' }]
-      }
-    }, null, 2));
+        console.log('📅 Дата из формы:', data.career_since_date);
 
-    const response = await api.registerTrainer({
-      username: data.username,
-      email: data.email,
-      password: data.password,
-      password_repeat: data.password_repeat,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      trainer_details: {
-        education_degree: data.education_degree || '',
-        career_since_date: normalizedDate,  // ← исправленная дата
-        sports: [{ sport_type_id: 1, experience_years: 0, sports_rank: data.sport_discipline || '' }]
-      }
-    });
+        const response = await api.registerTrainer({
+            username: data.username,
+            email: data.email,
+            password: data.password,
+            password_repeat: data.password_repeat,
+            first_name: data.first_name,
+            last_name: data.last_name,
+            trainer_details: {
+                education_degree: data.education_degree || '',
+                career_since_date: data.career_since_date,  // ← БЕЗ ПРЕОБРАЗОВАНИЙ!
+                sports: [{
+                    sport_type_id: 1,
+                    experience_years: 0,
+                    sports_rank: data.sport_discipline || ''
+                }]
+            }
+        });
 
-    if (response?.user) {
-      localStorage.setItem('user', JSON.stringify(response.user));
+        if (response?.user) {
+            localStorage.setItem('user', JSON.stringify(response.user));
+            window.router.navigateTo('/profile');
+        }
+    } catch (error) {
+        console.error('Trainer register error:', error);
+        throw error;
     }
-
-    window.router.navigateTo('/profile');
-  } catch (error) {
-    console.error('Trainer register error:', error);
-    throw error;
-  }
 }
   /**
    * Переключение режима формы
