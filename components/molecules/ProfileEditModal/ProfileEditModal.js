@@ -58,70 +58,75 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
 
   // Функция рендера полей
   const renderFields = async (showTrainerFields) => {
-    fieldsContainer.innerHTML = '';
-    inputsApi.clear();
+  fieldsContainer.innerHTML = '';
+  inputsApi.clear();
 
-    const fieldsToRender = [...baseFields];
-    if (showTrainerFields) {
-      fieldsToRender.push(...trainerFields);
+  const fieldsToRender = [...baseFields];
+  if (showTrainerFields) {
+    fieldsToRender.push(...trainerFields);
+  }
+
+  for (const field of fieldsToRender) {
+    const container = document.createElement('div');
+    fieldsContainer.appendChild(container);
+
+    // Определяем значение поля
+    let value = '';
+
+    if (field.name === 'education_degree' || field.name === 'career_since_date') {
+      // Тренерские поля из trainer_details
+      value = user.trainer_details?.[field.name] || '';
+    } else if (field.name === 'sport_discipline') {
+      // sport_discipline маппится на sports_rank первого спорта
+      value = user.trainer_details?.sports?.[0]?.sports_rank || '';
+    } else {
+      // Обычные поля пользователя
+      value = user[field.name] || '';
     }
 
-    for (const field of fieldsToRender) {
-      const container = document.createElement('div');
-      fieldsContainer.appendChild(container);
+    const api = await renderInput(container, {
+      type: field.type,
+      label: field.label,
+      name: field.name,
+      value: value,
+      placeholder: field.placeholder,
+      required: field.required,
+      maxlength: field.maxlength,
+      onChange: () => api.setNormal()
+    });
 
-      let value = user[field.name] || '';
-      if (showTrainerFields && !originalIsTrainer) {
-        value = '';
-      } else if (originalIsTrainer) {
-        if (field.name === 'education_degree' || field.name === 'career_since_date') {
-          value = user.trainer_details?.[field.name] || '';
-        } else if (field.name === 'sport_discipline') {
-          value = user.trainer_details?.sports?.[0]?.sports_rank || '';
+    // Маска для даты
+    if (field.name === 'career_since_date') {
+      const input = api.input;
+      input.addEventListener('input', e => {
+        let val = e.target.value.replace(/\D/g, '');
+        if (val.length >= 4) {
+          let formatted = val.substring(0, 4);
+          if (val.length > 4) formatted += '-' + val.substring(4, 6);
+          if (val.length > 6) formatted += '-' + val.substring(6, 8);
+          e.target.value = formatted;
+        } else {
+          e.target.value = val;
         }
-      }
-
-      const api = await renderInput(container, {
-        type: field.type,
-        label: field.label,
-        name: field.name,
-        value: value,
-        placeholder: field.placeholder,
-        required: field.required,
-        maxlength: field.maxlength,
-        onChange: () => api.setNormal()
       });
-
-      if (field.name === 'career_since_date') {
-        const input = api.input;
-        input.addEventListener('input', e => {
-          let val = e.target.value.replace(/\D/g, '');
-          if (val.length >= 4) {
-            let formatted = val.substring(0, 4);
-            if (val.length > 4) formatted += '-' + val.substring(4, 6);
-            if (val.length > 6) formatted += '-' + val.substring(6, 8);
-            e.target.value = formatted;
-          } else {
-            e.target.value = val;
-          }
-        });
-      }
-
-      if (field.name === 'sport_discipline') {
-        const helpText = document.createElement('small');
-        helpText.textContent = 'Можно указать несколько через запятую';
-        helpText.style.cssText = `
-          font-size: var(--font-size-xs);
-          color: var(--text-placeholder);
-          margin-top: 2px;
-          display: block;
-        `;
-        container.appendChild(helpText);
-      }
-
-      inputsApi.set(field.name, api);
     }
-  };
+
+    // Подсказка для sport_discipline
+    if (field.name === 'sport_discipline') {
+      const helpText = document.createElement('small');
+      helpText.textContent = 'Можно указать несколько через запятую';
+      helpText.style.cssText = `
+        font-size: var(--font-size-xs);
+        color: var(--text-placeholder);
+        margin-top: 2px;
+        display: block;
+      `;
+      container.appendChild(helpText);
+    }
+
+    inputsApi.set(field.name, api);
+  }
+};
 
   // Первичный рендер
   await renderFields(originalIsTrainer);
@@ -135,7 +140,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
 
     await renderButton(becomeTrainerContainer, {
       text: 'Стать тренером',
-      variant: BUTTON_VARIANTS.SECONDARY_BLUE,
+      variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
       size: BUTTON_SIZES.MEDIUM,
       onClick: async () => {
         becomingTrainer = true;
