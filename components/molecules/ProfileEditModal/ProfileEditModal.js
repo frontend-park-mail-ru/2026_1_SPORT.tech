@@ -41,20 +41,70 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   const inputsApi = new Map();
 
   // Поля как в регистрации
-  const fields = [
-    { name: 'username', label: 'Имя пользователя', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 30 },
-    { name: 'first_name', label: 'Имя', type: INPUT_TYPES.NAME, required: true, maxlength: 100 },
-    { name: 'last_name', label: 'Фамилия', type: INPUT_TYPES.NAME, required: true, maxlength: 100 },
-    { name: 'bio', label: 'О себе', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 1000 }
-  ];
-
-  if (isTrainer) {
-    fields.push(
-      { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 255 },
-      { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 10 },
-      { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 100 }
-    );
+  // Поля как в регистрации
+const fields = [
+  {
+    name: 'username',
+    label: 'Имя пользователя',
+    type: INPUT_TYPES.WITHOUTS,
+    required: true,
+    maxlength: 30,
+    placeholder: 'john_doe'
+  },
+  {
+    name: 'first_name',
+    label: 'Имя',
+    type: INPUT_TYPES.NAME,
+    required: true,
+    maxlength: 100,
+    placeholder: 'Введите имя'
+  },
+  {
+    name: 'last_name',
+    label: 'Фамилия',
+    type: INPUT_TYPES.NAME,
+    required: true,
+    maxlength: 100,
+    placeholder: 'Введите фамилию'
+  },
+  {
+    name: 'bio',
+    label: 'О себе',
+    type: INPUT_TYPES.WITHOUTS,
+    required: false,
+    maxlength: 1000,
+    placeholder: 'Расскажите о себе'
   }
+];
+
+if (isTrainer) {
+  fields.push(
+    {
+      name: 'education_degree',
+      label: 'Образование',
+      type: INPUT_TYPES.WITHOUTS,
+      required: false,
+      maxlength: 255,
+      placeholder: 'Введите образование'
+    },
+    {
+      name: 'career_since_date',
+      label: 'Дата начала профессиональной деятельности',
+      type: INPUT_TYPES.WITHOUTS,
+      required: true,
+      maxlength: 10,
+      placeholder: 'ГГГГ-ММ-ДД'
+    },
+    {
+      name: 'sport_discipline',
+      label: 'Вид дисциплины/спорта',
+      type: INPUT_TYPES.WITHOUTS,
+      required: true,
+      maxlength: 100,
+      placeholder: 'например: футбол, плавание, бокс'
+    }
+  );
+}
 
   // Рендер полей
   for (const field of fields) {
