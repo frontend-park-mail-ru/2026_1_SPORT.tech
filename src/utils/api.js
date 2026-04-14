@@ -254,12 +254,16 @@ async request(endpoint, options = {}) {
    * @param {Object} payload - Данные платежа
    * @returns {Promise<Object>}
    */
-  async createDonation(payload) {
-    return this.request('/donations', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-  }
+async createDonation(userId, amountValue, currency = 'RUB', message = '') {
+  return this.request(`/profiles/${userId}/donations`, {
+    method: 'POST',
+    body: JSON.stringify({
+      amount_value: amountValue,
+      currency: currency,
+      message: message
+    })
+  });
+}
 
   // ===== SPORT TYPES METHODS =====
 

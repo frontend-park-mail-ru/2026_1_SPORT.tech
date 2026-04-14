@@ -130,7 +130,6 @@ export async function renderPostCard(container, post) {
 
   if (deleteBtn && api && isOwner) {
     deleteBtn.addEventListener('click', async () => {
-      if (!confirm('Удалить эту публикацию?')) return;
       deleteBtn.disabled = true;
       try {
         await api.deletePost(postId);

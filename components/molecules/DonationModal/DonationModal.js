@@ -14,6 +14,8 @@ import { Validator } from '/src/utils/validator.js';
  * @param {number} options.recipientUserId - ID получателя (тренера)
  * @returns {Promise<void>}
  */
+
+
 export async function openDonationModal({ api, recipientUserId }) {
   const template = Handlebars.templates['DonationModal.hbs'];
   const root = document.createElement('div');
@@ -46,21 +48,13 @@ export async function openDonationModal({ api, recipientUserId }) {
     onChange: () => emailApi.setNormal()
   });
 
-  /**
-   * Закрыть модальное окно и снять обработчики
-   */
   const close = () => {
     document.removeEventListener('keydown', onKey);
     modal.remove();
   };
 
-  /**
-   * @param {KeyboardEvent} e
-   */
   const onKey = e => {
-    if (e.key === 'Escape') {
-      close();
-    }
+    if (e.key === 'Escape') close();
   };
 
   modal.querySelectorAll('[data-donation-close]').forEach(el => {
@@ -79,28 +73,25 @@ export async function openDonationModal({ api, recipientUserId }) {
 
     if (!result.isValid) {
       result.errors.forEach(err => {
-        if (err.field === 'amount') {
-          amountApi.setError(err.message);
-        }
-        if (err.field === 'email') {
-          emailApi.setError(err.message);
-        }
+        if (err.field === 'amount') amountApi.setError(err.message);
+        if (err.field === 'email') emailApi.setError(err.message);
       });
       return;
     }
 
     submitBtn.disabled = true;
     try {
-      await api.createDonation({
-        amount_rub: result.amountNumber,
-        email,
-        recipient_user_id: recipientUserId
-      });
+      await api.createDonation(
+        recipientUserId,
+        Math.round(result.amountNumber * 100),
+        'RUB',
+        ''
+      );
+
+      alert('Спасибо! Пожертвование отправлено.');
       close();
     } catch (error) {
-      globalErr.textContent =
-        error.message ||
-        'Не удалось отправить данные. Проверьте соединение или попробуйте позже.';
+      globalErr.textContent = error.message || 'Не удалось отправить данные.';
       globalErr.hidden = false;
     } finally {
       submitBtn.disabled = false;
