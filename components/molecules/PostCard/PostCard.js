@@ -95,25 +95,26 @@ export async function renderPostCard(container, post) {
   };
 
   if (likeBtn && api && canView) {
-    likeBtn.addEventListener('click', async () => {
-      if (likeBtn.disabled) return;
-      const wasLiked = likeBtn.classList.contains('post-card__action--liked');
-      likeBtn.disabled = true;
-      try {
-        if (wasLiked) {
-          await api.unlikePost(postId);
-        } else {
-          await api.likePost(postId);
-        }
-        const updated = await api.getPost(postId);
-        const engagement = mapPostEngagement(updated);
-        setLikeUi(engagement.liked, engagement.likes);
-      } catch (error) {
-      } finally {
-        likeBtn.disabled = false;
+  likeBtn.addEventListener('click', async () => {
+    if (likeBtn.disabled) return;
+    const wasLiked = likeBtn.classList.contains('post-card__action--liked');
+    likeBtn.disabled = true;
+    try {
+      let response;
+      if (wasLiked) {
+        response = await api.unlikePost(postId);
+      } else {
+        response = await api.likePost(postId);
       }
-    });
-  }
+      // Ответ должен быть { post_id, likes_count, is_liked }
+      setLikeUi(response.is_liked, response.likes_count);
+    } catch (error) {
+      console.error('Не удалось обновить лайк:', error);
+    } finally {
+      likeBtn.disabled = false;
+    }
+  });
+}
 
   if (editBtn && api && isOwner) {
     editBtn.addEventListener('click', async () => {

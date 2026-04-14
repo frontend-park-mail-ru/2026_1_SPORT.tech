@@ -268,4 +268,15 @@ export class ApiClient {
   async getSportTypes() {
     return this.request('/sport-types');
   }
+
+  async likePost(postId) {
+  console.log(`[API] Лайк поста ${postId}`);
+  return this.request(`/posts/${postId}/likes`, { method: 'POST' });
+}
+
+async unlikePost(postId) {
+  console.log(`[API] Снятие лайка с поста ${postId}`);
+  return this.request(`/posts/${postId}/likes`, { method: 'DELETE' });
+}
+
 }

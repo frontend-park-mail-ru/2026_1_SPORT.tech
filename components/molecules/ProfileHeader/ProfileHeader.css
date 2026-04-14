@@ -147,3 +147,10 @@
 .profile-header__stat:hover svg {
   color: #E85A2B;
 }
+/* Выравнивание текстовой кнопки "Отмена" с основной кнопкой */
+.post-form-modal__actions .button--text-orange {
+  height: 40px;
+  padding: 0 var(--spacing-lg);
+  display: inline-flex;
+  align-items: center;
+}
