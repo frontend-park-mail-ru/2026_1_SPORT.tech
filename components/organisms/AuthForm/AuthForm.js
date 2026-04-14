@@ -6,7 +6,7 @@
  * - Регистрацию тренера
  * - Валидацию всех полей
  * - Интеграцию с API
- * 
+ *
  * @module components/organisms/AuthForm
  */
 
@@ -31,17 +31,34 @@ export const AUTH_MODES = {
  * @private
  * @param {string} value - Введенное значение
  * @returns {string} Отформатированная дата
- * 
+ *
  * @example
  * formatDateInput('2024') // '2024'
  * formatDateInput('202412') // '2024-12'
  * formatDateInput('20241225') // '2024-12-25'
  */
 function formatDateInput(value) {
+  // Если уже в правильном формате YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  // Пробуем парсить DD.MM.YYYY или DD/MM/YYYY
+  const parts = value.split(/[.\/]/);
+  if (parts.length === 3) {
+    const [day, month, year] = parts;
+    if (day && month && year && year.length === 4 && day.length <= 2 && month.length <= 2) {
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+  }
+
+  // Старая логика для цифрового ввода (20241225 -> 2024-12-25)
   const digits = value.replace(/\D/g, '');
   if (digits.length <= 4) return digits;
   if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
-  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+  if (digits.length >= 8) return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+
+  return value;
 }
 
 /**
@@ -305,20 +322,34 @@ export async function renderAuthForm(container, config = {}) {
   break;
 }
       case 'career_since_date':
-        if (!value) {
-          result = {
-            isValid: false,
-            errors: [{ field: 'career_since_date', message: 'Дата начала деятельности обязательна' }]
-          };
-        } else if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-          result = {
-            isValid: false,
-            errors: [{ field: 'career_since_date', message: 'Дата должна быть в формате ГГГГ-ММ-ДД' }]
-          };
-        } else {
-          result = { isValid: true, errors: [] };
-        }
-        break;
+  if (!value) {
+    result = {
+      isValid: false,
+      errors: [{ field: 'career_since_date', message: 'Дата начала деятельности обязательна' }]
+    };
+  } else {
+    // Проверяем разные форматы
+    const yyyyMmDd = /^\d{4}-\d{2}-\d{2}$/.test(value);
+    const ddMmYyyy = /^\d{2}[.\/]\d{2}[.\/]\d{4}$/.test(value);
+
+    if (yyyyMmDd) {
+      result = { isValid: true, errors: [] };
+    } else if (ddMmYyyy) {
+      // Преобразуем DD.MM.YYYY в YYYY-MM-DD
+      const parts = value.split(/[.\/]/);
+      const [day, month, year] = parts;
+      const converted = `${year}-${month}-${day}`;
+      // Обновляем значение в поле
+      api.setValue(converted);
+      result = { isValid: true, errors: [] };
+    } else {
+      result = {
+        isValid: false,
+        errors: [{ field: 'career_since_date', message: 'Дата должна быть в формате ГГГГ-ММ-ДД или ДД.ММ.ГГГГ' }]
+      };
+    }
+  }
+  break;
       case 'sport_discipline': {
   validator.reset();
   const validationResult = {
