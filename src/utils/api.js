@@ -97,6 +97,7 @@ export class ApiClient {
    * @returns {Promise<Object>} Данные зарегистрированного тренера
    */
   async registerTrainer(userData) {
+    console.log('📤 registerTrainer payload:', JSON.stringify(userData, null, 2));
     return this.request('/auth/register/trainer', {
       method: 'POST',
       body: JSON.stringify(userData)

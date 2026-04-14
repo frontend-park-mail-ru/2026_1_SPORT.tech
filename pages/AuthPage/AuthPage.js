@@ -85,31 +85,7 @@ export async function renderAuthPage(container, api) {
  * @param {string} dateString - Входящая дата
  * @returns {string} Дата в формате YYYY-MM-DD
  */
-function normalizeDate(dateString) {
-  if (!dateString) return '';
 
-  // Уже в правильном формате
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-    return dateString;
-  }
-
-  // Пробуем парсить DD.MM.YYYY или DD/MM/YYYY
-  const parts = dateString.split(/[.\/]/);
-  if (parts.length === 3) {
-    const [day, month, year] = parts;
-    if (day && month && year && year.length === 4) {
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    }
-  }
-
-  // Пробуем через Date объект
-  const date = new Date(dateString);
-  if (!isNaN(date.getTime())) {
-    return date.toISOString().split('T')[0];
-  }
-
-  return dateString;
-}
 
 /**
  * Обработка регистрации тренера
