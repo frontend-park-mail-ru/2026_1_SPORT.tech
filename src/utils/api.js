@@ -60,6 +60,7 @@ async request(endpoint, options = {}) {
     return data;
   } catch (error) {
     console.error(`❌ API Request failed: ${endpoint}`, error);
+    console.error('❌ Full error details:', JSON.stringify(data, null, 2));
     throw error;
   }
 }

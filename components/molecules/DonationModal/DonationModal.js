@@ -81,9 +81,11 @@ export async function openDonationModal({ api, recipientUserId }) {
 
     submitBtn.disabled = true;
     try {
+      const amountInCents = Math.round(result.amountNumber * 100);
+
       await api.createDonation(
         recipientUserId,
-        Math.round(result.amountNumber * 100),
+        amountInCents,
         'RUB',
         ''
       );
@@ -91,7 +93,8 @@ export async function openDonationModal({ api, recipientUserId }) {
       alert('Спасибо! Пожертвование отправлено.');
       close();
     } catch (error) {
-      globalErr.textContent = error.message || 'Не удалось отправить данные.';
+      const errorMessage = error.data?.error?.message || error.message || 'Не удалось отправить данные.';
+      globalErr.textContent = errorMessage;
       globalErr.hidden = false;
     } finally {
       submitBtn.disabled = false;
