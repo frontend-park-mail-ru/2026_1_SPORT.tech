@@ -256,13 +256,15 @@ async request(endpoint, options = {}) {
    * @returns {Promise<Object>}
    */
 async createDonation(userId, amountValue, currency = 'RUB', message = '') {
+  const payload = {
+    amount_value: amountValue,
+    currency: currency,
+    message: message
+  };
+  console.log('📤 Donation payload:', payload);
   return this.request(`/profiles/${userId}/donations`, {
     method: 'POST',
-    body: JSON.stringify({
-      amount_value: amountValue,
-      currency: currency,
-      message: message
-    })
+    body: JSON.stringify(payload)
   });
 }
 

@@ -92,11 +92,21 @@ export async function openDonationModal({ api, recipientUserId }) {
 
       alert('Спасибо! Пожертвование отправлено.');
       close();
-    } catch (error) {
-      const errorMessage = error.data?.error?.message || error.message || 'Не удалось отправить данные.';
-      globalErr.textContent = errorMessage;
-      globalErr.hidden = false;
-    } finally {
+    }  catch (error) {
+  console.error('Donation error:', error);
+
+  // Правильно получаем сообщение об ошибке
+  let errorMessage = 'Не удалось отправить данные.';
+
+  if (error.data?.error?.message) {
+    errorMessage = error.data.error.message;
+  } else if (error.message) {
+    errorMessage = error.message;
+  }
+
+  globalErr.textContent = errorMessage;
+  globalErr.hidden = false;
+} finally {
       submitBtn.disabled = false;
     }
   });
