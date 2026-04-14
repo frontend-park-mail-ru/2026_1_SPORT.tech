@@ -29,37 +29,40 @@ export class ApiClient {
    * @throws {Error} Ошибка запроса
    * @private
    */
-  async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
+  // src/utils/api.js
+async request(endpoint, options = {}) {
+  const url = `${this.baseURL}${endpoint}`;
 
-    try {
-      const response = await fetch(url, {
-        ...options,
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers
-        }
-      });
-
-      if (response.status === 204) {
-        return null;
+  try {
+    const response = await fetch(url, {
+      ...options,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
       }
+    });
 
-      const data = await response.json();
+    if (response.status === 204) {
+      return null;
+    }
 
-      if (!response.ok) {
-        console.error('❌ API Error:', data);
-        console.error('❌ Full error details:', JSON.stringify(data, null, 2));
-        throw new Error(data.error?.message || `HTTP ${response.status}`);
-      }
+    const data = await response.json();
 
-      return data;
-    } catch (error) {
-      console.error(`❌ API Request failed: ${endpoint}`, error);
+    if (!response.ok) {
+      const error = new Error(data.error?.message || `HTTP ${response.status}`);
+      error.data = data;   // ← важно: сохраняем полный ответ
+      error.status = response.status;
+      console.error('❌ API Error:', data);
       throw error;
     }
+
+    return data;
+  } catch (error) {
+    console.error(`❌ API Request failed: ${endpoint}`, error);
+    throw error;
   }
+}
 
   // ===== AUTH METHODS =====
 
