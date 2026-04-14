@@ -43,31 +43,67 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
 
   // Определяем поля в зависимости от роли
   const isTrainer = user.is_trainer;
-  const fields = [
-    { name: 'username', label: 'Имя пользователя', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 30 },
-    { name: 'first_name', label: 'Имя', type: INPUT_TYPES.NAME, required: true, maxlength: 100 },
-    { name: 'last_name', label: 'Фамилия', type: INPUT_TYPES.NAME, required: true, maxlength: 100 },
-    { name: 'bio', label: 'О себе', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 1000 }
-  ];
+const fields = [
+  { name: 'username', label: 'Имя пользователя', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 30 },
+  { name: 'first_name', label: 'Имя', type: INPUT_TYPES.NAME, required: true, maxlength: 100 },
+  { name: 'last_name', label: 'Фамилия', type: INPUT_TYPES.NAME, required: true, maxlength: 100 },
+  { name: 'bio', label: 'О себе', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 1000 }
+];
+
+if (isTrainer) {
+  fields.push(
+    { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 255 },
+    { name: 'career_since_date', label: 'Дата начала карьеры', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 10 },
+    { name: 'sport_discipline', label: 'Вид спорта', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 100 }
+  );
+}
 
   // Для тренера можно добавить дополнительные поля (только отображение, т.к. API нет)
   // Но пока оставим общие.
 
   // Рендерим поля
   for (const field of fields) {
-    const container = document.createElement('div');
-    fieldsContainer.appendChild(container);
-    const api = await renderInput(container, {
-      type: field.type,
-      label: field.label,
-      name: field.name,
-      value: user[field.name] || '',
-      required: field.required,
-      maxlength: field.maxlength,
-      onChange: () => api.setNormal()
-    });
-    inputsApi.set(field.name, api);
+  const container = document.createElement('div');
+  fieldsContainer.appendChild(container);
+
+  // Определяем значение поля
+  let value = user[field.name] || '';
+  if (isTrainer) {
+    if (field.name === 'education_degree' || field.name === 'career_since_date') {
+      value = user.trainer_details?.[field.name] || '';
+    } else if (field.name === 'sport_discipline') {
+      value = user.trainer_details?.sports?.[0]?.sports_rank || '';
+    }
   }
+
+  const api = await renderInput(container, {
+    type: field.type,
+    label: field.label,
+    name: field.name,
+    value: value,
+    required: field.required,
+    maxlength: field.maxlength,
+    onChange: () => api.setNormal()
+  });
+
+  // Маска для даты
+  if (field.name === 'career_since_date') {
+    const input = api.input;
+    input.addEventListener('input', e => {
+      let val = e.target.value.replace(/\D/g, '');
+      if (val.length >= 4) {
+        let formatted = val.substring(0, 4);
+        if (val.length > 4) formatted += '-' + val.substring(4, 6);
+        if (val.length > 6) formatted += '-' + val.substring(6, 8);
+        e.target.value = formatted;
+      } else {
+        e.target.value = val;
+      }
+    });
+  }
+
+  inputsApi.set(field.name, api);
+}
 
   // Управление аватаром
   const updateAvatarPreview = () => {
