@@ -6,6 +6,7 @@
  */
 
 import { renderButton } from '../../atoms/Button/Button.js';
+import { openProfileEditModal } from '../ProfileEditModal/ProfileEditModal.js';
 
 /**
  * Рендерит шапку профиля
@@ -87,14 +88,27 @@ export async function renderProfileHeader(container, {
 
   // Кнопка редактирования для своего профиля
   if (isOwnProfile && actionsContainer) {
-    await renderButton(actionsContainer, {
-      text: 'Редактировать',
-      variant: 'primary-orange',
-      state: 'normal',
-      size: 'medium',
-      onClick: onEdit
-    });
-  }
+  await renderButton(actionsContainer, {
+    text: 'Редактировать',
+    variant: 'primary-orange',
+    state: 'normal',
+    size: 'medium',
+    onClick: async () => {
+      // Получаем актуальные данные текущего пользователя
+      const currentUser = await api.getCurrentUser();
+      openProfileEditModal({
+        api,
+        currentUser: currentUser?.user,
+        onUpdated: async () => {
+          // Обновляем данные на странице
+          const newUser = await api.getCurrentUser();
+          // Простой способ: перезагрузить страницу профиля
+          window.router.navigateTo('/profile');
+        }
+      });
+    }
+  });
+}
 
   /**
    * Обработчик клика по кнопке статистики

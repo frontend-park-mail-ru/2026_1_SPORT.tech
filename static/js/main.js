@@ -21,7 +21,8 @@ async function loadTemplates() {
     { name: 'PostFormModal', folder: 'molecules' },
     { name: 'Sidebar', folder: 'organisms' },
     { name: 'ProfileContent', folder: 'organisms' },
-    { name: 'AuthPage', folder: 'pages' }, { name: 'ProfilePage', folder: 'pages' }
+    { name: 'AuthPage', folder: 'pages' }, { name: 'ProfilePage', folder: 'pages' },
+    { name: 'ProfileEditModal', folder: 'molecules' }
   ];
 
   for (const { name, folder } of templates) {
