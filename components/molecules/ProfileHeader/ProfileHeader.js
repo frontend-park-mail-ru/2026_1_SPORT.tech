@@ -133,7 +133,23 @@ export async function renderProfileHeader(container, {
       setTimeout(() => subsBtn.classList.remove('button--active'), 100);
     });
   }
-
+// Кнопка камеры для смены аватара
+const cameraBtn = element.querySelector('.profile-header__camera-btn');
+if (cameraBtn) {
+  cameraBtn.addEventListener('click', async () => {
+    if (!api) {
+      console.error('API client not provided');
+      return;
+    }
+    const currentUser = await api.getCurrentUser();
+    const { openProfileEditModal } = await import('../ProfileEditModal/ProfileEditModal.js');
+    openProfileEditModal({
+      api,
+      currentUser: currentUser?.user,
+      onUpdated: () => window.router.navigateTo('/profile')
+    });
+  });
+}
   container.appendChild(element);
   return element;
 }
