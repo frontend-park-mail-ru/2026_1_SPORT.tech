@@ -20,8 +20,9 @@ export function getUserRoleLabel(isTrainer) {
  * @returns {string}
  */
 export function getFullName(profile = {}) {
-  return `${profile.first_name || ''} ${profile.last_name || ''}`.trim() ||
-    profile.username || 'Пользователь';
+  const first = profile.first_name || '';
+  const last = profile.last_name || '';
+  return `${first} ${last}`.trim() || profile.username || 'Пользователь';
 }
 
 /**
@@ -47,7 +48,6 @@ export function formatPostContent(textContent) {
   if (!textContent) {
     return 'Нет доступа к содержимому поста';
   }
-
   return escapeHtml(textContent).replace(/\n/g, '<br>');
 }
 
@@ -59,21 +59,21 @@ export function formatPostContent(textContent) {
  */
 export function mapProfileData(apiData, currentUser) {
   const isOwnProfile = apiData.is_me;
-  const fullName = getFullName(apiData.profile);
+  const fullName = getFullName(apiData);
 
   return {
     profile: {
       name: fullName,
       role: getUserRoleLabel(apiData.is_trainer),
-      avatar: apiData.profile.avatar_url,
+      avatar: apiData.avatar_url,                // ← поле напрямую
       isOwnProfile,
       isTrainer: Boolean(apiData.is_trainer)
     },
     currentUser: currentUser?.user ? {
       id: currentUser.user.user_id,
-      name: getFullName(currentUser.user.profile),
+      name: getFullName(currentUser.user),
       role: getUserRoleLabel(currentUser.user.is_trainer),
-      avatar: currentUser.user.profile.avatar_url
+      avatar: currentUser.user.avatar_url
     } : null
   };
 }
@@ -98,13 +98,12 @@ export async function loadProfilePageData(api, userId, currentUser = null) {
     api.getUserPosts(resolvedUserId).catch(() => ({ posts: [] }))
   ]);
 
-  const authorName = getFullName(profileData.profile);
+  const authorName = getFullName(profileData);          // ← profileData — сам профиль
   const authorRole = getUserRoleLabel(profileData.is_trainer);
   const postList = Array.isArray(postsData?.posts) ? postsData.posts : [];
 
   const posts = await Promise.all(postList.map(async post => {
     let fullPost = null;
-
     if (post.can_view) {
       try {
         fullPost = await api.getPost(post.post_id);
@@ -112,7 +111,6 @@ export async function loadProfilePageData(api, userId, currentUser = null) {
         // отдельный пост может быть недоступен
       }
     }
-
     const textContent = fullPost?.text_content || '';
     const engagement = mapPostEngagement(fullPost);
 
