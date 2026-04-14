@@ -111,14 +111,21 @@ function normalizeDate(dateString) {
   return dateString;
 }
 
-// AuthPage.js - handleTrainerRegister
-
+/**
+ * Обработка регистрации тренера
+ */
 async function handleTrainerRegister(data) {
     try {
-        // НЕ ИСПОЛЬЗУЕМ normalizeDate!
-        // Просто берём дату как есть из формы
+        // Дата уже отформатирована маской в AuthForm.js
+        const careerDate = data.career_since_date?.trim() || '';
 
-        console.log('📅 Дата из формы:', data.career_since_date);
+        console.log('📅 Дата из формы (career_since_date):', careerDate);
+
+        // Простая проверка формата перед отправкой
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(careerDate)) {
+            alert('Введите дату в формате ГГГГ-ММ-ДД (например, 2020-01-01)');
+            return;
+        }
 
         const response = await api.registerTrainer({
             username: data.username,
@@ -129,10 +136,10 @@ async function handleTrainerRegister(data) {
             last_name: data.last_name,
             trainer_details: {
                 education_degree: data.education_degree || '',
-                career_since_date: data.career_since_date,  // ← БЕЗ ПРЕОБРАЗОВАНИЙ!
+                career_since_date: careerDate,
                 sports: [{
                     sport_type_id: 1,
-                    experience_years: 0,
+                    experience_years: 1,   // ← 1 вместо 0 (на всякий случай)
                     sports_rank: data.sport_discipline || ''
                 }]
             }
