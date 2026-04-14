@@ -109,7 +109,6 @@ export async function renderPostCard(container, post) {
         const engagement = mapPostEngagement(updated);
         setLikeUi(engagement.liked, engagement.likes);
       } catch (error) {
-        alert(error.message || 'Не удалось обновить лайк');
       } finally {
         likeBtn.disabled = false;
       }
@@ -136,7 +135,7 @@ export async function renderPostCard(container, post) {
         await api.deletePost(postId);
         onPostsUpdated?.();
       } catch (error) {
-        alert(error.message || 'Не удалось удалить публикацию');
+
       } finally {
         deleteBtn.disabled = false;
       }
@@ -155,7 +154,6 @@ export async function renderPostCard(container, post) {
           await navigator.share(shareData);
         } else {
           await navigator.clipboard.writeText(window.location.href);
-          alert('Ссылка скопирована в буфер обмена');
         }
       } catch {
         // пользователь отменил share

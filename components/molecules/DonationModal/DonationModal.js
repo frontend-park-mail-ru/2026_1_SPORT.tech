@@ -96,7 +96,6 @@ export async function openDonationModal({ api, recipientUserId }) {
         email,
         recipient_user_id: recipientUserId
       });
-      alert('Спасибо! Заявка на пожертвование отправлена.');
       close();
     } catch (error) {
       globalErr.textContent =

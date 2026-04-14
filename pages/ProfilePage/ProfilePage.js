@@ -114,8 +114,8 @@ export async function renderProfilePage(api, container, {
     posts,
     popularPosts,
     api,
-    canAddPost: profile.isOwnProfile,
-    canManagePosts: profile.isOwnProfile,
+    canAddPost: profile.isOwnProfile && profile.isTrainer,
+    canManagePosts: profile.isOwnProfile && profile.isTrainer,
     onPostsUpdated: reloadPosts
   });
 

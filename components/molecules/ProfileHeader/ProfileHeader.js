@@ -1,7 +1,7 @@
 /**
  * @fileoverview Компонент шапки профиля
  * Отображает обложку, аватар, имя и кнопки действий
- * 
+ *
  * @module components/molecules/ProfileHeader
  */
 
@@ -21,7 +21,7 @@ import { renderButton } from '../../atoms/Button/Button.js';
  * @param {boolean} [profile.showDonate=false] - Показать кнопку пожертвования
  * @param {Function} [profile.onDonate=null] - Обработчик пожертвования
  * @returns {Promise<HTMLElement>} DOM элемент шапки
- * 
+ *
  * @example
  * // Чужой профиль
  * await renderProfileHeader(container, {
@@ -78,7 +78,7 @@ export async function renderProfileHeader(container, {
   if (showDonate && donateContainer && onDonate) {
     await renderButton(donateContainer, {
       text: 'Пожертвовать',
-      variant: 'secondary-blue',
+      variant: 'primary-orange',
       state: 'normal',
       size: 'medium',
       onClick: onDonate

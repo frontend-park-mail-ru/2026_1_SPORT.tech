@@ -88,19 +88,19 @@ export async function openPostFormModal({
   }
 
   await renderButton(cancelWrap, {
-    text: 'Отмена',
-    variant: BUTTON_VARIANTS.SECONDARY_BLUE,
-    size: BUTTON_SIZES.MEDIUM,
-    type: 'button',
-    onClick: () => close()
-  });
+  text: 'Отмена',
+  variant: BUTTON_VARIANTS.TEXT_ORANGE,
+  size: BUTTON_SIZES.MEDIUM,
+  type: 'button',
+  onClick: () => close()
+});
 
-  const saveBtn = await renderButton(submitWrap, {
-    text: mode === 'edit' ? 'Сохранить' : 'Опубликовать',
-    variant: BUTTON_VARIANTS.SECONDARY_BLUE,
-    size: BUTTON_SIZES.MEDIUM,
-    type: 'submit'
-  });
+const saveBtn = await renderButton(submitWrap, {
+  text: mode === 'edit' ? 'Сохранить' : 'Опубликовать',
+  variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
+  size: BUTTON_SIZES.MEDIUM,
+  type: 'submit'
+});
 
   modal.querySelectorAll('[data-post-form-close]').forEach(el => {
     el.addEventListener('click', close);
