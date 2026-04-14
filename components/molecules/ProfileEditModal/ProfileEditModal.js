@@ -17,7 +17,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
   const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
   const avatarUrl = user.avatar_url || '';
-  const isTrainer = user.is_trainer;
+  const originalIsTrainer = user.is_trainer;
 
   const root = document.createElement('div');
   root.innerHTML = template({ avatar: avatarUrl, initials }).trim();
@@ -36,131 +36,113 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
 
   let avatarFile = null;
   let avatarRemoved = false;
+  let becomingTrainer = false;
 
   const validator = new Validator();
   const inputsApi = new Map();
 
-  // Поля как в регистрации
-  // Поля как в регистрации
-const fields = [
-  {
-    name: 'username',
-    label: 'Имя пользователя',
-    type: INPUT_TYPES.WITHOUTS,
-    required: true,
-    maxlength: 30,
-    placeholder: 'john_doe'
-  },
-  {
-    name: 'first_name',
-    label: 'Имя',
-    type: INPUT_TYPES.NAME,
-    required: true,
-    maxlength: 100,
-    placeholder: 'Введите имя'
-  },
-  {
-    name: 'last_name',
-    label: 'Фамилия',
-    type: INPUT_TYPES.NAME,
-    required: true,
-    maxlength: 100,
-    placeholder: 'Введите фамилию'
-  },
-  {
-    name: 'bio',
-    label: 'О себе',
-    type: INPUT_TYPES.WITHOUTS,
-    required: false,
-    maxlength: 1000,
-    placeholder: 'Расскажите о себе'
-  }
-];
+  // Базовые поля (для всех)
+  const baseFields = [
+    { name: 'username', label: 'Имя пользователя', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 30, placeholder: 'john_doe' },
+    { name: 'first_name', label: 'Имя', type: INPUT_TYPES.NAME, required: true, maxlength: 100, placeholder: 'Введите имя' },
+    { name: 'last_name', label: 'Фамилия', type: INPUT_TYPES.NAME, required: true, maxlength: 100, placeholder: 'Введите фамилию' },
+    { name: 'bio', label: 'О себе', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 1000, placeholder: 'Расскажите о себе' }
+  ];
 
-if (isTrainer) {
-  fields.push(
-    {
-      name: 'education_degree',
-      label: 'Образование',
-      type: INPUT_TYPES.WITHOUTS,
-      required: false,
-      maxlength: 255,
-      placeholder: 'Введите образование'
-    },
-    {
-      name: 'career_since_date',
-      label: 'Дата начала профессиональной деятельности',
-      type: INPUT_TYPES.WITHOUTS,
-      required: true,
-      maxlength: 10,
-      placeholder: 'ГГГГ-ММ-ДД'
-    },
-    {
-      name: 'sport_discipline',
-      label: 'Вид дисциплины/спорта',
-      type: INPUT_TYPES.WITHOUTS,
-      required: true,
-      maxlength: 100,
-      placeholder: 'например: футбол, плавание, бокс'
-    }
-  );
-}
+  // Поля тренера
+  const trainerFields = [
+    { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 255, placeholder: 'Введите образование' },
+    { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 10, placeholder: 'ГГГГ-ММ-ДД' },
+    { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 100, placeholder: 'например: футбол, плавание, бокс' }
+  ];
 
-  // Рендер полей
-  for (const field of fields) {
-    const container = document.createElement('div');
-    fieldsContainer.appendChild(container);
+  // Функция рендера полей
+  const renderFields = async (showTrainerFields) => {
+    fieldsContainer.innerHTML = '';
+    inputsApi.clear();
 
-    let value = user[field.name] || '';
-    if (isTrainer) {
-      if (field.name === 'education_degree' || field.name === 'career_since_date') {
-        value = user.trainer_details?.[field.name] || '';
-      } else if (field.name === 'sport_discipline') {
-        value = user.trainer_details?.sports?.[0]?.sports_rank || '';
-      }
+    const fieldsToRender = [...baseFields];
+    if (showTrainerFields) {
+      fieldsToRender.push(...trainerFields);
     }
 
-    const api = await renderInput(container, {
-      type: field.type,
-      label: field.label,
-      name: field.name,
-      value: value,
-      placeholder: field.placeholder || '',
-      required: field.required,
-      maxlength: field.maxlength,
-      onChange: () => api.setNormal()
-    });
+    for (const field of fieldsToRender) {
+      const container = document.createElement('div');
+      fieldsContainer.appendChild(container);
 
-    // Маска для даты (как в регистрации)
-    if (field.name === 'career_since_date') {
-      const input = api.input;
-      input.addEventListener('input', e => {
-        let val = e.target.value.replace(/\D/g, '');
-        if (val.length >= 4) {
-          let formatted = val.substring(0, 4);
-          if (val.length > 4) formatted += '-' + val.substring(4, 6);
-          if (val.length > 6) formatted += '-' + val.substring(6, 8);
-          e.target.value = formatted;
-        } else {
-          e.target.value = val;
+      let value = user[field.name] || '';
+      if (showTrainerFields && !originalIsTrainer) {
+        value = '';
+      } else if (originalIsTrainer) {
+        if (field.name === 'education_degree' || field.name === 'career_since_date') {
+          value = user.trainer_details?.[field.name] || '';
+        } else if (field.name === 'sport_discipline') {
+          value = user.trainer_details?.sports?.[0]?.sports_rank || '';
         }
+      }
+
+      const api = await renderInput(container, {
+        type: field.type,
+        label: field.label,
+        name: field.name,
+        value: value,
+        placeholder: field.placeholder,
+        required: field.required,
+        maxlength: field.maxlength,
+        onChange: () => api.setNormal()
       });
-    }
 
-    // Подсказка для sport_discipline (как в регистрации)
-    if (field.name === 'sport_discipline') {
-      const helpText = document.createElement('small');
-      helpText.textContent = 'Можно указать несколько через запятую';
-      helpText.style.cssText = `
-        font-size: var(--font-size-xs);
-        color: var(--text-placeholder);
-        margin-top: 2px;
-        display: block;
-      `;
-      container.appendChild(helpText);
-    }
+      if (field.name === 'career_since_date') {
+        const input = api.input;
+        input.addEventListener('input', e => {
+          let val = e.target.value.replace(/\D/g, '');
+          if (val.length >= 4) {
+            let formatted = val.substring(0, 4);
+            if (val.length > 4) formatted += '-' + val.substring(4, 6);
+            if (val.length > 6) formatted += '-' + val.substring(6, 8);
+            e.target.value = formatted;
+          } else {
+            e.target.value = val;
+          }
+        });
+      }
 
-    inputsApi.set(field.name, api);
+      if (field.name === 'sport_discipline') {
+        const helpText = document.createElement('small');
+        helpText.textContent = 'Можно указать несколько через запятую';
+        helpText.style.cssText = `
+          font-size: var(--font-size-xs);
+          color: var(--text-placeholder);
+          margin-top: 2px;
+          display: block;
+        `;
+        container.appendChild(helpText);
+      }
+
+      inputsApi.set(field.name, api);
+    }
+  };
+
+  // Первичный рендер
+  await renderFields(originalIsTrainer);
+
+  // Кнопка "Стать тренером" для клиента
+  if (!originalIsTrainer) {
+    const becomeTrainerContainer = document.createElement('div');
+    becomeTrainerContainer.style.marginTop = 'var(--spacing-md)';
+    becomeTrainerContainer.style.textAlign = 'center';
+    fieldsContainer.appendChild(becomeTrainerContainer);
+
+    await renderButton(becomeTrainerContainer, {
+      text: 'Стать тренером',
+      variant: BUTTON_VARIANTS.SECONDARY_BLUE,
+      size: BUTTON_SIZES.MEDIUM,
+      onClick: async () => {
+        becomingTrainer = true;
+        await renderFields(true);
+        becomeTrainerContainer.remove();
+      }
+    });
   }
 
   // Управление аватаром
@@ -213,7 +195,7 @@ if (isTrainer) {
     el.addEventListener('click', close);
   });
 
-  // Кнопки (как в регистрации)
+  // Кнопки
   await renderButton(cancelWrap, {
     text: 'Отмена',
     variant: BUTTON_VARIANTS.TEXT_ORANGE,
@@ -229,7 +211,7 @@ if (isTrainer) {
     type: 'submit'
   });
 
-  // Валидация (как в регистрации)
+  // Валидация
   const validateField = (fieldName, value) => {
     const api = inputsApi.get(fieldName);
     if (!api) return true;
@@ -302,14 +284,11 @@ if (isTrainer) {
 
     saveBtn.setDisabled(true);
     try {
-      // Обновление профиля
       const profileData = {};
       for (const [name, api] of inputsApi) {
         profileData[name] = api.getValue().trim();
       }
 
-      // TODO: если тренер, нужно отправлять trainer_details отдельно или в этом же запросе
-      // Пока шлём только базовые поля
       await api.request('/profiles/me', {
         method: 'PATCH',
         body: JSON.stringify({
@@ -320,7 +299,23 @@ if (isTrainer) {
         })
       });
 
-      // Аватар
+      if (becomingTrainer || originalIsTrainer) {
+        const trainerDetails = {
+          education_degree: profileData.education_degree || '',
+          career_since_date: profileData.career_since_date,
+          sports: [{
+            sport_type_id: 1,
+            experience_years: 1,
+            sports_rank: profileData.sport_discipline || ''
+          }]
+        };
+
+        await api.request('/profiles/me/trainer', {
+          method: becomingTrainer ? 'POST' : 'PATCH',
+          body: JSON.stringify(trainerDetails)
+        });
+      }
+
       if (avatarFile) {
         const formData = new FormData();
         formData.append('avatar', avatarFile);
