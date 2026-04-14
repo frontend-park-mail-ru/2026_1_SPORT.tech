@@ -180,6 +180,7 @@ async function handleTrainerRegister(data) {
           }
         } catch (error) {
           console.error('Form submission error:', error);
+          throw error;
         }
       },
       onSwitchMode: newMode => {
