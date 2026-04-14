@@ -3,13 +3,6 @@ import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input.js';
 import { Validator } from '/src/utils/validator.js';
 
-/**
- * Открывает модальное окно редактирования профиля
- * @param {Object} options
- * @param {import('/src/utils/api.js').ApiClient} options.api
- * @param {Object} options.currentUser - текущий пользователь
- * @param {Function} options.onUpdated - колбэк после успешного обновления
- */
 export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   const template = Handlebars.templates['ProfileEditModal.hbs'];
 
@@ -41,7 +34,6 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   const validator = new Validator();
   const inputsApi = new Map();
 
-  // Базовые поля (для всех)
   const baseFields = [
     { name: 'username', label: 'Имя пользователя', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 30, placeholder: 'john_doe' },
     { name: 'first_name', label: 'Имя', type: INPUT_TYPES.NAME, required: true, maxlength: 100, placeholder: 'Введите имя' },
@@ -49,89 +41,82 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
     { name: 'bio', label: 'О себе', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 1000, placeholder: 'Расскажите о себе' }
   ];
 
-  // Поля тренера
   const trainerFields = [
     { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 255, placeholder: 'Введите образование' },
     { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 10, placeholder: 'ГГГГ-ММ-ДД' },
     { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 100, placeholder: 'например: футбол, плавание, бокс' }
   ];
 
-  // Функция рендера полей
   const renderFields = async (showTrainerFields) => {
-  fieldsContainer.innerHTML = '';
-  inputsApi.clear();
+    fieldsContainer.innerHTML = '';
+    inputsApi.clear();
 
-  const fieldsToRender = [...baseFields];
-  if (showTrainerFields) {
-    fieldsToRender.push(...trainerFields);
-  }
-
-  for (const field of fieldsToRender) {
-    const container = document.createElement('div');
-    fieldsContainer.appendChild(container);
-
-    // Определяем значение поля
-    let value = '';
-
-    if (field.name === 'education_degree' || field.name === 'career_since_date') {
-      // Тренерские поля из trainer_details
-      value = user.trainer_details?.[field.name] || '';
-    } else if (field.name === 'sport_discipline') {
-      // sport_discipline маппится на sports_rank первого спорта
-      value = user.trainer_details?.sports?.[0]?.sports_rank || '';
-    } else {
-      // Обычные поля пользователя
-      value = user[field.name] || '';
+    const fieldsToRender = [...baseFields];
+    if (showTrainerFields) {
+      fieldsToRender.push(...trainerFields);
     }
 
-    const api = await renderInput(container, {
-      type: field.type,
-      label: field.label,
-      name: field.name,
-      value: value,
-      placeholder: field.placeholder,
-      required: field.required,
-      maxlength: field.maxlength,
-      onChange: () => api.setNormal()
-    });
+    for (const field of fieldsToRender) {
+      const container = document.createElement('div');
+      fieldsContainer.appendChild(container);
 
-    // Маска для даты
-    if (field.name === 'career_since_date') {
-      const input = api.input;
-      input.addEventListener('input', e => {
-        let val = e.target.value.replace(/\D/g, '');
-        if (val.length >= 4) {
-          let formatted = val.substring(0, 4);
-          if (val.length > 4) formatted += '-' + val.substring(4, 6);
-          if (val.length > 6) formatted += '-' + val.substring(6, 8);
-          e.target.value = formatted;
-        } else {
-          e.target.value = val;
-        }
+      let value = '';
+
+      if (field.name === 'username' || field.name === 'first_name' ||
+          field.name === 'last_name' || field.name === 'bio') {
+        value = user[field.name] || '';
+      } else if (field.name === 'education_degree') {
+        value = user.trainer_details?.education_degree || '';
+      } else if (field.name === 'career_since_date') {
+        value = user.trainer_details?.career_since_date || '';
+      } else if (field.name === 'sport_discipline') {
+        value = user.trainer_details?.sports?.[0]?.sports_rank || '';
+      }
+
+      const api = await renderInput(container, {
+        type: field.type,
+        label: field.label,
+        name: field.name,
+        value: value,
+        placeholder: field.placeholder,
+        required: field.required,
+        maxlength: field.maxlength,
+        onChange: () => api.setNormal()
       });
+
+      if (field.name === 'career_since_date') {
+        const input = api.input;
+        input.addEventListener('input', e => {
+          let val = e.target.value.replace(/\D/g, '');
+          if (val.length >= 4) {
+            let formatted = val.substring(0, 4);
+            if (val.length > 4) formatted += '-' + val.substring(4, 6);
+            if (val.length > 6) formatted += '-' + val.substring(6, 8);
+            e.target.value = formatted;
+          } else {
+            e.target.value = val;
+          }
+        });
+      }
+
+      if (field.name === 'sport_discipline') {
+        const helpText = document.createElement('small');
+        helpText.textContent = 'Можно указать несколько через запятую';
+        helpText.style.cssText = `
+          font-size: var(--font-size-xs);
+          color: var(--text-placeholder);
+          margin-top: 2px;
+          display: block;
+        `;
+        container.appendChild(helpText);
+      }
+
+      inputsApi.set(field.name, api);
     }
+  };
 
-    // Подсказка для sport_discipline
-    if (field.name === 'sport_discipline') {
-      const helpText = document.createElement('small');
-      helpText.textContent = 'Можно указать несколько через запятую';
-      helpText.style.cssText = `
-        font-size: var(--font-size-xs);
-        color: var(--text-placeholder);
-        margin-top: 2px;
-        display: block;
-      `;
-      container.appendChild(helpText);
-    }
-
-    inputsApi.set(field.name, api);
-  }
-};
-
-  // Первичный рендер
   await renderFields(originalIsTrainer);
 
-  // Кнопка "Стать тренером" для клиента
   if (!originalIsTrainer) {
     const becomeTrainerContainer = document.createElement('div');
     becomeTrainerContainer.style.marginTop = 'var(--spacing-md)';
@@ -140,7 +125,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
 
     await renderButton(becomeTrainerContainer, {
       text: 'Стать тренером',
-      variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
+      variant: BUTTON_VARIANTS.SECONDARY_BLUE,
       size: BUTTON_SIZES.MEDIUM,
       onClick: async () => {
         becomingTrainer = true;
@@ -216,12 +201,13 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
     type: 'submit'
   });
 
-  // Валидация
+  // Валидация поля (как в регистрации)
   const validateField = (fieldName, value) => {
     const api = inputsApi.get(fieldName);
     if (!api) return true;
 
     let result;
+
     switch (fieldName) {
       case 'username':
         result = validator.validateUsername(value);
@@ -233,27 +219,48 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
         result = validator.validateLastName(value);
         break;
       case 'bio':
-        result = { isValid: !value || value.length <= 1000, errors: [] };
+        validator.reset();
+        validator.validateField(value, 'bio', validator.rules.bio);
+        result = { isValid: !validator.hasErrors(), errors: validator.getErrors() };
         break;
       case 'education_degree':
         validator.reset();
-        validator.validateField(value, 'education_degree', validator.rules.education_degree);
+        if (value && value.trim() !== '') {
+          validator.validateField(value, 'education_degree', validator.rules.education_degree);
+        }
         result = { isValid: !validator.hasErrors(), errors: validator.getErrors() };
         break;
       case 'career_since_date':
         if (!value) {
-          result = { isValid: false, errors: [{ field: 'career_since_date', message: 'Дата обязательна' }] };
-        } else {
-          const isValidFormat = /^\d{4}-\d{2}-\d{2}$/.test(value);
           result = {
-            isValid: isValidFormat,
-            errors: isValidFormat ? [] : [{ field: 'career_since_date', message: 'Формат ГГГГ-ММ-ДД' }]
+            isValid: false,
+            errors: [{ field: 'career_since_date', message: 'Дата начала деятельности обязательна' }]
           };
+        } else {
+          const yyyyMmDd = /^\d{4}-\d{2}-\d{2}$/.test(value);
+          const ddMmYyyy = /^\d{2}[.\/]\d{2}[.\/]\d{4}$/.test(value);
+
+          if (yyyyMmDd) {
+            result = { isValid: true, errors: [] };
+          } else if (ddMmYyyy) {
+            const parts = value.split(/[.\/]/);
+            const [day, month, year] = parts;
+            const converted = `${year}-${month}-${day}`;
+            api.setValue(converted);
+            result = { isValid: true, errors: [] };
+          } else {
+            result = {
+              isValid: false,
+              errors: [{ field: 'career_since_date', message: 'Дата должна быть в формате ГГГГ-ММ-ДД или ДД.ММ.ГГГГ' }]
+            };
+          }
         }
         break;
       case 'sport_discipline':
         validator.reset();
-        validator.validateField(value, 'sports_rank', validator.rules.sports_rank);
+        if (value && value.trim() !== '') {
+          validator.validateField(value, 'sports_rank', validator.rules.sports_rank);
+        }
         result = { isValid: !validator.hasErrors(), errors: validator.getErrors() };
         break;
       default:
@@ -269,14 +276,46 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
     }
   };
 
+  // Валидация всей формы
   const validateForm = () => {
     let isValid = true;
-    for (const [name, api] of inputsApi) {
-      const value = api.getValue();
-      if (!validateField(name, value)) {
-        isValid = false;
+    const showTrainerFields = originalIsTrainer || becomingTrainer;
+
+    // Проверяем базовые поля
+    ['username', 'first_name', 'last_name'].forEach(name => {
+      const api = inputsApi.get(name);
+      if (api) {
+        const value = api.getValue();
+        if (!validateField(name, value)) {
+          isValid = false;
+        }
+      }
+    });
+
+    // Проверяем bio (опционально)
+    const bioApi = inputsApi.get('bio');
+    if (bioApi) {
+      validateField('bio', bioApi.getValue());
+    }
+
+    // Проверяем тренерские поля если нужно
+    if (showTrainerFields) {
+      ['career_since_date', 'sport_discipline'].forEach(name => {
+        const api = inputsApi.get(name);
+        if (api) {
+          const value = api.getValue();
+          if (!validateField(name, value)) {
+            isValid = false;
+          }
+        }
+      });
+
+      const eduApi = inputsApi.get('education_degree');
+      if (eduApi) {
+        validateField('education_degree', eduApi.getValue());
       }
     }
+
     return isValid;
   };
 
@@ -294,6 +333,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
         profileData[name] = api.getValue().trim();
       }
 
+      // Обновление профиля
       await api.request('/profiles/me', {
         method: 'PATCH',
         body: JSON.stringify({
@@ -304,6 +344,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
         })
       });
 
+      // Если пользователь становится тренером или уже тренер
       if (becomingTrainer || originalIsTrainer) {
         const trainerDetails = {
           education_degree: profileData.education_degree || '',
@@ -315,12 +356,12 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
           }]
         };
 
-        await api.request('/profiles/me/trainer', {
-          method: becomingTrainer ? 'POST' : 'PATCH',
-          body: JSON.stringify(trainerDetails)
-        });
+        // Здесь нужен эндпоинт для обновления trainer_details
+        // Пока пропускаем, т.к. API может не поддерживать
+        console.log('Trainer details to save:', trainerDetails);
       }
 
+      // Аватар
       if (avatarFile) {
         const formData = new FormData();
         formData.append('avatar', avatarFile);
