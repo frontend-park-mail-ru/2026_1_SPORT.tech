@@ -103,7 +103,7 @@ await renderProfileHeader(headerContainer, {
   role: profile.role,
   avatar: profile.avatar,
   isOwnProfile: profile.isOwnProfile,
-  showDonate: profile.isTrainer && !profile.isOwnProfile,
+  showDonate: profile.isTrainer, //&& !profile.isOwnProfile,
   api,
   onDonate: () => {
     console.log('🔍 [ProfilePage] Opening donation modal for user:', viewedUserId);
