@@ -94,19 +94,28 @@ export async function renderProfileHeader(container, {
     state: 'normal',
     size: 'medium',
     onClick: async () => {
-      // Получаем актуальные данные текущего пользователя
-      const currentUser = await api.getCurrentUser();
-      openProfileEditModal({
-        api,
-        currentUser: currentUser?.user,
-        onUpdated: async () => {
-          // Обновляем данные на странице
-          const newUser = await api.getCurrentUser();
-          // Простой способ: перезагрузить страницу профиля
-          window.router.navigateTo('/profile');
-        }
-      });
+  // Получаем базовые данные текущего пользователя
+  const currentUser = await api.getCurrentUser();
+  let userData = currentUser?.user;
+
+  // Если пользователь тренер, запрашиваем полный профиль с trainer_details
+  if (userData?.is_trainer) {
+    try {
+      console.log('🔄 Fetching full profile with trainer_details...');
+      const fullProfile = await api.getProfile(userData.user_id);
+      userData = { ...userData, ...fullProfile };
+      console.log('✅ Full profile data loaded');
+    } catch (error) {
+      console.error('Failed to fetch trainer details:', error);
     }
+  }
+
+  openProfileEditModal({
+    api,
+    currentUser: { user: userData },
+    onUpdated: () => window.router.navigateTo('/profile')
+  });
+}
   });
 }
 
@@ -142,14 +151,24 @@ if (cameraBtn) {
       return;
     }
     const currentUser = await api.getCurrentUser();
+    let userData = currentUser?.user;
+
+    // Если тренер - запрашиваем полный профиль
+    if (userData?.is_trainer) {
+      try {
+        const fullProfile = await api.getProfile(userData.user_id);
+        userData = { ...userData, ...fullProfile };
+      } catch (error) {
+        console.error('Failed to fetch trainer details:', error);
+      }
+    }
+
     const { openProfileEditModal } = await import('../ProfileEditModal/ProfileEditModal.js');
     openProfileEditModal({
       api,
-      currentUser: currentUser?.user,
+      currentUser: { user: userData },
       onUpdated: () => window.router.navigateTo('/profile')
     });
   });
 }
-  container.appendChild(element);
-  return element;
 }

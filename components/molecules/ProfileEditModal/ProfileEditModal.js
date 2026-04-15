@@ -6,7 +6,20 @@ import { Validator } from '/src/utils/validator.js';
 export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   const template = Handlebars.templates['ProfileEditModal.hbs'];
 
-  const user = currentUser?.user || currentUser;
+  let user = currentUser?.user || currentUser;
+
+  // Если пользователь тренер, но нет trainer_details, запрашиваем полный профиль
+  if (user.is_trainer && !user.trainer_details) {
+    try {
+      console.log('🔄 Fetching full profile with trainer_details...');
+      const profileData = await api.getProfile(user.user_id);
+      user = { ...user, ...profileData };
+      console.log('✅ Full profile data:', user);
+      console.log('✅ trainer_details:', user.trainer_details);
+    } catch (error) {
+      console.error('Failed to fetch trainer details:', error);
+    }
+  }
   const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
   const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
   const avatarUrl = user.avatar_url || '';
