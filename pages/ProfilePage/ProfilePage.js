@@ -96,19 +96,23 @@ export async function renderProfilePage(api, container, {
     });
   }
 
-  await renderProfileHeader(headerContainer, {
-    name: profile.name,
-    role: profile.role,
-    avatar: profile.avatar,
-    isOwnProfile: profile.isOwnProfile,
-    showDonate: profile.isTrainer,
-    api,
-    onDonate: () =>
-      openDonationModal({
-        api,
-        recipientUserId: viewedUserId
-      })
-  });
+  // pages/ProfilePage/ProfilePage.js
+
+await renderProfileHeader(headerContainer, {
+  name: profile.name,
+  role: profile.role,
+  avatar: profile.avatar,
+  isOwnProfile: profile.isOwnProfile,
+  showDonate: profile.isTrainer && !profile.isOwnProfile,
+  api,
+  onDonate: () => {
+    console.log('🔍 [ProfilePage] Opening donation modal for user:', viewedUserId);
+    openDonationModal({
+      api,
+      recipientUserId: viewedUserId
+    });
+  }
+});
 
   await renderProfileContent(contentContainer, {
     activeTab,

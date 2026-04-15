@@ -30,8 +30,17 @@ export class ApiClient {
    * @private
    */
 
+// src/utils/api.js
+
 async request(endpoint, options = {}) {
   const url = `${this.baseURL}${endpoint}`;
+
+  console.log('🌐 [API] request - Outgoing:', {
+    url: url,
+    method: options.method || 'GET',
+    headers: options.headers,
+    body: options.body ? JSON.parse(options.body) : undefined
+  });
 
   try {
     const response = await fetch(url, {
@@ -43,18 +52,26 @@ async request(endpoint, options = {}) {
       }
     });
 
+    console.log('🌐 [API] request - Response:', {
+      url: url,
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries())
+    });
+
     if (response.status === 204) {
+      console.log('🌐 [API] request - 204 No Content');
       return null;
     }
 
-    // Безопасное получение JSON
     let data;
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
       data = await response.json();
+      console.log('🌐 [API] request - Response data:', data);
     } else {
       const text = await response.text();
-      console.error('❌ Non-JSON response:', text);
+      console.error('❌ [API] request - Non-JSON response:', text);
       data = { error: { message: text || `HTTP ${response.status}` } };
     }
 
@@ -62,14 +79,21 @@ async request(endpoint, options = {}) {
       const error = new Error(data.error?.message || `HTTP ${response.status}`);
       error.data = data;
       error.status = response.status;
-      console.error('❌ API Error:', data);
-      console.error('❌ Full error details:', JSON.stringify(data, null, 2));
+      console.error('❌ [API] request - Error details:', {
+        status: response.status,
+        data: data,
+        error: error
+      });
       throw error;
     }
 
     return data;
   } catch (error) {
-    console.error(`❌ API Request failed: ${endpoint}`, error);
+    console.error('❌ [API] request - Network/Parse error:', {
+      endpoint: endpoint,
+      error: error.message,
+      stack: error.stack
+    });
     throw error;
   }
 }
@@ -263,13 +287,23 @@ async request(endpoint, options = {}) {
    * @param {Object} payload - Данные платежа
    * @returns {Promise<Object>}
    */
+// src/utils/api.js
+
 async createDonation(userId, amountValue, currency = 'RUB', message = '') {
   const payload = {
     amount_value: amountValue,
     currency: currency,
     message: message
   };
-  console.log('📤 Donation payload:', payload);
+
+  console.log('📤 [API] createDonation - Request details:', {
+    endpoint: `/profiles/${userId}/donations`,
+    method: 'POST',
+    userId: userId,
+    payload: payload,
+    fullURL: `${this.baseURL}/profiles/${userId}/donations`
+  });
+
   return this.request(`/profiles/${userId}/donations`, {
     method: 'POST',
     body: JSON.stringify(payload)

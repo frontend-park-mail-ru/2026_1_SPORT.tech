@@ -61,55 +61,75 @@ export async function openDonationModal({ api, recipientUserId }) {
     el.addEventListener('click', close);
   });
 
-  form.addEventListener('submit', async e => {
-    e.preventDefault();
-    globalErr.hidden = true;
-    globalErr.textContent = '';
 
-    const amountStr = amountApi.getValue();
-    const email = emailApi.getValue();
 
-    const result = validator.validateDonationForm({ amount: amountStr, email });
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  globalErr.hidden = true;
+  globalErr.textContent = '';
 
-    if (!result.isValid) {
-      result.errors.forEach(err => {
-        if (err.field === 'amount') amountApi.setError(err.message);
-        if (err.field === 'email') emailApi.setError(err.message);
-      });
-      return;
-    }
+  const amountStr = amountApi.getValue();
+  const email = emailApi.getValue();
 
-    submitBtn.disabled = true;
-    try {
-      const amountInCents = Math.round(result.amountNumber * 100);
+  console.log('🔍 [DonationModal] Step 1 - Raw input:', { amountStr, email });
 
-      await api.createDonation(
-        recipientUserId,
-        amountInCents,
-        'RUB',
-        ''
-      );
+  const result = validator.validateDonationForm({ amount: amountStr, email });
+  console.log('🔍 [DonationModal] Step 2 - Validation result:', {
+    isValid: result.isValid,
+    amountNumber: result.amountNumber,
+    errors: result.errors
+  });
 
-      alert('Спасибо! Пожертвование отправлено.');
-      close();
-    }  catch (error) {
-  console.error('Donation error:', error);
-
-  // Правильно получаем сообщение об ошибке
-  let errorMessage = 'Не удалось отправить данные.';
-
-  if (error.data?.error?.message) {
-    errorMessage = error.data.error.message;
-  } else if (error.message) {
-    errorMessage = error.message;
+  if (!result.isValid) {
+    result.errors.forEach(err => {
+      if (err.field === 'amount') amountApi.setError(err.message);
+      if (err.field === 'email') emailApi.setError(err.message);
+    });
+    return;
   }
 
-  globalErr.textContent = errorMessage;
-  globalErr.hidden = false;
-} finally {
-      submitBtn.disabled = false;
+  submitBtn.disabled = true;
+  try {
+    const amountInCents = Math.round(result.amountNumber * 100);
+
+    console.log('🔍 [DonationModal] Step 3 - Prepared data:', {
+      recipientUserId,
+      amountInCents,
+      originalAmount: result.amountNumber,
+      currency: 'RUB',
+      message: ''
+    });
+
+    const response = await api.createDonation(
+      recipientUserId,
+      amountInCents,
+      'RUB',
+      ''
+    );
+
+    console.log('✅ [DonationModal] Step 4 - Success response:', response);
+    close();
+  } catch (error) {
+    console.error('❌ [DonationModal] Step 4 - Error:', {
+      message: error.message,
+      data: error.data,
+      status: error.status,
+      fullError: error
+    });
+
+    let errorMessage = 'Не удалось отправить данные.';
+    if (error.data?.error?.message) {
+      errorMessage = error.data.error.message;
+    } else if (error.message) {
+      errorMessage = error.message;
     }
-  });
+
+    globalErr.textContent = errorMessage;
+    globalErr.hidden = false;
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
 
   document.addEventListener('keydown', onKey);
   document.body.appendChild(modal);
