@@ -62,7 +62,6 @@ export async function openDonationModal({ api, recipientUserId }) {
   });
 
 
-
 form.addEventListener('submit', async e => {
   e.preventDefault();
   globalErr.hidden = true;
@@ -89,6 +88,17 @@ form.addEventListener('submit', async e => {
   }
 
   submitBtn.disabled = true;
+
+  // Показываем индикатор загрузки
+  const originalBtnText = submitBtn.innerHTML;
+  submitBtn.innerHTML = `
+    <span class="donation-modal__cta-text">Отправка...</span>
+    <span class="donation-modal__sbp" aria-hidden="true">
+      <span class="donation-modal__sbp-icon"></span>
+      <span class="donation-modal__sbp-label">сбп система быстрых платежей</span>
+    </span>
+  `;
+
   try {
     const amountInCents = Math.round(result.amountNumber * 100);
 
@@ -101,20 +111,60 @@ form.addEventListener('submit', async e => {
     });
 
     const response = await api.createDonation(
-  recipientUserId,
-  amountInCents,
-  'RUB',
-  'Пожертвование'
-);
+      recipientUserId,
+      amountInCents,
+      'RUB',
+      'Пожертвование'
+    );
 
     console.log('✅ [DonationModal] Step 4 - Success response:', response);
-    close();
+
+    // === УСПЕХ: показываем красивое сообщение ===
+
+    // Очищаем форму
+    amountApi.setValue('');
+    emailApi.setValue('');
+
+    form.querySelectorAll('.donation-modal__field').forEach(field => {
+      field.style.display = 'none';
+    });
+
+    submitBtn.style.display = 'none';
+
+    const successMessage = document.createElement('div');
+    successMessage.className = 'donation-modal__success';
+    successMessage.innerHTML = `
+      <div class="donation-modal__success-icon">✓</div>
+      <h3 class="donation-modal__success-title">Спасибо!</h3>
+      <p class="donation-modal__success-text">
+        Ваше пожертвование в размере <strong>${result.amountNumber} ₽</strong> успешно отправлено.
+      </p>
+      <button class="donation-modal__success-btn" type="button">Закрыть</button>
+    `;
+
+    form.appendChild(successMessage);
+
+    successMessage.querySelector('.donation-modal__success-btn').addEventListener('click', () => {
+      close();
+    });
+
+    setTimeout(() => {
+      close();
+    }, 3000);
+
   } catch (error) {
     console.error('❌ [DonationModal] Step 4 - Error:', {
       message: error.message,
       data: error.data,
       status: error.status,
       fullError: error
+    });
+
+    submitBtn.innerHTML = originalBtnText;
+    submitBtn.disabled = false;
+
+    form.querySelectorAll('.donation-modal__field').forEach(field => {
+      field.style.display = 'block';
     });
 
     let errorMessage = 'Не удалось отправить данные.';
@@ -126,8 +176,6 @@ form.addEventListener('submit', async e => {
 
     globalErr.textContent = errorMessage;
     globalErr.hidden = false;
-  } finally {
-    submitBtn.disabled = false;
   }
 });
 
