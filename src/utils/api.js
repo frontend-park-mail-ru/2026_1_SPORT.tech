@@ -29,7 +29,7 @@ export class ApiClient {
    * @throws {Error} Ошибка запроса
    * @private
    */
-  // src/utils/api.js
+
 async request(endpoint, options = {}) {
   const url = `${this.baseURL}${endpoint}`;
 
@@ -47,24 +47,32 @@ async request(endpoint, options = {}) {
       return null;
     }
 
-    const data = await response.json();
+    // Безопасное получение JSON
+    let data;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      console.error('❌ Non-JSON response:', text);
+      data = { error: { message: text || `HTTP ${response.status}` } };
+    }
 
     if (!response.ok) {
       const error = new Error(data.error?.message || `HTTP ${response.status}`);
-      error.data = data;   // ← важно: сохраняем полный ответ
+      error.data = data;
       error.status = response.status;
       console.error('❌ API Error:', data);
+      console.error('❌ Full error details:', JSON.stringify(data, null, 2));
       throw error;
     }
 
     return data;
   } catch (error) {
     console.error(`❌ API Request failed: ${endpoint}`, error);
-    console.error('❌ Full error details:', JSON.stringify(data, null, 2));
     throw error;
   }
 }
-
   // ===== AUTH METHODS =====
 
   /**
