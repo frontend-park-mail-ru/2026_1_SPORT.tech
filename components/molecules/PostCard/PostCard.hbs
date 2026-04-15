@@ -1,18 +1,24 @@
 <article class="post-card" data-post-id="{{post_id}}">
   <div class="post-card__header">
-    <div class="post-card__author-avatar">{{authorInitials}}</div>
+    <div class="post-card__author-avatar">
+  {{#if authorAvatar}}
+    <img src="{{authorAvatar}}" alt="{{authorName}}" style="width: 100%; height: 100%; object-fit: cover;">
+  {{else}}
+    {{authorInitials}}
+  {{/if}}
+</div>
     <div class="post-card__author-info">
       <div class="post-card__author-name">{{authorName}}</div>
       <div class="post-card__author-role">{{authorRole}}</div>
     </div>
   </div>
-  
+
   <h3 class="post-card__title">{{title}}</h3>
-  
+
   <div class="post-card__content">
     {{{content}}}
   </div>
-  
+
   <div class="post-card__footer">
     <button
       type="button"

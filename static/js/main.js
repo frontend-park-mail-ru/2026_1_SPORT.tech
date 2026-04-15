@@ -106,6 +106,7 @@ async function loadProfilePageData(api, userId, currentUser = null) {
     const authorName = getFullName(profileData);
     const authorRole = getUserRoleLabel(profileData.is_trainer);
     const postList = Array.isArray(postsData?.posts) ? postsData.posts : [];
+    const authorAvatar = profileData.avatar_url || null;
 
     const posts = await Promise.all(postList.map(async post => {
       let fullPost = null;
@@ -123,6 +124,7 @@ async function loadProfilePageData(api, userId, currentUser = null) {
         content: post.can_view ? formatPostContent(textContent) : 'Нет доступа к содержимому поста',
         authorName,
         authorRole,
+        authorAvatar,
         likes: fullPost?.likes_count || 0,
         liked: fullPost?.is_liked || false,
         comments: 0,

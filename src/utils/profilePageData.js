@@ -86,6 +86,8 @@ export function mapProfileData(apiData, currentUser) {
  * @param {Object|null} [currentUser=null]
  * @returns {Promise<Object>}
  */
+
+
 export async function loadProfilePageData(api, userId, currentUser = null) {
   const resolvedUserId = userId || currentUser?.user?.user_id;
 
@@ -98,8 +100,9 @@ export async function loadProfilePageData(api, userId, currentUser = null) {
     api.getUserPosts(resolvedUserId).catch(() => ({ posts: [] }))
   ]);
 
-  const authorName = getFullName(profileData);          // ← profileData — сам профиль
+  const authorName = getFullName(profileData);
   const authorRole = getUserRoleLabel(profileData.is_trainer);
+  const authorAvatar = profileData.avatar_url || null;  // ← добавить
   const postList = Array.isArray(postsData?.posts) ? postsData.posts : [];
 
   const posts = await Promise.all(postList.map(async post => {
@@ -121,6 +124,7 @@ export async function loadProfilePageData(api, userId, currentUser = null) {
       raw_text: textContent,
       authorName,
       authorRole,
+      authorAvatar,  // ← добавить
       likes: engagement.likes,
       liked: engagement.liked,
       comments: engagement.comments,
