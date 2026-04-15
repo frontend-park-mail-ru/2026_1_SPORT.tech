@@ -88,36 +88,36 @@ export async function renderProfileHeader(container, {
 
   // Кнопка редактирования для своего профиля
   if (isOwnProfile && actionsContainer) {
-  await renderButton(actionsContainer, {
-    text: 'Редактировать',
-    variant: 'primary-orange',
-    state: 'normal',
-    size: 'medium',
-    onClick: async () => {
-  // Получаем базовые данные текущего пользователя
-  const currentUser = await api.getCurrentUser();
-  let userData = currentUser?.user;
+    await renderButton(actionsContainer, {
+      text: 'Редактировать',
+      variant: 'primary-orange',
+      state: 'normal',
+      size: 'medium',
+      onClick: async () => {
+        // Получаем базовые данные текущего пользователя
+        const currentUser = await api.getCurrentUser();
+        let userData = currentUser?.user;
 
-  // Если пользователь тренер, запрашиваем полный профиль с trainer_details
-  if (userData?.is_trainer) {
-    try {
-      console.log('🔄 Fetching full profile with trainer_details...');
-      const fullProfile = await api.getProfile(userData.user_id);
-      userData = { ...userData, ...fullProfile };
-      console.log('✅ Full profile data loaded');
-    } catch (error) {
-      console.error('Failed to fetch trainer details:', error);
-    }
+        // Если пользователь тренер, запрашиваем полный профиль с trainer_details
+        if (userData?.is_trainer) {
+          try {
+            console.log('🔄 Fetching full profile with trainer_details...');
+            const fullProfile = await api.getProfile(userData.user_id);
+            userData = { ...userData, ...fullProfile };
+            console.log('✅ Full profile data loaded');
+          } catch (error) {
+            console.error('Failed to fetch trainer details:', error);
+          }
+        }
+
+        openProfileEditModal({
+          api,
+          currentUser: { user: userData },
+          onUpdated: () => window.router.navigateTo('/profile')
+        });
+      }
+    });
   }
-
-  openProfileEditModal({
-    api,
-    currentUser: { user: userData },
-    onUpdated: () => window.router.navigateTo('/profile')
-  });
-}
-  });
-}
 
   /**
    * Обработчик клика по кнопке статистики
@@ -142,33 +142,37 @@ export async function renderProfileHeader(container, {
       setTimeout(() => subsBtn.classList.remove('button--active'), 100);
     });
   }
-// Кнопка камеры для смены аватара
-const cameraBtn = element.querySelector('.profile-header__camera-btn');
-if (cameraBtn) {
-  cameraBtn.addEventListener('click', async () => {
-    if (!api) {
-      console.error('API client not provided');
-      return;
-    }
-    const currentUser = await api.getCurrentUser();
-    let userData = currentUser?.user;
 
-    // Если тренер - запрашиваем полный профиль
-    if (userData?.is_trainer) {
-      try {
-        const fullProfile = await api.getProfile(userData.user_id);
-        userData = { ...userData, ...fullProfile };
-      } catch (error) {
-        console.error('Failed to fetch trainer details:', error);
+  // Кнопка камеры для смены аватара
+  const cameraBtn = element.querySelector('.profile-header__camera-btn');
+  if (cameraBtn) {
+    cameraBtn.addEventListener('click', async () => {
+      if (!api) {
+        console.error('API client not provided');
+        return;
       }
-    }
+      const currentUser = await api.getCurrentUser();
+      let userData = currentUser?.user;
 
-    const { openProfileEditModal } = await import('../ProfileEditModal/ProfileEditModal.js');
-    openProfileEditModal({
-      api,
-      currentUser: { user: userData },
-      onUpdated: () => window.router.navigateTo('/profile')
+      // Если тренер - запрашиваем полный профиль
+      if (userData?.is_trainer) {
+        try {
+          const fullProfile = await api.getProfile(userData.user_id);
+          userData = { ...userData, ...fullProfile };
+        } catch (error) {
+          console.error('Failed to fetch trainer details:', error);
+        }
+      }
+
+      const { openProfileEditModal } = await import('../ProfileEditModal/ProfileEditModal.js');
+      openProfileEditModal({
+        api,
+        currentUser: { user: userData },
+        onUpdated: () => window.router.navigateTo('/profile')
+      });
     });
-  });
-}
+  }
+
+  container.appendChild(element);
+  return element;
 }
