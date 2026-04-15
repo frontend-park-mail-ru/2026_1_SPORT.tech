@@ -101,11 +101,11 @@ form.addEventListener('submit', async e => {
     });
 
     const response = await api.createDonation(
-      recipientUserId,
-      amountInCents,
-      'RUB',
-      ''
-    );
+  recipientUserId,
+  amountInCents,
+  'RUB',
+  'Пожертвование'
+);
 
     console.log('✅ [DonationModal] Step 4 - Success response:', response);
     close();

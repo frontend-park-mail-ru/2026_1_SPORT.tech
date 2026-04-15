@@ -289,11 +289,11 @@ async request(endpoint, options = {}) {
    */
 // src/utils/api.js
 
-async createDonation(userId, amountValue, currency = 'RUB', message = '') {
+async createDonation(userId, amountValue, currency = 'RUB', message = null) {
   const payload = {
     amount_value: amountValue,
     currency: currency,
-    message: message
+    message: message || null  // ← null вместо пустой строки
   };
 
   console.log('📤 [API] createDonation - Request details:', {
