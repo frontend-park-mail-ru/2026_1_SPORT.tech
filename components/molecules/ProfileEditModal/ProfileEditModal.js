@@ -315,60 +315,76 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   };
 
   // Отправка
-  form.addEventListener('submit', async e => {
-    e.preventDefault();
-    globalErr.hidden = true;
+// Отправка
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  globalErr.hidden = true;
 
-    if (!validateForm()) return;
+  if (!validateForm()) return;
 
-    saveBtn.setDisabled(true);
-    try {
-      const profileData = {};
-      for (const [name, api] of inputsApi) {
-        profileData[name] = api.getValue().trim();
-      }
-
-      // Обновление базового профиля
-      await api.request('/profiles/me', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          username: profileData.username,
-          first_name: profileData.first_name,
-          last_name: profileData.last_name,
-          bio: profileData.bio || ''
-        })
-      });
-
-      // Аватар
-      if (avatarFile) {
-        const formData = new FormData();
-        formData.append('avatar', avatarFile);
-        await fetch(`${api.baseURL}/profiles/me/avatar`, {
-          method: 'POST',
-          credentials: 'include',
-          body: formData
-        });
-      }
-
-      onUpdated?.();
-      close();
-    } catch (error) {
-      console.error('Profile update error:', error);
-      let message = error.message || 'Не удалось сохранить изменения';
-      if (error.data?.error?.fields) {
-        error.data.error.fields.forEach(f => {
-          const api = inputsApi.get(f.field);
-          if (api) api.setError(f.message);
-        });
-        message = error.data.error.message;
-      }
-      globalErr.textContent = message;
-      globalErr.hidden = false;
-    } finally {
-      saveBtn.setDisabled(false);
+  saveBtn.setDisabled(true);
+  try {
+    const profileData = {};
+    for (const [name, api] of inputsApi) {
+      profileData[name] = api.getValue().trim();
     }
-  });
 
+    // Обновление базового профиля
+    await api.request('/profiles/me', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        username: profileData.username,
+        first_name: profileData.first_name,
+        last_name: profileData.last_name,
+        bio: profileData.bio || ''
+      })
+    });
+
+    // Аватар: загрузка нового или удаление существующего
+    if (avatarFile) {
+      // Загрузка нового аватара
+      const formData = new FormData();
+      formData.append('avatar', avatarFile, avatarFile.name || 'avatar.jpg');
+      await fetch(`${api.baseURL}/profiles/me/avatar`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      console.log('✅ Avatar uploaded');
+    } else if (avatarRemoved) {
+      // Удаление аватара
+      try {
+        await api.deleteAvatar();
+        console.log('✅ Avatar deleted via DELETE');
+      } catch (error) {
+        // Если DELETE не поддерживается, пробуем PATCH с null
+        console.log('DELETE failed, trying PATCH with avatar_url: null');
+        await api.request('/profiles/me', {
+          method: 'PATCH',
+          body: JSON.stringify({ avatar_url: null })
+        });
+        console.log('✅ Avatar removed via PATCH');
+      }
+    }
+
+    onUpdated?.();
+    close();
+  } catch (error) {
+    console.error('Profile update error:', error);
+    let message = error.message || 'Не удалось сохранить изменения';
+    if (error.data?.error?.fields) {
+      error.data.error.fields.forEach(f => {
+        const api = inputsApi.get(f.field);
+        if (api) api.setError(f.message);
+      });
+      message = error.data.error.message;
+    }
+    globalErr.textContent = message;
+    globalErr.hidden = false;
+  } finally {
+    saveBtn.setDisabled(false);
+  }
+});
   document.addEventListener('keydown', onKey);
   document.body.appendChild(modal);
   modal.focus({ preventScroll: true });

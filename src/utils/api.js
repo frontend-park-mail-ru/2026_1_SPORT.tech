@@ -331,4 +331,10 @@ async unlikePost(postId) {
   return this.request(`/posts/${postId}/likes`, { method: 'DELETE' });
 }
 
+async deleteAvatar() {
+  return this.request('/profiles/me/avatar', {
+    method: 'DELETE'
+  });
+}
+
 }
