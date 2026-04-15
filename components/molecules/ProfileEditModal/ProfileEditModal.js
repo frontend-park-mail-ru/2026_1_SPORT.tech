@@ -8,7 +8,6 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
 
   let user = currentUser?.user || currentUser;
 
-  // Если пользователь тренер, но нет trainer_details, запрашиваем полный профиль
   if (user.is_trainer && !user.trainer_details) {
     try {
       console.log('🔄 Fetching full profile with trainer_details...');
@@ -210,7 +209,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   await renderFields(originalIsTrainer);
 
   // Кнопка "Стать тренером" для клиента
-  if (!originalIsTrainer) {
+ /*if (!originalIsTrainer) {
     const becomeTrainerContainer = document.createElement('div');
     becomeTrainerContainer.style.marginTop = 'var(--spacing-md)';
     becomeTrainerContainer.style.textAlign = 'center';
@@ -226,7 +225,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
         becomeTrainerContainer.remove();
       }
     });
-  }
+  }*/
 
   // Управление аватаром
   const updateAvatarPreview = () => {
