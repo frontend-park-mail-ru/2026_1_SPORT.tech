@@ -52,9 +52,10 @@ export async function openPostFormModal({
     onChange: () => titleApi.setNormal()
   });
 
-  if (initial.text_content) {
-    bodyInput.value = initial.text_content;
-  }
+  const textContent = initial.text_content || initial.raw_text || '';
+if (textContent) {
+  bodyInput.value = textContent;
+}
 
   /**
    * @param {string} msg

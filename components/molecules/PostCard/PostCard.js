@@ -61,7 +61,7 @@ export async function renderPostCard(container, post) {
     content,
     authorName,
     authorRole,
-    authorAvatar, 
+    authorAvatar,
     authorInitials: initials,
     likes,
     liked,
@@ -108,8 +108,14 @@ export async function renderPostCard(container, post) {
       } else {
         response = await api.likePost(postId);
       }
-      // Ответ должен быть { post_id, likes_count, is_liked }
+
+      // Обновляем UI
       setLikeUi(response.is_liked, response.likes_count);
+
+      // Если есть колбэк для обновления списка постов — вызываем его
+      if (onPostsUpdated) {
+        await onPostsUpdated();
+      }
     } catch (error) {
       console.error('Не удалось обновить лайк:', error);
     } finally {
