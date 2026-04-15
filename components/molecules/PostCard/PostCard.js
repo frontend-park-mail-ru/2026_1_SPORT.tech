@@ -130,7 +130,7 @@ export async function renderPostCard(container, post) {
         api,
         mode: 'edit',
         postId,
-        initial: { title, text_content: rawText },
+        initial: { title, text_content: rawText || content || ''  },
         onSaved: onPostsUpdated
       });
     });
