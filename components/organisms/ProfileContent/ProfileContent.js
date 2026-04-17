@@ -112,11 +112,6 @@ async function showTrainerAbout(container, api, userId) {
           <h3 class="trainer-about__section-title">О себе</h3>
           <p class="trainer-about__section-text">${profile.bio || 'Не указано'}</p>
         </div>
-
-        <div class="trainer-about__section">
-          <h3 class="trainer-about__section-title">Контакты</h3>
-          <p class="trainer-about__section-text">Email: ${profile.email || 'Не указан'}</p>
-        </div>
       </div>
     `;
   } catch (error) {
