@@ -122,7 +122,8 @@ await renderProfileHeader(headerContainer, {
     canAddPost: profile.isOwnProfile && profile.isTrainer,
     canManagePosts: profile.isOwnProfile && profile.isTrainer,
     onPostsUpdated: reloadPosts,
-  viewedUserId: viewedUserId
+  viewedUserId: viewedUserId,
+  isTrainer: profile.isTrainer
   });
 
   container.appendChild(page);

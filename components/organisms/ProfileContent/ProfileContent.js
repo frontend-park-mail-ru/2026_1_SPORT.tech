@@ -97,13 +97,13 @@ async function showTrainerAbout(container, api, userId) {
       }
       if (experienceYears < 0) experienceYears = 0;
     }
-
+{/* <span class="trainer-about__sport-years">Опыт: ${experienceYears} ${getYearsWord(experienceYears)}</span> //нужно или нет? */}
     const sports = trainerDetails.sports || [];
     const sportsList = sports.length > 0
       ? sports.map(s => `
           <div class="trainer-about__sport-item">
             <span class="trainer-about__sport-name">${s.sports_rank || 'Вид спорта'}</span>
-            
+
           </div>
         `).join('')
       : '<p class="trainer-about__section-text">Не указано</p>';
@@ -169,38 +169,36 @@ export async function renderProfileContent(container, {
   api,
   canManagePosts = false,
   onPostsUpdated = null,
-  viewedUserId = null
+  viewedUserId = null,
+  isTrainer = true
 }) {
   const template = Handlebars.templates['ProfileContent.hbs'];
 
-  /**
-   * @constant {Array} tabs - Конфигурация вкладок
-   * @property {string} id - ID вкладки
-   * @property {string} label - Текст вкладки
-   * @property {boolean} active - Активна ли вкладка
-   */
-  const tabs = [
-    { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
-    { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
-    { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
-    { id: 'about', label: 'О тренере', active: activeTab === 'about' }
-  ];
+  const tabs = isTrainer
+    ? [
+        { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
+        { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
+        { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
+        { id: 'about', label: 'О тренере', active: activeTab === 'about' }
+      ]
+    : [
+        { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' || activeTab === 'main' },
+        { id: 'about', label: 'О себе', active: activeTab === 'about' }
+      ];
 
-  /**
-   * @constant {Object} sectionTitles - Заголовки секций для разных вкладок
-   */
   const sectionTitles = {
     main: 'Недавние публикации',
     publications: 'Все публикации',
     subscriptions: 'Подписки',
-    about: 'О тренере'
+    about: isTrainer ? 'О тренере' : 'О себе'
   };
 
-  /**
-   * Добавляет описания для популярных постов
-   * @param {Array} posts - Массив постов
-   * @returns {Array} Посты с описаниями
-   */
+  // Корректируем activeTab для клиента
+  let currentTab = activeTab;
+  if (!isTrainer && (currentTab === 'main' || currentTab === 'publications')) {
+    currentTab = 'subscriptions';
+  }
+
   const popularWithDescriptions = popularPosts.map(post => ({
     ...post,
     description: post.description || 'Практические советы и рекомендации'
@@ -208,90 +206,74 @@ export async function renderProfileContent(container, {
 
   const html = template({
     tabs,
-    activeTab,
-    sectionTitle: sectionTitles[activeTab],
-    showFilters: activeTab === 'main' || activeTab === 'publications',
+    activeTab: currentTab,
+    sectionTitle: sectionTitles[currentTab],
+    showFilters: isTrainer && (currentTab === 'main' || currentTab === 'publications'),
     popularPosts: popularWithDescriptions,
-    canAddPost: canAddPost && activeTab === 'publications'
+    canAddPost: canAddPost && currentTab === 'publications'
   });
 
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild;
   const sectionTitle = element.querySelector('.profile-content__section-title');
-const filtersElement = element.querySelector('.profile-content__filters');
-const addButtonContainer = element.querySelector('#add-post-button-container');
+  const filtersElement = element.querySelector('.profile-content__filters');
+  const addButtonContainer = element.querySelector('#add-post-button-container');
 
-// Сохраняем оригинальное состояние
-const originalFiltersDisplay = filtersElement ? filtersElement.style.display : '';
-const originalAddButtonDisplay = addButtonContainer ? addButtonContainer.style.display : '';
+  // Скрываем фильтры и кнопку для клиента
+  if (!isTrainer) {
+    if (filtersElement) filtersElement.style.display = 'none';
+    if (addButtonContainer) addButtonContainer.style.display = 'none';
+  }
 
-  /**
-   * Обработчик клика по вкладке
-   * @param {MouseEvent} _event - Событие клика
-   */
+  // Обработчик клика по вкладкам
+  element.querySelectorAll('.profile-content__tab').forEach(tab => {
+    tab.addEventListener('click', async () => {
+      const tabId = tab.dataset.tab;
 
-// ProfileContent.js - заменить обработчик клика по вкладкам
-
-element.querySelectorAll('.profile-content__tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    const tabId = tab.dataset.tab;
-
-    // Обновляем активную вкладку
-    element.querySelectorAll('.profile-content__tab').forEach(t => {
-      t.classList.remove('profile-content__tab--active');
-    });
-    tab.classList.add('profile-content__tab--active');
-
-    // Переключаем контент
-    const postsContainer = element.querySelector('#posts-container');
-    const filtersElement = element.querySelector('.profile-content__filters');
-    const addButtonContainer = element.querySelector('#add-post-button-container');
-
-    if (tabId === 'about') {
-      // Скрываем фильтры и кнопку добавления
-      if (filtersElement) filtersElement.style.display = 'none';
-      if (addButtonContainer) addButtonContainer.style.display = 'none';
-
-      // Меняем заголовок
-      sectionTitle.textContent = 'О тренере';
-
-      // Показываем информацию о тренере
-      showTrainerAbout(postsContainer, api, viewedUserId);
-    } else {
-      // Показываем фильтры (если нужны)
-      if (filtersElement) {
-        const showFilters = tabId === 'main' || tabId === 'publications';
-        filtersElement.style.display = showFilters ? 'flex' : 'none';
-      }
-
-      // Показываем кнопку добавления (если есть права)
-      if (addButtonContainer) {
-        const showAddButton = canAddPost && tabId === 'publications';
-        addButtonContainer.style.display = showAddButton ? 'block' : 'none';
-      }
-
-      // Меняем заголовок
-      sectionTitle.textContent = sectionTitles[tabId] || 'Публикации';
-
-      // Показываем посты
-      fillProfilePostsSection(postsContainer, {
-        activeTab: tabId,
-        posts: posts,
-        api,
-        canManagePosts,
-        onPostsUpdated
+      element.querySelectorAll('.profile-content__tab').forEach(t => {
+        t.classList.remove('profile-content__tab--active');
       });
-    }
+      tab.classList.add('profile-content__tab--active');
+
+      const postsContainer = element.querySelector('#posts-container');
+
+      if (tabId === 'about') {
+        if (filtersElement) filtersElement.style.display = 'none';
+        if (addButtonContainer) addButtonContainer.style.display = 'none';
+        sectionTitle.textContent = isTrainer ? 'О тренере' : 'О себе';
+
+        if (isTrainer) {
+          await showTrainerAbout(postsContainer, api, viewedUserId);
+        } else {
+          const profile = await api.getProfile(viewedUserId);
+          showClientAbout(postsContainer, profile);
+        }
+      } else {
+        if (filtersElement) {
+          filtersElement.style.display = (tabId === 'main' || tabId === 'publications') ? 'flex' : 'none';
+        }
+        if (addButtonContainer) {
+          addButtonContainer.style.display = (canAddPost && tabId === 'publications') ? 'block' : 'none';
+        }
+        sectionTitle.textContent = sectionTitles[tabId] || 'Публикации';
+
+        await fillProfilePostsSection(postsContainer, {
+          activeTab: tabId,
+          posts: posts,
+          api,
+          canManagePosts,
+          onPostsUpdated
+        });
+      }
+    });
   });
-});
-  /**
-   * Рендеринг кнопки "Добавить публикацию"
-   */
-  if (canAddPost && activeTab === 'publications') {
-    const addButtonContainer = element.querySelector('#add-post-button-container');
-    if (addButtonContainer) {
-      await renderButton(addButtonContainer, {
+
+  // Кнопка "Добавить публикацию"
+  if (canAddPost && currentTab === 'publications' && isTrainer) {
+    const btnContainer = element.querySelector('#add-post-button-container');
+    if (btnContainer) {
+      await renderButton(btnContainer, {
         text: 'Добавить публикацию',
         variant: 'primary-orange',
         state: 'normal',
@@ -307,18 +289,24 @@ element.querySelectorAll('.profile-content__tab').forEach(tab => {
     }
   }
 
-  /**
-   * Рендеринг постов
-   */
+  // Рендеринг постов
   const postsContainer = element.querySelector('#posts-container');
-
-  await fillProfilePostsSection(postsContainer, {
-    activeTab,
-    posts,
-    api,
-    canManagePosts,
-    onPostsUpdated
-  });
+  if (currentTab !== 'about') {
+    await fillProfilePostsSection(postsContainer, {
+      activeTab: currentTab,
+      posts,
+      api,
+      canManagePosts,
+      onPostsUpdated
+    });
+  } else {
+    if (isTrainer) {
+      await showTrainerAbout(postsContainer, api, viewedUserId);
+    } else {
+      const profile = await api.getProfile(viewedUserId);
+      showClientAbout(postsContainer, profile);
+    }
+  }
 
   container.appendChild(element);
   return element;
