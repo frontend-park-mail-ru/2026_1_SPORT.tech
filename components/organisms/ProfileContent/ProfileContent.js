@@ -161,7 +161,7 @@ export async function renderProfileContent(container, {
   api,
   canManagePosts = false,
   onPostsUpdated = null,
-  viewedUserId = null 
+  viewedUserId = null
 }) {
   const template = Handlebars.templates['ProfileContent.hbs'];
 
@@ -210,11 +210,20 @@ export async function renderProfileContent(container, {
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild;
+  const sectionTitle = element.querySelector('.profile-content__section-title');
+const filtersElement = element.querySelector('.profile-content__filters');
+const addButtonContainer = element.querySelector('#add-post-button-container');
+
+// Сохраняем оригинальное состояние
+const originalFiltersDisplay = filtersElement ? filtersElement.style.display : '';
+const originalAddButtonDisplay = addButtonContainer ? addButtonContainer.style.display : '';
 
   /**
    * Обработчик клика по вкладке
    * @param {MouseEvent} _event - Событие клика
    */
+
+// ProfileContent.js - заменить обработчик клика по вкладкам
 
 element.querySelectorAll('.profile-content__tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -228,15 +237,36 @@ element.querySelectorAll('.profile-content__tab').forEach(tab => {
 
     // Переключаем контент
     const postsContainer = element.querySelector('#posts-container');
-    const sectionTitle = element.querySelector('.profile-content__section-title');
+    const filtersElement = element.querySelector('.profile-content__filters');
+    const addButtonContainer = element.querySelector('#add-post-button-container');
 
     if (tabId === 'about') {
+      // Скрываем фильтры и кнопку добавления
+      if (filtersElement) filtersElement.style.display = 'none';
+      if (addButtonContainer) addButtonContainer.style.display = 'none';
+
+      // Меняем заголовок
+      sectionTitle.textContent = 'О тренере';
+
       // Показываем информацию о тренере
       showTrainerAbout(postsContainer, api, viewedUserId);
-      sectionTitle.textContent = 'О тренере';
     } else {
-      // Показываем посты
+      // Показываем фильтры (если нужны)
+      if (filtersElement) {
+        const showFilters = tabId === 'main' || tabId === 'publications';
+        filtersElement.style.display = showFilters ? 'flex' : 'none';
+      }
+
+      // Показываем кнопку добавления (если есть права)
+      if (addButtonContainer) {
+        const showAddButton = canAddPost && tabId === 'publications';
+        addButtonContainer.style.display = showAddButton ? 'block' : 'none';
+      }
+
+      // Меняем заголовок
       sectionTitle.textContent = sectionTitles[tabId] || 'Публикации';
+
+      // Показываем посты
       fillProfilePostsSection(postsContainer, {
         activeTab: tabId,
         posts: posts,
