@@ -106,7 +106,7 @@ await renderProfileHeader(headerContainer, {
   showDonate: profile.isTrainer, //&& !profile.isOwnProfile,
   api,
   onDonate: () => {
-    
+
     openDonationModal({
       api,
       recipientUserId: viewedUserId
@@ -121,7 +121,8 @@ await renderProfileHeader(headerContainer, {
     api,
     canAddPost: profile.isOwnProfile && profile.isTrainer,
     canManagePosts: profile.isOwnProfile && profile.isTrainer,
-    onPostsUpdated: reloadPosts
+    onPostsUpdated: reloadPosts,
+  viewedUserId: viewedUserId
   });
 
   container.appendChild(page);

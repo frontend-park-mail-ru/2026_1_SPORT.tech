@@ -1,7 +1,7 @@
 /**
  * @fileoverview Компонент контента профиля
  * Содержит вкладки, список постов и правую колонку с популярным
- * 
+ *
  * @module components/organisms/ProfileContent
  */
 
@@ -53,6 +53,82 @@ export async function fillProfilePostsSection(postsContainer, {
   }
 }
 
+
+
+
+// ProfileContent.js - добавить перед renderProfileContent
+
+async function showTrainerAbout(container, api, userId) {
+  try {
+    // Загружаем полный профиль
+    const profile = await api.getProfile(userId);
+    const trainerDetails = profile.trainer_details;
+
+    if (!trainerDetails) {
+      container.innerHTML = `
+        <div class="profile-content__empty">
+          <p>Информация о тренере недоступна</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Форматируем дату
+    const careerDate = trainerDetails.career_since_date
+      ? new Date(trainerDetails.career_since_date).toLocaleDateString('ru-RU')
+      : 'Не указано';
+
+    // Собираем виды спорта
+    const sports = trainerDetails.sports || [];
+    const sportsList = sports.length > 0
+      ? sports.map(s => `
+          <div class="trainer-about__sport-item">
+            <span class="trainer-about__sport-name">${s.sports_rank || 'Вид спорта'}</span>
+            <span class="trainer-about__sport-years">Опыт: ${s.experience_years || 0} лет</span>
+          </div>
+        `).join('')
+      : '<p>Не указано</p>';
+
+    container.innerHTML = `
+      <div class="trainer-about">
+        <div class="trainer-about__section">
+          <h3 class="trainer-about__section-title">Образование</h3>
+          <p class="trainer-about__section-text">${trainerDetails.education_degree || 'Не указано'}</p>
+        </div>
+
+        <div class="trainer-about__section">
+          <h3 class="trainer-about__section-title">Начало карьеры</h3>
+          <p class="trainer-about__section-text">${careerDate}</p>
+        </div>
+
+        <div class="trainer-about__section">
+          <h3 class="trainer-about__section-title">Специализация</h3>
+          <div class="trainer-about__sports-list">
+            ${sportsList}
+          </div>
+        </div>
+
+        <div class="trainer-about__section">
+          <h3 class="trainer-about__section-title">О себе</h3>
+          <p class="trainer-about__section-text">${profile.bio || 'Не указано'}</p>
+        </div>
+
+        <div class="trainer-about__section">
+          <h3 class="trainer-about__section-title">Контакты</h3>
+          <p class="trainer-about__section-text">Email: ${profile.email || 'Не указан'}</p>
+        </div>
+      </div>
+    `;
+  } catch (error) {
+    console.error('Failed to load trainer about:', error);
+    container.innerHTML = `
+      <div class="profile-content__empty">
+        <p>Не удалось загрузить информацию о тренере</p>
+      </div>
+    `;
+  }
+}
+
 /**
  * Рендерит контент профиля с вкладками
  * @async
@@ -66,7 +142,7 @@ export async function fillProfilePostsSection(postsContainer, {
  * @param {boolean} [params.canManagePosts=false] - Управление своими постами
  * @param {Function} [params.onPostsUpdated] - Обновление списка постов
  * @returns {Promise<HTMLElement>} DOM элемент контента
- * 
+ *
  * @example
  * await renderProfileContent(container, {
  *   activeTab: 'publications',
@@ -84,7 +160,8 @@ export async function renderProfileContent(container, {
   canAddPost = false,
   api,
   canManagePosts = false,
-  onPostsUpdated = null
+  onPostsUpdated = null,
+  viewedUserId = null 
 }) {
   const template = Handlebars.templates['ProfileContent.hbs'];
 
@@ -138,13 +215,38 @@ export async function renderProfileContent(container, {
    * Обработчик клика по вкладке
    * @param {MouseEvent} _event - Событие клика
    */
-  element.querySelectorAll('.profile-content__tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      const tabId = tab.dataset.tab;
-      // TODO: Реализовать переключение вкладок
-    });
-  });
 
+element.querySelectorAll('.profile-content__tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const tabId = tab.dataset.tab;
+
+    // Обновляем активную вкладку
+    element.querySelectorAll('.profile-content__tab').forEach(t => {
+      t.classList.remove('profile-content__tab--active');
+    });
+    tab.classList.add('profile-content__tab--active');
+
+    // Переключаем контент
+    const postsContainer = element.querySelector('#posts-container');
+    const sectionTitle = element.querySelector('.profile-content__section-title');
+
+    if (tabId === 'about') {
+      // Показываем информацию о тренере
+      showTrainerAbout(postsContainer, api, viewedUserId);
+      sectionTitle.textContent = 'О тренере';
+    } else {
+      // Показываем посты
+      sectionTitle.textContent = sectionTitles[tabId] || 'Публикации';
+      fillProfilePostsSection(postsContainer, {
+        activeTab: tabId,
+        posts: posts,
+        api,
+        canManagePosts,
+        onPostsUpdated
+      });
+    }
+  });
+});
   /**
    * Рендеринг кнопки "Добавить публикацию"
    */

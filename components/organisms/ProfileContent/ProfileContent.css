@@ -327,3 +327,65 @@
 .profile-content__add-button button {
   white-space: nowrap; /* Чтобы текст не переносился */
 }
+
+/* ProfileContent.css - добавить в конец */
+
+.trainer-about {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 8px 0;
+}
+
+.trainer-about__section {
+  border-bottom: 1px solid #EDF2F7;
+  padding-bottom: 20px;
+}
+
+.trainer-about__section:last-child {
+  border-bottom: none;
+}
+
+.trainer-about__section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1A2B3C;
+  margin-bottom: 12px;
+}
+
+.trainer-about__section-text {
+  font-size: 14px;
+  color: #4A5568;
+  line-height: 1.6;
+}
+
+.trainer-about__sports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trainer-about__sport-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #F8FAFC;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+}
+
+.trainer-about__sport-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1A2B3C;
+}
+
+.trainer-about__sport-years {
+  font-size: 13px;
+  color: #E85A2B;
+  font-weight: 500;
+  background: #FFF5F0;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
