@@ -13,9 +13,10 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
       const profileData = await api.getProfile(user.user_id);
       user = { ...user, ...profileData };
     } catch (error) {
-
+      console.error('Failed to fetch trainer details:', error);
     }
   }
+
   const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
   const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
   const avatarUrl = user.avatar_url || '';
@@ -56,7 +57,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
     { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 100, placeholder: 'например: футбол, плавание, бокс' }
   ];
 
-  // Функция валидации поля (как в AuthForm)
+  // Функция валидации поля
   const validateField = (fieldName, value) => {
     const api = inputsApi.get(fieldName);
     if (!api) return true;
@@ -139,7 +140,6 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
       const container = document.createElement('div');
       fieldsContainer.appendChild(container);
 
-      // Загружаем значения из API
       let value = '';
 
       if (field.name === 'username' || field.name === 'first_name' || field.name === 'last_name') {
@@ -163,12 +163,10 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
         required: field.required,
         maxlength: field.maxlength,
         onChange: (newValue) => {
-          // ДИНАМИЧЕСКАЯ ВАЛИДАЦИЯ В РЕАЛЬНОМ ВРЕМЕНИ
           validateField(field.name, newValue);
         }
       });
 
-      // Маска для даты
       if (field.name === 'career_since_date') {
         const input = api.input;
         input.addEventListener('input', e => {
@@ -181,12 +179,10 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
           } else {
             e.target.value = val;
           }
-          // Валидация после форматирования
           validateField(field.name, e.target.value);
         });
       }
 
-      // Подсказка для sport_discipline
       if (field.name === 'sport_discipline') {
         const helpText = document.createElement('small');
         helpText.textContent = 'Можно указать несколько через запятую';
@@ -206,7 +202,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   await renderFields(originalIsTrainer);
 
   // Кнопка "Стать тренером" для клиента
- if (!originalIsTrainer) {
+  if (!originalIsTrainer) {
     const becomeTrainerContainer = document.createElement('div');
     becomeTrainerContainer.style.marginTop = 'var(--spacing-md)';
     becomeTrainerContainer.style.textAlign = 'center';
@@ -298,7 +294,6 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
     for (const [name, api] of inputsApi) {
       const value = api.getValue();
 
-      // Пропускаем необязательные поля тренера, если они не отображаются
       if (!showTrainerFields && (name === 'education_degree' || name === 'career_since_date' || name === 'sport_discipline')) {
         continue;
       }
@@ -311,90 +306,97 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
     return isValid;
   };
 
+  // Отправка
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    globalErr.hidden = true;
 
-form.addEventListener('submit', async e => {
-  e.preventDefault();
-  globalErr.hidden = true;
+    if (!validateForm()) return;
 
-  if (!validateForm()) return;
+    saveBtn.setDisabled(true);
 
-  saveBtn.setDisabled(true);
-  try {
-    const profileData = {};
-    for (const [name, api] of inputsApi) {
-      profileData[name] = api.getValue().trim();
-    }
-
-    // Подготавливаем тело запроса
-    const updatePayload = {
-      username: profileData.username,
-      first_name: profileData.first_name,
-      last_name: profileData.last_name,
-      bio: profileData.bio || ''
-    };
-
-    // Если пользователь тренер или становится тренером — добавляем trainer_details
-    if (originalIsTrainer || becomingTrainer) {
-      updatePayload.trainer_details = {
-        education_degree: profileData.education_degree || '',
-        career_since_date: profileData.career_since_date,
-        sports: [{
-          sport_type_id: 1,  // TODO: брать из выбора видов спорта
-          experience_years: 1,
-          sports_rank: profileData.sport_discipline || ''
-        }]
-      };
-    }
-
-    console.log('📤 Updating profile with:', updatePayload);
-
-    // Обновление профиля (включая trainer_details)
-    await api.request('/profiles/me', {
-      method: 'PATCH',
-      body: JSON.stringify(updatePayload)
-    });
-
-    // Аватар: загрузка нового или удаление существующего
-    if (avatarFile) {
-      const formData = new FormData();
-      formData.append('avatar', avatarFile, avatarFile.name || 'avatar.jpg');
-      await fetch(`${api.baseURL}/profiles/me/avatar`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-      console.log('✅ Avatar uploaded');
-    } else if (avatarRemoved) {
-      try {
-        await api.deleteAvatar();
-        console.log('✅ Avatar deleted');
-      } catch (error) {
-        console.log('DELETE failed, trying PATCH with avatar_url: null');
-        await api.request('/profiles/me', {
-          method: 'PATCH',
-          body: JSON.stringify({ avatar_url: null })
-        });
+    try {
+      const profileData = {};
+      for (const [name, api] of inputsApi) {
+        profileData[name] = api.getValue().trim();
       }
-    }
 
-    onUpdated?.();
-    close();
-  } catch (error) {
-    console.error('Profile update error:', error);
-    let message = error.message || 'Не удалось сохранить изменения';
-    if (error.data?.error?.fields) {
-      error.data.error.fields.forEach(f => {
-        const api = inputsApi.get(f.field);
-        if (api) api.setError(f.message);
+      console.log('🔍 Profile data from form:', profileData);
+
+      const updatePayload = {
+        username: profileData.username,
+        first_name: profileData.first_name,
+        last_name: profileData.last_name,
+        bio: profileData.bio || ''
+      };
+
+      if (originalIsTrainer || becomingTrainer) {
+        updatePayload.trainer_details = {
+          education_degree: profileData.education_degree || '',
+          career_since_date: profileData.career_since_date,
+          sports: [{
+            sport_type_id: 1,
+            experience_years: 1,
+            sports_rank: profileData.sport_discipline || ''
+          }]
+        };
+        console.log('🔍 Adding trainer_details:', updatePayload.trainer_details);
+      }
+
+      console.log('📤 FULL update payload:', JSON.stringify(updatePayload, null, 2));
+
+      const response = await api.request('/profiles/me', {
+        method: 'PATCH',
+        body: JSON.stringify(updatePayload)
       });
-      message = error.data.error.message;
+
+      console.log('✅ Profile update response:', response);
+
+      if (avatarFile) {
+        const formData = new FormData();
+        formData.append('avatar', avatarFile, avatarFile.name || 'avatar.jpg');
+        await fetch(`${api.baseURL}/profiles/me/avatar`, {
+          method: 'POST',
+          credentials: 'include',
+          body: formData
+        });
+        console.log('✅ Avatar uploaded');
+      } else if (avatarRemoved) {
+        try {
+          await api.deleteAvatar();
+          console.log('✅ Avatar deleted');
+        } catch (error) {
+          console.log('DELETE failed, trying PATCH with avatar_url: null');
+          await api.request('/profiles/me', {
+            method: 'PATCH',
+            body: JSON.stringify({ avatar_url: null })
+          });
+        }
+      }
+
+      onUpdated?.();
+      close();
+    } catch (error) {
+      console.error('❌ Profile update error:', error);
+      console.error('❌ Error data:', error.data);
+      console.error('❌ Error status:', error.status);
+
+      let message = error.message || 'Не удалось сохранить изменения';
+      if (error.data?.error?.fields) {
+        console.error('❌ Validation fields:', error.data.error.fields);
+        error.data.error.fields.forEach(f => {
+          const api = inputsApi.get(f.field);
+          if (api) api.setError(f.message);
+        });
+        message = error.data.error.message;
+      }
+      globalErr.textContent = message;
+      globalErr.hidden = false;
+    } finally {
+      saveBtn.setDisabled(false);
     }
-    globalErr.textContent = message;
-    globalErr.hidden = false;
-  } finally {
-    saveBtn.setDisabled(false);
-  }
-});
+  });
+
   document.addEventListener('keydown', onKey);
   document.body.appendChild(modal);
   modal.focus({ preventScroll: true });
