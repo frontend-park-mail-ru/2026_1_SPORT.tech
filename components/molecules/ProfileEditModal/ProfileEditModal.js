@@ -13,7 +13,6 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
       const profileData = await api.getProfile(user.user_id);
       user = { ...user, ...profileData };
     } catch (error) {
-      console.error('Failed to fetch trainer details:', error);
     }
   }
 
@@ -202,23 +201,23 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   await renderFields(originalIsTrainer);
 
   // Кнопка "Стать тренером" для клиента
-  if (!originalIsTrainer) {
-    const becomeTrainerContainer = document.createElement('div');
-    becomeTrainerContainer.style.marginTop = 'var(--spacing-md)';
-    becomeTrainerContainer.style.textAlign = 'center';
-    fieldsContainer.appendChild(becomeTrainerContainer);
+  // if (!originalIsTrainer) {
+  //   const becomeTrainerContainer = document.createElement('div');
+  //   becomeTrainerContainer.style.marginTop = 'var(--spacing-md)';
+  //   becomeTrainerContainer.style.textAlign = 'center';
+  //   fieldsContainer.appendChild(becomeTrainerContainer);
 
-    await renderButton(becomeTrainerContainer, {
-      text: 'Стать тренером',
-      variant: BUTTON_VARIANTS.SECONDARY_BLUE,
-      size: BUTTON_SIZES.MEDIUM,
-      onClick: async () => {
-        becomingTrainer = true;
-        await renderFields(true);
-        becomeTrainerContainer.remove();
-      }
-    });
-  }
+  //   await renderButton(becomeTrainerContainer, {
+  //     text: 'Стать тренером',
+  //     variant: BUTTON_VARIANTS.SECONDARY_BLUE,
+  //     size: BUTTON_SIZES.MEDIUM,
+  //     onClick: async () => {
+  //       becomingTrainer = true;
+  //       await renderFields(true);
+  //       becomeTrainerContainer.remove();
+  //     }
+  //   });
+  // }
 
   // Управление аватаром
   const updateAvatarPreview = () => {
@@ -307,95 +306,102 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   };
 
   // Отправка
-  form.addEventListener('submit', async e => {
-    e.preventDefault();
-    globalErr.hidden = true;
+ form.addEventListener('submit', async e => {
+  e.preventDefault();
+  globalErr.hidden = true;
 
-    if (!validateForm()) return;
+  if (!validateForm()) return;
 
-    saveBtn.setDisabled(true);
+  saveBtn.setDisabled(true);
 
-    try {
-      const profileData = {};
-      for (const [name, api] of inputsApi) {
-        profileData[name] = api.getValue().trim();
-      }
-
-      console.log('🔍 Profile data from form:', profileData);
-
-      const updatePayload = {
-        username: profileData.username,
-        first_name: profileData.first_name,
-        last_name: profileData.last_name,
-        bio: profileData.bio || ''
-      };
-
-      if (originalIsTrainer || becomingTrainer) {
-        updatePayload.trainer_details = {
-          education_degree: profileData.education_degree || '',
-          career_since_date: profileData.career_since_date,
-          sports: [{
-            sport_type_id: 1,
-            experience_years: 1,
-            sports_rank: profileData.sport_discipline || ''
-          }]
-        };
-        console.log('🔍 Adding trainer_details:', updatePayload.trainer_details);
-      }
-
-      console.log('📤 FULL update payload:', JSON.stringify(updatePayload, null, 2));
-
-      const response = await api.request('/profiles/me', {
-        method: 'PATCH',
-        body: JSON.stringify(updatePayload)
-      });
-
-      console.log('✅ Profile update response:', response);
-
-      if (avatarFile) {
-        const formData = new FormData();
-        formData.append('avatar', avatarFile, avatarFile.name || 'avatar.jpg');
-        await fetch(`${api.baseURL}/profiles/me/avatar`, {
-          method: 'POST',
-          credentials: 'include',
-          body: formData
-        });
-        console.log('✅ Avatar uploaded');
-      } else if (avatarRemoved) {
-        try {
-          await api.deleteAvatar();
-          console.log('✅ Avatar deleted');
-        } catch (error) {
-          console.log('DELETE failed, trying PATCH with avatar_url: null');
-          await api.request('/profiles/me', {
-            method: 'PATCH',
-            body: JSON.stringify({ avatar_url: null })
-          });
-        }
-      }
-
-      onUpdated?.();
-      close();
-    } catch (error) {
-      console.error('❌ Profile update error:', error);
-      console.error('❌ Error data:', error.data);
-      console.error('❌ Error status:', error.status);
-
-      let message = error.message || 'Не удалось сохранить изменения';
-      if (error.data?.error?.fields) {
-        console.error('❌ Validation fields:', error.data.error.fields);
-        error.data.error.fields.forEach(f => {
-          const api = inputsApi.get(f.field);
-          if (api) api.setError(f.message);
-        });
-        message = error.data.error.message;
-      }
-      globalErr.textContent = message;
-      globalErr.hidden = false;
-    } finally {
-      saveBtn.setDisabled(false);
+  try {
+    const profileData = {};
+    for (const [name, api] of inputsApi) {
+      profileData[name] = api.getValue().trim();
     }
-  });
+
+    console.log('🔍 Profile data from form:', profileData);
+
+    const updatePayload = {
+      username: profileData.username,
+      first_name: profileData.first_name,
+      last_name: profileData.last_name,
+      bio: profileData.bio || ''
+    };
+
+    if (originalIsTrainer || becomingTrainer) {
+      const careerDate = new Date(profileData.career_since_date);
+      const today = new Date();
+      let experienceYears = today.getFullYear() - careerDate.getFullYear();
+
+      const monthDiff = today.getMonth() - careerDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < careerDate.getDate())) {
+        experienceYears--;
+      }
+
+      if (experienceYears < 0) experienceYears = 0;
+
+      console.log('📅 Calculated experience years:', experienceYears);
+
+      updatePayload.trainer_details = {
+        education_degree: profileData.education_degree || '',
+        career_since_date: profileData.career_since_date,
+        sports: [{
+          sport_type_id: 1,
+          experience_years: experienceYears,
+          sports_rank: profileData.sport_discipline || ''
+        }]
+      };
+      console.log('🔍 Adding trainer_details:', updatePayload.trainer_details);
+    }
+
+    console.log('📤 FULL update payload:', JSON.stringify(updatePayload, null, 2));
+
+    const response = await api.request('/profiles/me', {
+      method: 'PATCH',
+      body: JSON.stringify(updatePayload)
+    });
+
+    console.log('✅ Profile update response:', response);
+
+    if (avatarFile) {
+      const formData = new FormData();
+      formData.append('avatar', avatarFile, avatarFile.name || 'avatar.jpg');
+      await fetch(`${api.baseURL}/profiles/me/avatar`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      console.log('✅ Avatar uploaded');
+    } else if (avatarRemoved) {
+      try {
+        await api.deleteAvatar();
+      } catch (error) {
+        await api.request('/profiles/me', {
+          method: 'PATCH',
+          body: JSON.stringify({ avatar_url: null })
+        });
+      }
+    }
+
+    onUpdated?.();
+    close();
+  } catch (error) {
+
+    let message = error.message || 'Не удалось сохранить изменения';
+    if (error.data?.error?.fields) {
+      error.data.error.fields.forEach(f => {
+        const api = inputsApi.get(f.field);
+        if (api) api.setError(f.message);
+      });
+      message = error.data.error.message;
+    }
+    globalErr.textContent = message;
+    globalErr.hidden = false;
+  } finally {
+    saveBtn.setDisabled(false);
+  }
+});
 
   document.addEventListener('keydown', onKey);
   document.body.appendChild(modal);

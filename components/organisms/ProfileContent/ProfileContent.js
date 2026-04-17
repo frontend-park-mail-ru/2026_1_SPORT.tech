@@ -60,34 +60,43 @@ export async function fillProfilePostsSection(postsContainer, {
 
 async function showTrainerAbout(container, api, userId) {
   try {
-    // Загружаем полный профиль
     const profile = await api.getProfile(userId);
     const trainerDetails = profile.trainer_details;
 
     if (!trainerDetails) {
-      container.innerHTML = `
-        <div class="profile-content__empty">
-          <p>Информация о тренере недоступна</p>
-        </div>
-      `;
+      container.innerHTML = `<div class="profile-content__empty"><p>Информация о тренере недоступна</p></div>`;
       return;
     }
 
-    // Форматируем дату
     const careerDate = trainerDetails.career_since_date
-      ? new Date(trainerDetails.career_since_date).toLocaleDateString('ru-RU')
+      ? new Date(trainerDetails.career_since_date)
+      : null;
+
+    const careerDateStr = careerDate
+      ? careerDate.toLocaleDateString('ru-RU')
       : 'Не указано';
 
-    // Собираем виды спорта
+    // Вычисляем стаж
+    let experienceYears = 0;
+    if (careerDate) {
+      const today = new Date();
+      experienceYears = today.getFullYear() - careerDate.getFullYear();
+      const monthDiff = today.getMonth() - careerDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < careerDate.getDate())) {
+        experienceYears--;
+      }
+      if (experienceYears < 0) experienceYears = 0;
+    }
+
     const sports = trainerDetails.sports || [];
     const sportsList = sports.length > 0
       ? sports.map(s => `
           <div class="trainer-about__sport-item">
             <span class="trainer-about__sport-name">${s.sports_rank || 'Вид спорта'}</span>
-            <span class="trainer-about__sport-years">Опыт: ${s.experience_years || 0} лет</span>
+            <span class="trainer-about__sport-years">Опыт: ${experienceYears} ${getYearsWord(experienceYears)}</span>
           </div>
         `).join('')
-      : '<p>Не указано</p>';
+      : '<p class="trainer-about__section-text">Не указано</p>';
 
     container.innerHTML = `
       <div class="trainer-about">
@@ -95,19 +104,18 @@ async function showTrainerAbout(container, api, userId) {
           <h3 class="trainer-about__section-title">Образование</h3>
           <p class="trainer-about__section-text">${trainerDetails.education_degree || 'Не указано'}</p>
         </div>
-
         <div class="trainer-about__section">
           <h3 class="trainer-about__section-title">Начало карьеры</h3>
-          <p class="trainer-about__section-text">${careerDate}</p>
+          <p class="trainer-about__section-text">${careerDateStr}</p>
         </div>
-
+        <div class="trainer-about__section">
+          <h3 class="trainer-about__section-title">Стаж</h3>
+          <p class="trainer-about__section-text">${experienceYears} ${getYearsWord(experienceYears)}</p>
+        </div>
         <div class="trainer-about__section">
           <h3 class="trainer-about__section-title">Специализация</h3>
-          <div class="trainer-about__sports-list">
-            ${sportsList}
-          </div>
+          <div class="trainer-about__sports-list">${sportsList}</div>
         </div>
-
         <div class="trainer-about__section">
           <h3 class="trainer-about__section-title">О себе</h3>
           <p class="trainer-about__section-text">${profile.bio || 'Не указано'}</p>
@@ -115,12 +123,7 @@ async function showTrainerAbout(container, api, userId) {
       </div>
     `;
   } catch (error) {
-    console.error('Failed to load trainer about:', error);
-    container.innerHTML = `
-      <div class="profile-content__empty">
-        <p>Не удалось загрузить информацию о тренере</p>
-      </div>
-    `;
+    container.innerHTML = `<div class="profile-content__empty"><p>Не удалось загрузить информацию</p></div>`;
   }
 }
 

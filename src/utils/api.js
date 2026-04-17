@@ -32,50 +32,50 @@ export class ApiClient {
 
 // src/utils/api.js
 
-async request(endpoint, options = {}) {
-  const url = `${this.baseURL}${endpoint}`;
+// async request(endpoint, options = {}) {
+//   const url = `${this.baseURL}${endpoint}`;
 
-  console.log(`🌐 [API] ${options.method || 'GET'} ${url}`);
-  if (options.body) {
-    console.log(`📦 [API] Request body:`, options.body);
-  }
+//   console.log(`🌐 [API] ${options.method || 'GET'} ${url}`);
+//   if (options.body) {
+//     console.log(`📦 [API] Request body:`, options.body);
+//   }
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      }
-    });
+//   try {
+//     const response = await fetch(url, {
+//       ...options,
+//       credentials: 'include',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         ...options.headers
+//       }
+//     });
 
-    console.log(`🌐 [API] Response status: ${response.status} ${response.statusText}`);
+//     console.log(`🌐 [API] Response status: ${response.status} ${response.statusText}`);
 
-    let data;
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      data = await response.json();
-      console.log(`📦 [API] Response data:`, data);
-    } else {
-      const text = await response.text();
-      console.log(`📦 [API] Response text:`, text);
-      data = { error: { message: text || `HTTP ${response.status}` } };
-    }
+//     let data;
+//     const contentType = response.headers.get('content-type');
+//     if (contentType && contentType.includes('application/json')) {
+//       data = await response.json();
+//       console.log(`📦 [API] Response data:`, data);
+//     } else {
+//       const text = await response.text();
+//       console.log(`📦 [API] Response text:`, text);
+//       data = { error: { message: text || `HTTP ${response.status}` } };
+//     }
 
-    if (!response.ok) {
-      const error = new Error(data.error?.message || `HTTP ${response.status}`);
-      error.data = data;
-      error.status = response.status;
-      throw error;
-    }
+//     if (!response.ok) {
+//       const error = new Error(data.error?.message || `HTTP ${response.status}`);
+//       error.data = data;
+//       error.status = response.status;
+//       throw error;
+//     }
 
-    return data;
-  } catch (error) {
-    console.error(`❌ [API] Request failed:`, error);
-    throw error;
-  }
-}
+//     return data;
+//   } catch (error) {
+//     console.error(`❌ [API] Request failed:`, error);
+//     throw error;
+//   }
+// }
   // ===== AUTH METHODS =====
 
   /**
