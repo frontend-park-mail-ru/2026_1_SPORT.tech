@@ -41,7 +41,6 @@ export async function renderAuthPage(container, api) {
 
       window.router.navigateTo('/profile');
     } catch (error) {
-      console.error('Login error:', error);
       throw error;
     }
   }
@@ -69,7 +68,6 @@ export async function renderAuthPage(container, api) {
 
       window.router.navigateTo('/profile');
     } catch (error) {
-      console.error('Register error:', error);
       throw error;
     }
   }
@@ -95,7 +93,7 @@ async function handleTrainerRegister(data) {
         // Дата уже отформатирована маской в AuthForm.js
         const careerDate = data.career_since_date?.trim() || '';
 
-        console.log('📅 Дата из формы (career_since_date):', careerDate);
+
 
         // Простая проверка формата перед отправкой
         if (!/^\d{4}-\d{2}-\d{2}$/.test(careerDate)) {
@@ -126,7 +124,6 @@ async function handleTrainerRegister(data) {
             window.router.navigateTo('/profile');
         }
     } catch (error) {
-        console.error('Trainer register error:', error);
         throw error;
     }
 }
@@ -179,7 +176,6 @@ async function handleTrainerRegister(data) {
             await handleTrainerRegister(data);
           }
         } catch (error) {
-          console.error('Form submission error:', error);
           throw error;
         }
       },

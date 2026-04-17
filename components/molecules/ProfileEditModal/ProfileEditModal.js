@@ -10,13 +10,10 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
 
   if (user.is_trainer && !user.trainer_details) {
     try {
-      console.log('🔄 Fetching full profile with trainer_details...');
       const profileData = await api.getProfile(user.user_id);
       user = { ...user, ...profileData };
-      console.log('✅ Full profile data:', user);
-      console.log('✅ trainer_details:', user.trainer_details);
     } catch (error) {
-      console.error('Failed to fetch trainer details:', error);
+
     }
   }
   const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
@@ -350,27 +347,22 @@ form.addEventListener('submit', async e => {
         credentials: 'include',
         body: formData
       });
-      console.log('✅ Avatar uploaded');
     } else if (avatarRemoved) {
       // Удаление аватара
       try {
         await api.deleteAvatar();
-        console.log('✅ Avatar deleted via DELETE');
       } catch (error) {
         // Если DELETE не поддерживается, пробуем PATCH с null
-        console.log('DELETE failed, trying PATCH with avatar_url: null');
         await api.request('/profiles/me', {
           method: 'PATCH',
           body: JSON.stringify({ avatar_url: null })
         });
-        console.log('✅ Avatar removed via PATCH');
       }
     }
 
     onUpdated?.();
     close();
   } catch (error) {
-    console.error('Profile update error:', error);
     let message = error.message || 'Не удалось сохранить изменения';
     if (error.data?.error?.fields) {
       error.data.error.fields.forEach(f => {

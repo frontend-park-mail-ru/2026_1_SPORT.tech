@@ -35,12 +35,7 @@ export class ApiClient {
 async request(endpoint, options = {}) {
   const url = `${this.baseURL}${endpoint}`;
 
-  console.log('🌐 [API] request - Outgoing:', {
-    url: url,
-    method: options.method || 'GET',
-    headers: options.headers,
-    body: options.body ? JSON.parse(options.body) : undefined
-  });
+
 
   try {
     const response = await fetch(url, {
@@ -52,26 +47,15 @@ async request(endpoint, options = {}) {
       }
     });
 
-    console.log('🌐 [API] request - Response:', {
-      url: url,
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
-    });
 
-    if (response.status === 204) {
-      console.log('🌐 [API] request - 204 No Content');
-      return null;
-    }
 
     let data;
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
       data = await response.json();
-      console.log('🌐 [API] request - Response data:', data);
+
     } else {
       const text = await response.text();
-      console.error('❌ [API] request - Non-JSON response:', text);
       data = { error: { message: text || `HTTP ${response.status}` } };
     }
 
@@ -79,21 +63,13 @@ async request(endpoint, options = {}) {
       const error = new Error(data.error?.message || `HTTP ${response.status}`);
       error.data = data;
       error.status = response.status;
-      console.error('❌ [API] request - Error details:', {
-        status: response.status,
-        data: data,
-        error: error
-      });
+
       throw error;
     }
 
     return data;
   } catch (error) {
-    console.error('❌ [API] request - Network/Parse error:', {
-      endpoint: endpoint,
-      error: error.message,
-      stack: error.stack
-    });
+
     throw error;
   }
 }
@@ -133,7 +109,6 @@ async request(endpoint, options = {}) {
    * @returns {Promise<Object>} Данные зарегистрированного тренера
    */
   async registerTrainer(userData) {
-    console.log('📤 registerTrainer payload:', JSON.stringify(userData, null, 2));
     return this.request('/auth/register/trainer', {
       method: 'POST',
       body: JSON.stringify(userData)
@@ -296,13 +271,7 @@ async createDonation(userId, amountValue, currency = 'RUB', message = null) {
     message: message || null  // ← null вместо пустой строки
   };
 
-  console.log('📤 [API] createDonation - Request details:', {
-    endpoint: `/profiles/${userId}/donations`,
-    method: 'POST',
-    userId: userId,
-    payload: payload,
-    fullURL: `${this.baseURL}/profiles/${userId}/donations`
-  });
+
 
   return this.request(`/profiles/${userId}/donations`, {
     method: 'POST',
@@ -322,12 +291,10 @@ async createDonation(userId, amountValue, currency = 'RUB', message = null) {
   }
 
   async likePost(postId) {
-  console.log(`[API] Лайк поста ${postId}`);
   return this.request(`/posts/${postId}/likes`, { method: 'POST' });
 }
 
 async unlikePost(postId) {
-  console.log(`[API] Снятие лайка с поста ${postId}`);
   return this.request(`/posts/${postId}/likes`, { method: 'DELETE' });
 }
 

@@ -117,7 +117,7 @@ export async function renderPostCard(container, post) {
         await onPostsUpdated();
       }
     } catch (error) {
-      console.error('Не удалось обновить лайк:', error);
+      
     } finally {
       likeBtn.disabled = false;
     }

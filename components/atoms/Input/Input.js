@@ -6,7 +6,7 @@
  * - Глазок: open/close, active/non-active
  * - Сообщения под полем
  * - Обработка длинного текста
- * 
+ *
  * @module components/atoms/Input
  */
 
@@ -138,7 +138,6 @@ export async function renderInput(container, config = {}) {
   let messageEl = field.querySelector('.input-field__message');
 
   if (!messageEl) {
-    console.warn('Message element not found, creating dynamically');
     messageEl = document.createElement('span');
     messageEl.className = 'input-field__message';
     field.appendChild(messageEl);

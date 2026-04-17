@@ -101,12 +101,11 @@ export async function renderProfileHeader(container, {
         // Если пользователь тренер, запрашиваем полный профиль с trainer_details
         if (userData?.is_trainer) {
           try {
-            console.log('🔄 Fetching full profile with trainer_details...');
+
             const fullProfile = await api.getProfile(userData.user_id);
             userData = { ...userData, ...fullProfile };
-            console.log('✅ Full profile data loaded');
+
           } catch (error) {
-            console.error('Failed to fetch trainer details:', error);
           }
         }
 
@@ -148,7 +147,6 @@ export async function renderProfileHeader(container, {
   if (cameraBtn) {
     cameraBtn.addEventListener('click', async () => {
       if (!api) {
-        console.error('API client not provided');
         return;
       }
       const currentUser = await api.getCurrentUser();
@@ -160,7 +158,6 @@ export async function renderProfileHeader(container, {
           const fullProfile = await api.getProfile(userData.user_id);
           userData = { ...userData, ...fullProfile };
         } catch (error) {
-          console.error('Failed to fetch trainer details:', error);
         }
       }
 

@@ -70,14 +70,10 @@ form.addEventListener('submit', async e => {
   const amountStr = amountApi.getValue();
   const email = emailApi.getValue();
 
-  console.log('🔍 [DonationModal] Step 1 - Raw input:', { amountStr, email });
+
 
   const result = validator.validateDonationForm({ amount: amountStr, email });
-  console.log('🔍 [DonationModal] Step 2 - Validation result:', {
-    isValid: result.isValid,
-    amountNumber: result.amountNumber,
-    errors: result.errors
-  });
+
 
   if (!result.isValid) {
     result.errors.forEach(err => {
@@ -102,13 +98,7 @@ form.addEventListener('submit', async e => {
   try {
     const amountInCents = Math.round(result.amountNumber * 100);
 
-    console.log('🔍 [DonationModal] Step 3 - Prepared data:', {
-      recipientUserId,
-      amountInCents,
-      originalAmount: result.amountNumber,
-      currency: 'RUB',
-      message: ''
-    });
+
 
     const response = await api.createDonation(
       recipientUserId,
@@ -117,7 +107,7 @@ form.addEventListener('submit', async e => {
       'Пожертвование'
     );
 
-    console.log('✅ [DonationModal] Step 4 - Success response:', response);
+
 
     // === УСПЕХ: показываем красивое сообщение ===
 
@@ -153,12 +143,7 @@ form.addEventListener('submit', async e => {
     }, 3000);
 
   } catch (error) {
-    console.error('❌ [DonationModal] Step 4 - Error:', {
-      message: error.message,
-      data: error.data,
-      status: error.status,
-      fullError: error
-    });
+    
 
     submitBtn.innerHTML = originalBtnText;
     submitBtn.disabled = false;
