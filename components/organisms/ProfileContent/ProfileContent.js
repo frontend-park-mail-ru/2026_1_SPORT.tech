@@ -103,7 +103,7 @@ async function showTrainerAbout(container, api, userId) {
       ? sports.map(s => `
           <div class="trainer-about__sport-item">
             <span class="trainer-about__sport-name">${s.sports_rank || 'Вид спорта'}</span>
-            <span class="trainer-about__sport-years">Опыт: ${experienceYears} ${getYearsWord(experienceYears)}</span>
+            
           </div>
         `).join('')
       : '<p class="trainer-about__section-text">Не указано</p>';
