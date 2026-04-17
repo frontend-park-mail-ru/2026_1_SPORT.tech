@@ -10,16 +10,7 @@ import { renderPostCard } from '../../molecules/PostCard/PostCard.js';
 import { openPostFormModal } from '../../molecules/PostFormModal/PostFormModal.js';
 
 /**
- * Заполняет контейнер постов (используется при первой отрисовке и при обновлении)
- * @async
- * @param {HTMLElement} postsContainer
- * @param {Object} opts
- * @param {string} opts.activeTab
- * @param {Array} opts.posts
- * @param {import('/src/utils/api.js').ApiClient|null} opts.api
- * @param {boolean} [opts.canManagePosts=false]
- * @param {Function} [opts.onPostsUpdated]
- * @returns {Promise<void>}
+ * Заполняет контейнер постов
  */
 export async function fillProfilePostsSection(postsContainer, {
   activeTab,
@@ -53,10 +44,6 @@ export async function fillProfilePostsSection(postsContainer, {
   }
 }
 
-
-
-// ProfileContent.js - добавить перед showTrainerAbout
-
 function getYearsWord(years) {
   const lastDigit = years % 10;
   const lastTwoDigits = years % 100;
@@ -66,7 +53,17 @@ function getYearsWord(years) {
   if (lastDigit >= 2 && lastDigit <= 4) return 'года';
   return 'лет';
 }
-// ProfileContent.js - добавить перед renderProfileContent
+
+function formatPostContent(textContent) {
+  if (!textContent) return '';
+  return String(textContent)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('\'', '&#39;')
+    .replace(/\n/g, '<br>');
+}
 
 async function showTrainerAbout(container, api, userId) {
   try {
@@ -86,7 +83,6 @@ async function showTrainerAbout(container, api, userId) {
       ? careerDate.toLocaleDateString('ru-RU')
       : 'Не указано';
 
-    // Вычисляем стаж
     let experienceYears = 0;
     if (careerDate) {
       const today = new Date();
@@ -97,13 +93,13 @@ async function showTrainerAbout(container, api, userId) {
       }
       if (experienceYears < 0) experienceYears = 0;
     }
-{/* <span class="trainer-about__sport-years">Опыт: ${experienceYears} ${getYearsWord(experienceYears)}</span> //нужно или нет? */}
+
     const sports = trainerDetails.sports || [];
     const sportsList = sports.length > 0
       ? sports.map(s => `
           <div class="trainer-about__sport-item">
             <span class="trainer-about__sport-name">${s.sports_rank || 'Вид спорта'}</span>
-
+            <span class="trainer-about__sport-years">Опыт: ${experienceYears} ${getYearsWord(experienceYears)}</span>
           </div>
         `).join('')
       : '<p class="trainer-about__section-text">Не указано</p>';
@@ -137,30 +133,68 @@ async function showTrainerAbout(container, api, userId) {
   }
 }
 
-/**
- * Рендерит контент профиля с вкладками
- * @async
- * @param {HTMLElement} container - DOM элемент для вставки
- * @param {Object} params - Параметры отображения
- * @param {string} [params.activeTab='main'] - Активная вкладка
- * @param {Array} [params.posts=[]] - Массив постов
- * @param {Array} [params.popularPosts=[]] - Массив популярных постов
- * @param {boolean} [params.canAddPost=false] - Может ли пользователь добавлять посты
- * @param {Object} [params.api] - API клиент
- * @param {boolean} [params.canManagePosts=false] - Управление своими постами
- * @param {Function} [params.onPostsUpdated] - Обновление списка постов
- * @returns {Promise<HTMLElement>} DOM элемент контента
- *
- * @example
- * await renderProfileContent(container, {
- *   activeTab: 'publications',
- *   posts: [...],
- *   popularPosts: [...],
- *   canAddPost: true,
- *   canManagePosts: true,
- *   onPostsUpdated: async () => {}
- * });
- */
+function showClientAbout(container, profile) {
+  const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Не указано';
+
+  container.innerHTML = `
+    <div class="trainer-about">
+      <div class="trainer-about__section">
+        <h3 class="trainer-about__section-title">Имя пользователя</h3>
+        <p class="trainer-about__section-text">${profile.username || 'Не указано'}</p>
+      </div>
+      <div class="trainer-about__section">
+        <h3 class="trainer-about__section-title">Полное имя</h3>
+        <p class="trainer-about__section-text">${fullName}</p>
+      </div>
+      <div class="trainer-about__section">
+        <h3 class="trainer-about__section-title">О себе</h3>
+        <p class="trainer-about__section-text">${profile.bio || 'Не указано'}</p>
+      </div>
+    </div>
+  `;
+}
+
+async function loadLikedPosts(api, userId) {
+  try {
+    const postsData = await api.getUserPosts(userId);
+    const postList = Array.isArray(postsData?.posts) ? postsData.posts : [];
+
+    const likedPosts = postList.filter(post => post.is_liked);
+
+    const fullPosts = await Promise.all(likedPosts.map(async post => {
+      try {
+        const fullPost = await api.getPost(post.post_id);
+        const authorProfile = await api.getProfile(post.trainer_id).catch(() => ({}));
+
+        return {
+          post_id: post.post_id,
+          title: post.title,
+          content: formatPostContent(fullPost?.text_content || ''),
+          raw_text: fullPost?.text_content || '',
+          authorName: `${authorProfile.first_name || ''} ${authorProfile.last_name || ''}`.trim() || 'Автор',
+          authorRole: authorProfile.is_trainer ? 'Тренер' : 'Клиент',
+          authorAvatar: authorProfile.avatar_url || null,
+          likes: post.likes_count || 0,
+          liked: true,
+          comments: 0,
+          can_view: post.can_view,
+          created_at: post.created_at,
+          min_tier_id: post.min_tier_id ?? null,
+          attachments: fullPost?.attachments || [],
+          isOwner: false
+        };
+      } catch {
+        return null;
+      }
+    }));
+
+    return fullPosts.filter(p => p !== null);
+  } catch (error) {
+    console.error('Failed to load liked posts:', error);
+    return [];
+  }
+}
+
 export async function renderProfileContent(container, {
   activeTab = 'main',
   posts = [],
@@ -182,21 +216,22 @@ export async function renderProfileContent(container, {
         { id: 'about', label: 'О тренере', active: activeTab === 'about' }
       ]
     : [
-        { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' || activeTab === 'main' },
+        { id: 'publications', label: 'Понравившиеся', active: activeTab === 'publications' || activeTab === 'main' },
+        { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
         { id: 'about', label: 'О себе', active: activeTab === 'about' }
       ];
 
   const sectionTitles = {
     main: 'Недавние публикации',
-    publications: 'Все публикации',
+    publications: isTrainer ? 'Все публикации' : 'Понравившиеся',
     subscriptions: 'Подписки',
     about: isTrainer ? 'О тренере' : 'О себе'
   };
 
-  // Корректируем activeTab для клиента
   let currentTab = activeTab;
   if (!isTrainer && (currentTab === 'main' || currentTab === 'publications')) {
-    currentTab = 'subscriptions';
+    currentTab = 'publications';
+    tabs[0].active = true;
   }
 
   const popularWithDescriptions = popularPosts.map(post => ({
@@ -219,14 +254,13 @@ export async function renderProfileContent(container, {
   const sectionTitle = element.querySelector('.profile-content__section-title');
   const filtersElement = element.querySelector('.profile-content__filters');
   const addButtonContainer = element.querySelector('#add-post-button-container');
+  const postsContainer = element.querySelector('#posts-container');
 
-  // Скрываем фильтры и кнопку для клиента
   if (!isTrainer) {
     if (filtersElement) filtersElement.style.display = 'none';
     if (addButtonContainer) addButtonContainer.style.display = 'none';
   }
 
-  // Обработчик клика по вкладкам
   element.querySelectorAll('.profile-content__tab').forEach(tab => {
     tab.addEventListener('click', async () => {
       const tabId = tab.dataset.tab;
@@ -235,8 +269,6 @@ export async function renderProfileContent(container, {
         t.classList.remove('profile-content__tab--active');
       });
       tab.classList.add('profile-content__tab--active');
-
-      const postsContainer = element.querySelector('#posts-container');
 
       if (tabId === 'about') {
         if (filtersElement) filtersElement.style.display = 'none';
@@ -249,6 +281,19 @@ export async function renderProfileContent(container, {
           const profile = await api.getProfile(viewedUserId);
           showClientAbout(postsContainer, profile);
         }
+      } else if (tabId === 'publications' && !isTrainer) {
+        if (filtersElement) filtersElement.style.display = 'none';
+        if (addButtonContainer) addButtonContainer.style.display = 'none';
+        sectionTitle.textContent = 'Понравившиеся';
+
+        const likedPosts = await loadLikedPosts(api, viewedUserId);
+        await fillProfilePostsSection(postsContainer, {
+          activeTab: tabId,
+          posts: likedPosts,
+          api,
+          canManagePosts: false,
+          onPostsUpdated
+        });
       } else {
         if (filtersElement) {
           filtersElement.style.display = (tabId === 'main' || tabId === 'publications') ? 'flex' : 'none';
@@ -269,7 +314,6 @@ export async function renderProfileContent(container, {
     });
   });
 
-  // Кнопка "Добавить публикацию"
   if (canAddPost && currentTab === 'publications' && isTrainer) {
     const btnContainer = element.querySelector('#add-post-button-container');
     if (btnContainer) {
@@ -289,9 +333,23 @@ export async function renderProfileContent(container, {
     }
   }
 
-  // Рендеринг постов
-  const postsContainer = element.querySelector('#posts-container');
-  if (currentTab !== 'about') {
+  if (currentTab === 'about') {
+    if (isTrainer) {
+      await showTrainerAbout(postsContainer, api, viewedUserId);
+    } else {
+      const profile = await api.getProfile(viewedUserId);
+      showClientAbout(postsContainer, profile);
+    }
+  } else if (currentTab === 'publications' && !isTrainer) {
+    const likedPosts = await loadLikedPosts(api, viewedUserId);
+    await fillProfilePostsSection(postsContainer, {
+      activeTab: currentTab,
+      posts: likedPosts,
+      api,
+      canManagePosts: false,
+      onPostsUpdated
+    });
+  } else {
     await fillProfilePostsSection(postsContainer, {
       activeTab: currentTab,
       posts,
@@ -299,13 +357,6 @@ export async function renderProfileContent(container, {
       canManagePosts,
       onPostsUpdated
     });
-  } else {
-    if (isTrainer) {
-      await showTrainerAbout(postsContainer, api, viewedUserId);
-    } else {
-      const profile = await api.getProfile(viewedUserId);
-      showClientAbout(postsContainer, profile);
-    }
   }
 
   container.appendChild(element);
