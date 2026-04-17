@@ -206,7 +206,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   await renderFields(originalIsTrainer);
 
   // Кнопка "Стать тренером" для клиента
- /*if (!originalIsTrainer) {
+ if (!originalIsTrainer) {
     const becomeTrainerContainer = document.createElement('div');
     becomeTrainerContainer.style.marginTop = 'var(--spacing-md)';
     becomeTrainerContainer.style.textAlign = 'center';
@@ -222,7 +222,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
         becomeTrainerContainer.remove();
       }
     });
-  }*/
+  }
 
   // Управление аватаром
   const updateAvatarPreview = () => {
@@ -311,8 +311,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
     return isValid;
   };
 
-  // Отправка
-// Отправка
+
 form.addEventListener('submit', async e => {
   e.preventDefault();
   globalErr.hidden = true;
@@ -326,20 +325,37 @@ form.addEventListener('submit', async e => {
       profileData[name] = api.getValue().trim();
     }
 
-    // Обновление базового профиля
+    // Подготавливаем тело запроса
+    const updatePayload = {
+      username: profileData.username,
+      first_name: profileData.first_name,
+      last_name: profileData.last_name,
+      bio: profileData.bio || ''
+    };
+
+    // Если пользователь тренер или становится тренером — добавляем trainer_details
+    if (originalIsTrainer || becomingTrainer) {
+      updatePayload.trainer_details = {
+        education_degree: profileData.education_degree || '',
+        career_since_date: profileData.career_since_date,
+        sports: [{
+          sport_type_id: 1,  // TODO: брать из выбора видов спорта
+          experience_years: 1,
+          sports_rank: profileData.sport_discipline || ''
+        }]
+      };
+    }
+
+    console.log('📤 Updating profile with:', updatePayload);
+
+    // Обновление профиля (включая trainer_details)
     await api.request('/profiles/me', {
       method: 'PATCH',
-      body: JSON.stringify({
-        username: profileData.username,
-        first_name: profileData.first_name,
-        last_name: profileData.last_name,
-        bio: profileData.bio || ''
-      })
+      body: JSON.stringify(updatePayload)
     });
 
     // Аватар: загрузка нового или удаление существующего
     if (avatarFile) {
-      // Загрузка нового аватара
       const formData = new FormData();
       formData.append('avatar', avatarFile, avatarFile.name || 'avatar.jpg');
       await fetch(`${api.baseURL}/profiles/me/avatar`, {
@@ -347,12 +363,13 @@ form.addEventListener('submit', async e => {
         credentials: 'include',
         body: formData
       });
+      console.log('✅ Avatar uploaded');
     } else if (avatarRemoved) {
-      // Удаление аватара
       try {
         await api.deleteAvatar();
+        console.log('✅ Avatar deleted');
       } catch (error) {
-        // Если DELETE не поддерживается, пробуем PATCH с null
+        console.log('DELETE failed, trying PATCH with avatar_url: null');
         await api.request('/profiles/me', {
           method: 'PATCH',
           body: JSON.stringify({ avatar_url: null })
@@ -363,6 +380,7 @@ form.addEventListener('submit', async e => {
     onUpdated?.();
     close();
   } catch (error) {
+    console.error('Profile update error:', error);
     let message = error.message || 'Не удалось сохранить изменения';
     if (error.data?.error?.fields) {
       error.data.error.fields.forEach(f => {
