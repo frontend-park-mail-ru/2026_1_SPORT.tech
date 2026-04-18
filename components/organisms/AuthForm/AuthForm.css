@@ -232,6 +232,14 @@
     .sport-types-field__dropdown {
         max-height: 200px;
     }
+
+    .sport-types-field__option {
+        align-items: flex-start;
+    }
+
+    .sport-types-field__checkbox {
+        margin-top: 2px;
+    }
 }
 
 @media (max-width: 480px) {

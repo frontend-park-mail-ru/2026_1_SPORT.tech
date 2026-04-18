@@ -134,7 +134,14 @@
     }
 
     .auth-page__feature {
-        justify-content: center;
+        justify-content: flex-start;
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .auth-page__feature-icon {
+        flex: 0 0 auto;
+        margin-top: 2px;
     }
 }
 
