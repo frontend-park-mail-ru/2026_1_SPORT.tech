@@ -109,6 +109,11 @@
   scrollbar-color: #E85A2B #FFE8E3;
 }
 
+#posts-container.profile-content__posts-container--message {
+  overflow-y: hidden;
+  padding-right: 0;
+}
+
 #posts-container::-webkit-scrollbar {
   width: 6px;
 }

@@ -53,7 +53,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   const trainerFields = [
     { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 255, placeholder: 'Введите образование' },
     { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 10, placeholder: 'ГГГГ-ММ-ДД' },
-    { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 100, placeholder: 'например: футбол, плавание, бокс' }
+    { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 100, placeholder: 'Например: футбол, плавание, бокс' }
   ];
 
   // Функция валидации поля
@@ -184,7 +184,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
 
       if (field.name === 'sport_discipline') {
         const helpText = document.createElement('small');
-        helpText.textContent = 'Можно указать несколько через запятую';
+        helpText.textContent = 'Например: футбол, плавание, бокс. Можно указать несколько через запятую.';
         helpText.style.cssText = `
           font-size: var(--font-size-xs);
           color: var(--text-placeholder);

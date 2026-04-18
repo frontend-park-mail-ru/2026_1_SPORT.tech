@@ -9,6 +9,11 @@ import { renderButton } from '../../atoms/Button/Button.js';
 import { renderPostCard } from '../../molecules/PostCard/PostCard.js';
 import { openPostFormModal } from '../../molecules/PostFormModal/PostFormModal.js';
 
+function setPostsContainerMessageState(container, isMessageState) {
+  if (!container) return;
+  container.classList.toggle('profile-content__posts-container--message', isMessageState);
+}
+
 /**
  * Заполняет контейнер постов
  */
@@ -20,6 +25,7 @@ export async function fillProfilePostsSection(postsContainer, {
   onPostsUpdated
 }) {
   if (posts.length === 0 && activeTab !== 'about') {
+    setPostsContainerMessageState(postsContainer, true);
     postsContainer.innerHTML = `
       <div class="profile-content__empty">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -33,6 +39,7 @@ export async function fillProfilePostsSection(postsContainer, {
     return;
   }
 
+  setPostsContainerMessageState(postsContainer, false);
   postsContainer.innerHTML = '';
   await Promise.all(posts.map(post => renderPostCard(postsContainer, {
       ...post,
@@ -69,9 +76,12 @@ async function showTrainerAbout(container, api, userId) {
     const trainerDetails = profile.trainer_details;
 
     if (!trainerDetails) {
+      setPostsContainerMessageState(container, true);
       container.innerHTML = `<div class="profile-content__empty"><p>Информация о тренере недоступна</p></div>`;
       return;
     }
+
+    setPostsContainerMessageState(container, false);
 
     const careerDate = trainerDetails.career_since_date
       ? new Date(trainerDetails.career_since_date)
@@ -127,11 +137,13 @@ async function showTrainerAbout(container, api, userId) {
       </div>
     `;
   } catch (error) {
+    setPostsContainerMessageState(container, true);
     container.innerHTML = `<div class="profile-content__empty"><p>Не удалось загрузить информацию</p></div>`;
   }
 }
 
 function showClientAbout(container, profile) {
+  setPostsContainerMessageState(container, false);
   const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Не указано';
 
   container.innerHTML = `

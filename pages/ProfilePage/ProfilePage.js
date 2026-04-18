@@ -59,6 +59,8 @@ export async function renderProfilePage(api, container, {
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const page = wrapper.firstElementChild;
+
+  container.innerHTML = '';
   container.appendChild(page);
 
   const sidebarContainer = page.querySelector('#sidebar-container');
