@@ -31,7 +31,7 @@
  *   id: 123,
  *   name: 'Иван Петров',
  *   role: 'Тренер',
- *   onClick: (user) => console.log('Selected:', user)
+ *   onClick: user => handleUserSelect(user)
  * });
  */
 export async function renderUserPhotoItem(container, config = {}) {

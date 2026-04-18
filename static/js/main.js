@@ -67,6 +67,19 @@ function renderProfileShell(container) {
   `;
 }
 
+function createLogoutHandler(api, setCurrentUser, navigateTo) {
+  return async () => {
+    try {
+      await api.logout();
+      setCurrentUser(null);
+      localStorage.removeItem('user');
+      navigateTo('/auth');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+}
+
 async function loadTemplates() {
   if (templatesPromise) {
     return templatesPromise;
@@ -83,6 +96,7 @@ async function loadTemplates() {
     { name: 'Sidebar', folder: 'organisms' },
     { name: 'ProfileContent', folder: 'organisms' },
     { name: 'AuthPage', folder: 'pages' }, { name: 'ProfilePage', folder: 'pages' },
+    { name: 'HomePage', folder: 'pages' },
     { name: 'ProfileEditModal', folder: 'molecules' }
   ];
 
@@ -148,16 +162,38 @@ function createRouter(api) {
     }
   }
 
-  async function showProfilePage(currentUser) {
+  async function showHomePage(currentUser) {
     const app = document.getElementById('app');
     renderProfileShell(app);
     document.body.classList.remove('auth-page');
 
     try {
-      const userId = currentUser?.user?.user_id;
+      const { renderHomePage } = await import('/pages/HomePage/HomePage.js');
+
+      await renderHomePage(api, app, {
+        currentUser,
+        onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
+      });
+    } catch (error) {
+      console.error('Failed to load HomePage:', error);
+      app.innerHTML = `
+        <div style="color: red; padding: 20px; text-align: center;">
+          <h3>Ошибка загрузки главной страницы</h3>
+          <p>${error.message}</p>
+        </div>
+      `;
+    }
+  }
+
+  async function showProfilePage(currentUser, viewedUserId = currentUser?.user?.user_id) {
+    const app = document.getElementById('app');
+    renderProfileShell(app);
+    document.body.classList.remove('auth-page');
+
+    try {
       const [{ renderProfilePage }, data] = await Promise.all([
         import('/pages/ProfilePage/ProfilePage.js'),
-        loadProfilePageData(api, userId, currentUser)
+        loadProfilePageData(api, viewedUserId, currentUser)
       ]);
 
       await renderProfilePage(api, app, {
@@ -168,16 +204,7 @@ function createRouter(api) {
         activeTab: 'publications',
         popularPosts: [],
         viewedUserId: data.viewedUserId,
-        onLogout: async () => {
-          try {
-            await api.logout();
-            setCurrentUser(null);
-            localStorage.removeItem('user');
-            navigateTo('/auth');
-          } catch (error) {
-            console.error('Logout error:', error);
-          }
-        }
+        onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
       });
     } catch (error) {
       console.error('Failed to load ProfilePage:', error);
@@ -208,15 +235,25 @@ function createRouter(api) {
     ]);
     const isAuthenticated = !!currentUser;
     const path = window.location.pathname;
+    const viewedProfileMatch = path.match(/^\/profile\/(\d+)$/);
 
-    if (path === '/' || path === '/index.html') {
-      navigateTo(isAuthenticated ? '/profile' : '/auth');
+    if (path === '/index.html') {
+      navigateTo(isAuthenticated ? '/' : '/auth');
+      return;
+    }
+
+    if (path === '/') {
+      if (!isAuthenticated) {
+        navigateTo('/auth');
+      } else {
+        await showHomePage(currentUser);
+      }
       return;
     }
 
     if (path === '/auth') {
       if (isAuthenticated) {
-        navigateTo('/profile');
+        navigateTo('/');
       } else {
         await showAuthPage();
       }
@@ -232,7 +269,16 @@ function createRouter(api) {
       return;
     }
 
-    navigateTo(isAuthenticated ? '/profile' : '/auth');
+    if (viewedProfileMatch) {
+      if (!isAuthenticated) {
+        navigateTo('/auth');
+      } else {
+        await showProfilePage(currentUser, Number(viewedProfileMatch[1]));
+      }
+      return;
+    }
+
+    navigateTo(isAuthenticated ? '/' : '/auth');
   }
 
   return { handleRouting, navigateTo, setCurrentUser, getCurrentUser };

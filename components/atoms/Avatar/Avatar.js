@@ -70,7 +70,7 @@ function getInitials(name) {
  * await renderAvatar(container, {
  *   name: 'Иван Петров',
  *   size: AVATAR_SIZES.LARGE,
- *   onClick: (user) => console.log('Clicked:', user)
+ *   onClick: user => handleAvatarClick(user)
  * });
  * 
  * @example

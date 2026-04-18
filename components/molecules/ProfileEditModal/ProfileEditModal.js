@@ -353,8 +353,6 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
         : rawValue;
     }
 
-    console.log('🔍 Profile data from form:', profileData);
-
     const updatePayload = {
       username: profileData.username,
       first_name: profileData.first_name,
@@ -379,9 +377,6 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
       }
 
       if (experienceYears < 0) experienceYears = 0;
-
-      console.log('📅 Calculated experience years:', experienceYears);
-
       updatePayload.trainer_details = {
         education_degree: profileData.education_degree || '',
         career_since_date: profileData.career_since_date,
@@ -394,17 +389,11 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
           };
         })
       };
-      console.log('🔍 Adding trainer_details:', updatePayload.trainer_details);
     }
-
-    console.log('📤 FULL update payload:', JSON.stringify(updatePayload, null, 2));
-
-    const response = await api.request('/profiles/me', {
+    await api.request('/profiles/me', {
       method: 'PATCH',
       body: JSON.stringify(updatePayload)
     });
-
-    console.log('✅ Profile update response:', response);
 
     if (avatarFile) {
       const formData = new FormData();
@@ -414,7 +403,6 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
         credentials: 'include',
         body: formData
       });
-      console.log('✅ Avatar uploaded');
     } else if (avatarRemoved) {
       try {
         await api.deleteAvatar();

@@ -40,7 +40,7 @@ export async function renderAuthPage(container, api) {
         window.router?.setCurrentUser(response);
       }
 
-      window.router.navigateTo('/profile');
+      window.router.navigateTo('/');
     } catch (error) {
       throw error;
     }
@@ -68,7 +68,7 @@ export async function renderAuthPage(container, api) {
         window.router?.setCurrentUser(response);
       }
 
-      window.router.navigateTo('/profile');
+      window.router.navigateTo('/');
     } catch (error) {
       throw error;
     }
@@ -122,7 +122,7 @@ async function handleTrainerRegister(data) {
         if (response?.user) {
             localStorage.setItem('user', JSON.stringify(response.user));
             window.router?.setCurrentUser(response);
-            window.router.navigateTo('/profile');
+            window.router.navigateTo('/');
         }
     } catch (error) {
         throw error;

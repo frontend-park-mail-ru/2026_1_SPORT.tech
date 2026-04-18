@@ -152,6 +152,15 @@ async request(endpoint, options = {}) {
   }
 
   /**
+   * Получение списка тренеров
+   * @async
+   * @returns {Promise<Object>} Список тренеров
+   */
+  async getTrainers() {
+    return this.request('/trainers');
+  }
+
+  /**
    * Получение постов пользователя
    * @async
    * @param {number} userId - ID пользователя
