@@ -71,9 +71,22 @@ function formatPostContent(textContent) {
     .replace(/\n/g, '<br>');
 }
 
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('\'', '&#39;');
+}
+
 async function showTrainerAbout(container, api, userId) {
   try {
-    const profile = await api.getProfile(userId);
+    const [profile, sportTypesResponse] = await Promise.all([
+      api.getProfile(userId),
+      api.getSportTypes?.().catch(() => ({ sport_types: [] })) ?? { sport_types: [] }
+    ]);
     const trainerDetails = profile.trainer_details;
 
     if (!trainerDetails) {
@@ -104,11 +117,14 @@ async function showTrainerAbout(container, api, userId) {
     }
 
     const sports = trainerDetails.sports || [];
+    const sportTypes = Array.isArray(sportTypesResponse?.sport_types) ? sportTypesResponse.sport_types : [];
+    const sportNamesById = new Map(
+      sportTypes.map(sportType => [Number(sportType.sport_type_id), sportType.name])
+    );
     const sportsList = sports.length > 0
       ? sports.map(s => `
           <div class="trainer-about__sport-item">
-            <span class="trainer-about__sport-name">${s.sports_rank || 'Вид спорта'}</span>
-            <span class="trainer-about__sport-years">Опыт: ${experienceYears} ${getYearsWord(experienceYears)}</span>
+            <span class="trainer-about__sport-name">${escapeHtml(sportNamesById.get(Number(s.sport_type_id)) || 'Не указано')}</span>
           </div>
         `).join('')
       : '<p class="trainer-about__section-text">Не указано</p>';
@@ -117,7 +133,7 @@ async function showTrainerAbout(container, api, userId) {
       <div class="trainer-about">
         <div class="trainer-about__section">
           <h3 class="trainer-about__section-title">Образование</h3>
-          <p class="trainer-about__section-text">${trainerDetails.education_degree || 'Не указано'}</p>
+          <p class="trainer-about__section-text">${escapeHtml(trainerDetails.education_degree || 'Не указано')}</p>
         </div>
         <div class="trainer-about__section">
           <h3 class="trainer-about__section-title">Начало карьеры</h3>
@@ -133,7 +149,7 @@ async function showTrainerAbout(container, api, userId) {
         </div>
         <div class="trainer-about__section">
           <h3 class="trainer-about__section-title">О себе</h3>
-          <p class="trainer-about__section-text">${profile.bio || 'Не указано'}</p>
+          <p class="trainer-about__section-text">${escapeHtml(profile.bio || 'Не указано')}</p>
         </div>
       </div>
     `;

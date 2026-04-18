@@ -393,7 +393,6 @@
 
 .trainer-about__sport-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
   background: #F8FAFC;
@@ -405,13 +404,4 @@
   font-size: 14px;
   font-weight: 500;
   color: #1A2B3C;
-}
-
-.trainer-about__sport-years {
-  font-size: 13px;
-  color: #E85A2B;
-  font-weight: 500;
-  background: #FFF5F0;
-  padding: 4px 10px;
-  border-radius: 20px;
 }
