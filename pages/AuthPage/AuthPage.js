@@ -37,6 +37,7 @@ export async function renderAuthPage(container, api) {
 
       if (response?.user) {
         localStorage.setItem('user', JSON.stringify(response.user));
+        window.router?.setCurrentUser(response);
       }
 
       window.router.navigateTo('/profile');
@@ -64,6 +65,7 @@ export async function renderAuthPage(container, api) {
 
       if (response?.user) {
         localStorage.setItem('user', JSON.stringify(response.user));
+        window.router?.setCurrentUser(response);
       }
 
       window.router.navigateTo('/profile');
@@ -121,6 +123,7 @@ async function handleTrainerRegister(data) {
 
         if (response?.user) {
             localStorage.setItem('user', JSON.stringify(response.user));
+            window.router?.setCurrentUser(response);
             window.router.navigateTo('/profile');
         }
     } catch (error) {

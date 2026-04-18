@@ -59,16 +59,9 @@ export async function renderProfilePage(api, container, {
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const page = wrapper.firstElementChild;
+  container.appendChild(page);
 
   const sidebarContainer = page.querySelector('#sidebar-container');
-  await renderSidebar(sidebarContainer, {
-    activePage: 'profile',
-    currentUser,
-    users: subscriptions,
-    api,
-    onLogout
-  });
-
   const profileContainer = page.querySelector('#profile-container');
 
   const headerContainer = document.createElement('div');
@@ -83,8 +76,7 @@ export async function renderProfilePage(api, container, {
    * Перезагрузка списка постов после лайка, редактирования и т.д.
    */
   async function reloadPosts() {
-    const current = await api.getCurrentUser();
-    const data = await loadProfilePageData(api, viewedUserId, current);
+    const data = await loadProfilePageData(api, viewedUserId);
     const postsContainer = contentContainer.querySelector('#posts-container');
     if (!postsContainer) return;
     await fillProfilePostsSection(postsContainer, {
@@ -96,36 +88,40 @@ export async function renderProfilePage(api, container, {
     });
   }
 
-  // pages/ProfilePage/ProfilePage.js
-
-await renderProfileHeader(headerContainer, {
-  name: profile.name,
-  role: profile.role,
-  avatar: profile.avatar,
-  isOwnProfile: profile.isOwnProfile,
-  showDonate: profile.isTrainer, //&& !profile.isOwnProfile,
-  api,
-  onDonate: () => {
-
-    openDonationModal({
+  await Promise.all([
+    renderSidebar(sidebarContainer, {
+      activePage: 'profile',
+      currentUser,
+      users: subscriptions,
       api,
-      recipientUserId: viewedUserId
-    });
-  }
-});
+      onLogout
+    }),
+    renderProfileHeader(headerContainer, {
+      name: profile.name,
+      role: profile.role,
+      avatar: profile.avatar,
+      isOwnProfile: profile.isOwnProfile,
+      showDonate: profile.isTrainer,
+      api,
+      onDonate: () => {
+        openDonationModal({
+          api,
+          recipientUserId: viewedUserId
+        });
+      }
+    }),
+    renderProfileContent(contentContainer, {
+      activeTab,
+      posts,
+      popularPosts,
+      api,
+      canAddPost: profile.isOwnProfile && profile.isTrainer,
+      canManagePosts: profile.isOwnProfile && profile.isTrainer,
+      onPostsUpdated: reloadPosts,
+      viewedUserId,
+      isTrainer: profile.isTrainer
+    })
+  ]);
 
-  await renderProfileContent(contentContainer, {
-    activeTab,
-    posts,
-    popularPosts,
-    api,
-    canAddPost: profile.isOwnProfile && profile.isTrainer,
-    canManagePosts: profile.isOwnProfile && profile.isTrainer,
-    onPostsUpdated: reloadPosts,
-  viewedUserId: viewedUserId,
-  isTrainer: profile.isTrainer
-  });
-
-  container.appendChild(page);
   return page;
 }

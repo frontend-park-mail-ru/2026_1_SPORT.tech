@@ -34,14 +34,12 @@ export async function fillProfilePostsSection(postsContainer, {
   }
 
   postsContainer.innerHTML = '';
-  for (const post of posts) {
-    await renderPostCard(postsContainer, {
+  await Promise.all(posts.map(post => renderPostCard(postsContainer, {
       ...post,
       api,
       isOwner: canManagePosts,
       onPostsUpdated
-    });
-  }
+    })));
 }
 
 function getYearsWord(years) {
