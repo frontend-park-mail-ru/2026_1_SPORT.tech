@@ -12,6 +12,7 @@ import { openPostFormModal } from '../../molecules/PostFormModal/PostFormModal.j
 function setPostsContainerMessageState(container, isMessageState) {
   if (!container) return;
   container.classList.toggle('profile-content__posts-container--message', isMessageState);
+  container.closest('.profile-content__main')?.classList.toggle('profile-content__main--message', isMessageState);
 }
 
 /**

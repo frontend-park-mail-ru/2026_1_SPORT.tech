@@ -181,6 +181,10 @@
   margin-bottom: var(--spacing-md);
 }
 
+.profile-edit-modal__fields .sport-types-field {
+  margin-bottom: var(--spacing-md);
+}
+
 /* Выравнивание кнопок */
 .profile-edit-modal__actions {
   display: flex;

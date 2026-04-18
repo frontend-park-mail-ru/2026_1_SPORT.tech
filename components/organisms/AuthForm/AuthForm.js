@@ -28,7 +28,7 @@ export const AUTH_MODES = {
 
 let sportTypesPromise = null;
 
-async function loadSportTypes(api) {
+export async function loadSportTypes(api) {
   if (!api?.getSportTypes) {
     return [];
   }
@@ -45,7 +45,7 @@ async function loadSportTypes(api) {
   return sportTypesPromise;
 }
 
-function createSportTypesField(container, {
+export function createSportTypesField(container, {
   label,
   placeholder,
   required,

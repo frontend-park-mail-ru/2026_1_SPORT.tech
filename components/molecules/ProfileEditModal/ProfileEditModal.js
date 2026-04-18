@@ -1,6 +1,7 @@
 // components/molecules/ProfileEditModal/ProfileEditModal.js
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button.js';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input.js';
+import { createSportTypesField, loadSportTypes } from '../../organisms/AuthForm/AuthForm.js';
 import { Validator } from '/src/utils/validator.js';
 
 export async function openProfileEditModal({ api, currentUser, onUpdated }) {
@@ -39,6 +40,8 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   let avatarFile = null;
   let avatarRemoved = false;
   let becomingTrainer = false;
+  let sportTypeOptions = [];
+  let sportTypesLoaded = false;
 
   const validator = new Validator();
   const inputsApi = new Map();
@@ -53,7 +56,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   const trainerFields = [
     { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 255, placeholder: 'Введите образование' },
     { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 10, placeholder: 'ГГГГ-ММ-ДД' },
-    { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 100, placeholder: 'Например: футбол, плавание, бокс' }
+    { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 100, placeholder: 'Выберите виды спорта' }
   ];
 
   // Функция валидации поля
@@ -107,11 +110,12 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
         }
         break;
       case 'sport_discipline':
-        validator.reset();
-        if (value && value.trim() !== '') {
-          validator.validateField(value, 'sports_rank', validator.rules.sports_rank);
-        }
-        result = { isValid: !validator.hasErrors(), errors: validator.getErrors() };
+        result = Array.isArray(value) && value.length > 0
+          ? { isValid: true, errors: [] }
+          : {
+              isValid: false,
+              errors: [{ field: 'sport_discipline', message: 'Выберите хотя бы один вид спорта' }]
+            };
         break;
       default:
         return true;
@@ -129,6 +133,11 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   const renderFields = async (showTrainerFields) => {
     fieldsContainer.innerHTML = '';
     inputsApi.clear();
+
+    if (showTrainerFields && !sportTypesLoaded) {
+      sportTypesLoaded = true;
+      sportTypeOptions = await loadSportTypes(api).catch(() => []);
+    }
 
     const fieldsToRender = [...baseFields];
     if (showTrainerFields) {
@@ -150,7 +159,40 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
       } else if (field.name === 'career_since_date') {
         value = user.trainer_details?.career_since_date || '';
       } else if (field.name === 'sport_discipline') {
-        value = user.trainer_details?.sports?.[0]?.sports_rank || '';
+        value = Array.isArray(user.trainer_details?.sports)
+          ? user.trainer_details.sports
+              .map(sport => Number(sport.sport_type_id))
+              .filter(Number.isFinite)
+          : [];
+      }
+
+      if (field.name === 'sport_discipline') {
+        const sportFieldApi = createSportTypesField(container, {
+          label: field.label,
+          placeholder: field.placeholder,
+          required: field.required,
+          options: sportTypeOptions,
+          onChange: newValue => {
+            validateField(field.name, newValue);
+          }
+        });
+
+        sportFieldApi.setValue(value);
+
+        const helpText = document.createElement('small');
+        helpText.textContent = sportTypeOptions.length > 0
+          ? 'Выберите один или несколько видов спорта'
+          : 'Не удалось загрузить список видов спорта';
+        helpText.style.cssText = `
+          font-size: var(--font-size-xs);
+          color: var(--text-placeholder);
+          margin-top: 2px;
+          display: block;
+        `;
+        container.appendChild(helpText);
+
+        inputsApi.set(field.name, sportFieldApi);
+        continue;
       }
 
       const api = await renderInput(container, {
@@ -180,18 +222,6 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
           }
           validateField(field.name, e.target.value);
         });
-      }
-
-      if (field.name === 'sport_discipline') {
-        const helpText = document.createElement('small');
-        helpText.textContent = 'Например: футбол, плавание, бокс. Можно указать несколько через запятую.';
-        helpText.style.cssText = `
-          font-size: var(--font-size-xs);
-          color: var(--text-placeholder);
-          margin-top: 2px;
-          display: block;
-        `;
-        container.appendChild(helpText);
       }
 
       inputsApi.set(field.name, api);
@@ -317,7 +347,10 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
   try {
     const profileData = {};
     for (const [name, api] of inputsApi) {
-      profileData[name] = api.getValue().trim();
+      const rawValue = api.getValue();
+      profileData[name] = typeof rawValue === 'string'
+        ? rawValue.trim()
+        : rawValue;
     }
 
     console.log('🔍 Profile data from form:', profileData);
@@ -333,6 +366,12 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
       const careerDate = new Date(profileData.career_since_date);
       const today = new Date();
       let experienceYears = today.getFullYear() - careerDate.getFullYear();
+      const selectedSportTypes = Array.isArray(profileData.sport_discipline)
+        ? profileData.sport_discipline
+        : [];
+      const existingSportsById = new Map(
+        (user.trainer_details?.sports || []).map(sport => [Number(sport.sport_type_id), sport])
+      );
 
       const monthDiff = today.getMonth() - careerDate.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < careerDate.getDate())) {
@@ -346,11 +385,14 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
       updatePayload.trainer_details = {
         education_degree: profileData.education_degree || '',
         career_since_date: profileData.career_since_date,
-        sports: [{
-          sport_type_id: 1,
-          experience_years: experienceYears,
-          sports_rank: profileData.sport_discipline || ''
-        }]
+        sports: selectedSportTypes.map(sportTypeId => {
+          const existingSport = existingSportsById.get(Number(sportTypeId));
+          return {
+            sport_type_id: Number(sportTypeId),
+            experience_years: experienceYears,
+            ...(existingSport?.sports_rank ? { sports_rank: existingSport.sports_rank } : {})
+          };
+        })
       };
       console.log('🔍 Adding trainer_details:', updatePayload.trainer_details);
     }
