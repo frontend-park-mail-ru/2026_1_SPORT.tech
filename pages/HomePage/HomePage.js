@@ -109,12 +109,15 @@ export async function renderHomePage(api, container, {
   const sidebarContainer = page.querySelector('#sidebar-container');
   const grid = page.querySelector('#trainers-grid');
   const emptyState = page.querySelector('#trainers-empty');
+  const currentUserProfile = currentUser?.user?.user_id
+    ? await api.getProfile(currentUser.user.user_id).catch(() => null)
+    : null;
 
   const sidebarUser = currentUser?.user ? {
     id: currentUser.user.user_id,
-    name: getFullName(currentUser.user),
-    role: getUserRoleLabel(currentUser.user.is_trainer),
-    avatar: currentUser.user.avatar_url
+    name: getFullName(currentUserProfile || currentUser.user),
+    role: getUserRoleLabel((currentUserProfile || currentUser.user).is_trainer),
+    avatar: currentUserProfile?.avatar_url || currentUser.user.avatar_url || currentUser.user.avatar || null
   } : null;
 
   await renderSidebar(sidebarContainer, {

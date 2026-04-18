@@ -60,6 +60,10 @@ export function formatPostContent(textContent) {
 export function mapProfileData(apiData, currentUser) {
   const isOwnProfile = apiData.is_me;
   const fullName = getFullName(apiData);
+  const currentUserData = currentUser?.user || currentUser || null;
+  const currentUserAvatar = isOwnProfile
+    ? apiData.avatar_url
+    : currentUserData?.avatar_url || currentUserData?.avatar || null;
 
   return {
     profile: {
@@ -70,10 +74,10 @@ export function mapProfileData(apiData, currentUser) {
       isTrainer: Boolean(apiData.is_trainer)
     },
     currentUser: currentUser?.user ? {
-      id: currentUser.user.user_id,
-      name: getFullName(currentUser.user),
-      role: getUserRoleLabel(currentUser.user.is_trainer),
-      avatar: currentUser.user.avatar_url
+      id: currentUserData.user_id,
+      name: getFullName(currentUserData),
+      role: getUserRoleLabel(currentUserData.is_trainer),
+      avatar: currentUserAvatar
     } : null
   };
 }
