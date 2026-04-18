@@ -12,6 +12,61 @@ import { loadProfilePageData } from '/src/utils/profilePageData.js';
 Handlebars.templates = {};
 let templatesPromise = null;
 
+function renderBootScreen(container, message = 'Загружаем интерфейс') {
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="app-loader" aria-live="polite" aria-busy="true">
+      <div class="app-loader__panel">
+        <div class="app-loader__brand">SPORT.tech</div>
+        <div class="app-loader__spinner"></div>
+        <p class="app-loader__message">${message}</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderProfileShell(container) {
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="profile-page profile-page--loading" aria-live="polite" aria-busy="true">
+      <div class="profile-page__sidebar">
+        <div class="page-skeleton page-skeleton--sidebar">
+          <div class="page-skeleton__block page-skeleton__block--title"></div>
+          <div class="page-skeleton__block page-skeleton__block--nav"></div>
+          <div class="page-skeleton__block page-skeleton__block--nav"></div>
+          <div class="page-skeleton__block page-skeleton__block--nav"></div>
+          <div class="page-skeleton__block page-skeleton__block--footer"></div>
+        </div>
+      </div>
+      <div class="profile-page__main">
+        <div class="profile-page__container">
+          <div class="page-skeleton page-skeleton--header">
+            <div class="page-skeleton__block page-skeleton__block--cover"></div>
+            <div class="page-skeleton__row">
+              <div class="page-skeleton__block page-skeleton__block--avatar"></div>
+              <div class="page-skeleton__meta">
+                <div class="page-skeleton__block page-skeleton__block--name"></div>
+                <div class="page-skeleton__block page-skeleton__block--role"></div>
+              </div>
+            </div>
+          </div>
+          <div class="page-skeleton page-skeleton--content">
+            <div class="page-skeleton__row page-skeleton__row--tabs">
+              <div class="page-skeleton__block page-skeleton__block--tab"></div>
+              <div class="page-skeleton__block page-skeleton__block--tab"></div>
+              <div class="page-skeleton__block page-skeleton__block--tab"></div>
+            </div>
+            <div class="page-skeleton__block page-skeleton__block--card"></div>
+            <div class="page-skeleton__block page-skeleton__block--card"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 async function loadTemplates() {
   if (templatesPromise) {
     return templatesPromise;
@@ -76,7 +131,7 @@ function createRouter(api) {
 
   async function showAuthPage() {
     const app = document.getElementById('app');
-    app.innerHTML = '';
+    renderBootScreen(app, 'Загружаем страницу входа');
     document.body.classList.add('auth-page');
 
     try {
@@ -95,7 +150,7 @@ function createRouter(api) {
 
   async function showProfilePage(currentUser) {
     const app = document.getElementById('app');
-    app.innerHTML = '';
+    renderProfileShell(app);
     document.body.classList.remove('auth-page');
 
     try {
@@ -194,6 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const apiClient = new ApiClient(API_BASE_URL);
   const router = createRouter(apiClient);
   window.router = router;
+  renderBootScreen(document.getElementById('app'));
   await router.handleRouting();
 
   window.addEventListener('popstate', () => {
