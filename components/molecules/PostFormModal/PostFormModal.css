@@ -122,3 +122,32 @@
   gap: var(--spacing-md);
   flex-wrap: wrap;
 }
+
+@media (max-width: 768px) {
+  .post-form-modal {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .post-form-modal__panel {
+    max-width: none;
+    max-height: calc(100dvh - 24px);
+    padding: 18px 16px;
+    border-radius: 16px;
+  }
+
+  .post-form-modal__textarea {
+    min-height: 140px;
+    font-size: 16px;
+  }
+
+  .post-form-modal__actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .post-form-modal__actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+}

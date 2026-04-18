@@ -102,12 +102,15 @@
 
 @media (max-width: 768px) {
     .auth-page {
+        position: relative;
+        min-height: 100dvh;
         padding: var(--spacing-lg);
         align-items: flex-start;
     }
 
     .auth-page__container {
         flex-direction: column;
+        gap: var(--spacing-xl);
         margin: 0; /* Убираем автоматические отступы */
     }
 
@@ -115,7 +118,36 @@
         text-align: center;
     }
 
+    .auth-page__form {
+        max-width: none;
+        width: 100%;
+    }
+
+    .auth-page__role-selector {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .auth-page__role-btn {
+        width: 100%;
+    }
+
     .auth-page__feature {
         justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .auth-page {
+        padding: 14px;
+    }
+
+    .auth-page__title {
+        font-size: 28px;
+    }
+
+    .auth-page__description {
+        font-size: 14px;
     }
 }

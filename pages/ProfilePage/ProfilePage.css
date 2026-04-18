@@ -32,3 +32,32 @@
 .profile-page__content {
   width: 100%;
 }
+
+@media (max-width: 1024px) {
+  .profile-page {
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+
+  .profile-page__sidebar {
+    width: 100%;
+  }
+
+  .profile-page__main {
+    padding: 16px;
+  }
+
+  .profile-page__container {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-page__main {
+    padding: 12px;
+  }
+
+  .profile-page__container {
+    gap: 12px;
+  }
+}

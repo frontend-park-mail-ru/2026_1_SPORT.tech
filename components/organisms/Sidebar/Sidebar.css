@@ -341,3 +341,142 @@
   height: 16px;
   color: #666;
 }
+
+@media (max-width: 1024px) {
+  .sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    border-radius: 0 0 20px 20px;
+    box-shadow: 0 14px 34px rgba(232, 90, 43, 0.18);
+  }
+
+  .sidebar__content {
+    overflow: visible;
+    padding-top: 0;
+  }
+
+  .sidebar__logo {
+    padding: 16px;
+  }
+
+  .sidebar__nav {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 12px 16px;
+    scrollbar-width: none;
+  }
+
+  .sidebar__nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sidebar__nav-item {
+    flex: 0 0 auto;
+    width: auto;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .sidebar__users {
+    min-height: 0;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .sidebar__users-title {
+    margin-bottom: 0;
+    padding: 0;
+  }
+
+  .sidebar__users-list {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .sidebar__users-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sidebar__user-item {
+    min-width: 220px;
+    margin-bottom: 0;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .sidebar__current-user {
+    margin: 12px 16px 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    border-radius: 0 0 18px 18px;
+  }
+
+  .sidebar__logo {
+    gap: 10px;
+    padding: 14px 12px 12px;
+  }
+
+  .sidebar__logo-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .sidebar__logo-text {
+    font-size: 18px;
+  }
+
+  .sidebar__logo-subtext {
+    display: none;
+  }
+
+  .sidebar__nav {
+    padding: 10px 12px;
+  }
+
+  .sidebar__nav-item {
+    padding: 10px 12px;
+  }
+
+  .sidebar__nav-text {
+    font-size: 13px;
+  }
+
+  .sidebar__users {
+    padding: 12px;
+  }
+
+  .sidebar__user-item {
+    min-width: 180px;
+  }
+
+  .sidebar__current-user {
+    margin: 12px;
+    padding: 12px;
+    align-items: flex-start;
+  }
+
+  .sidebar__menu-container {
+    align-self: center;
+  }
+
+  .sidebar__dropdown {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar__user-item {
+    min-width: 164px;
+  }
+}

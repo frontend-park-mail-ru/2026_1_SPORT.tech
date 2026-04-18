@@ -208,3 +208,44 @@
     border-color: var(--error-red);
     background: var(--error-light);
 }
+
+@media (max-width: 768px) {
+    .auth-form {
+        max-width: none;
+        padding: 20px 16px;
+        border-radius: var(--radius-lg);
+    }
+
+    .auth-form__header {
+        margin-bottom: var(--spacing-xl);
+    }
+
+    .auth-form__title {
+        font-size: 22px;
+    }
+
+    .auth-form__fields {
+        gap: 14px;
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .sport-types-field__dropdown {
+        max-height: 200px;
+    }
+}
+
+@media (max-width: 480px) {
+    .auth-form {
+        padding: 18px 14px;
+    }
+
+    .auth-form__alt-action {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .auth-form__alt-text {
+        margin-right: 0;
+    }
+}

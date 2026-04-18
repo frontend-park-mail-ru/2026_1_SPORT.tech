@@ -405,3 +405,137 @@
   font-weight: 500;
   color: #1A2B3C;
 }
+
+@media (max-width: 1024px) {
+  .profile-content__layout {
+    flex-direction: column;
+  }
+
+  .profile-content__main,
+  .profile-content__main--message {
+    height: auto;
+    min-height: 0;
+  }
+
+  #posts-container,
+  #posts-container.profile-content__posts-container--message {
+    overflow: visible;
+    flex: none;
+    min-height: 0;
+    padding-right: 0;
+  }
+
+  .profile-content__sidebar-right {
+    width: 100%;
+  }
+
+  .profile-content__popular {
+    height: auto;
+    max-height: none;
+  }
+
+  .profile-content__popular-list {
+    overflow: visible;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-content__tabs {
+    gap: 6px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    padding: 6px;
+    scrollbar-width: none;
+  }
+
+  .profile-content__tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .profile-content__tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .profile-content__main {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .profile-content__section-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+  }
+
+  .profile-content__section-title {
+    font-size: 16px;
+  }
+
+  .profile-content__header-actions {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .profile-content__filters {
+    align-self: flex-start;
+  }
+
+  .profile-content__add-button {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .profile-content__add-button .button {
+    width: 100%;
+  }
+
+  .profile-content__sidebar-right {
+    gap: 16px;
+  }
+
+  .profile-content__search,
+  .profile-content__popular {
+    padding: 14px;
+  }
+
+  .profile-content__popular-item {
+    padding: 8px;
+  }
+
+  .profile-content__popular-thumb {
+    width: 52px;
+    height: 52px;
+  }
+
+  .profile-content__empty {
+    padding: 48px 16px;
+  }
+
+  .trainer-about {
+    gap: 18px;
+  }
+
+  .trainer-about__section {
+    padding-bottom: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-content__main {
+    padding: 14px;
+  }
+
+  .profile-content__tab {
+    padding: 10px 12px;
+  }
+
+  .profile-content__popular-title {
+    white-space: normal;
+  }
+}

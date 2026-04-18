@@ -143,3 +143,59 @@ button.post-card__action {
 .post-card__icon-btn:hover {
   color: var(--base-purple);
 }
+
+@media (max-width: 768px) {
+  .post-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .post-card__header {
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+
+  .post-card__author-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 13px;
+  }
+
+  .post-card__title {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .post-card__content {
+    font-size: 13px;
+    line-height: 1.55;
+    margin-bottom: 12px;
+  }
+
+  .post-card__footer {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 12px;
+  }
+
+  .post-card__action {
+    font-size: 13px;
+  }
+
+  .post-card__actions-right {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .post-card__footer {
+    justify-content: space-between;
+  }
+
+  .post-card__actions-right {
+    width: auto;
+    margin-left: auto;
+  }
+}
