@@ -86,3 +86,125 @@
   font-size: var(--font-size-sm);
   text-align: center;
 }
+
+.input-field__input[type="date"] {
+    padding-right: 12px;
+    color-scheme: light;
+}
+
+.sport-types-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    width: 100%;
+    position: relative;
+}
+
+.sport-types-field__label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--base-black);
+    margin-bottom: var(--spacing-xs);
+}
+
+.sport-types-field__trigger {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    background: var(--base-white);
+    padding: 10px 42px 10px var(--spacing-md);
+    text-align: left;
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sport-types-field__trigger:hover,
+.sport-types-field--open .sport-types-field__trigger {
+    border-color: var(--border-focus);
+    box-shadow: var(--shadow-focus);
+}
+
+.sport-types-field__trigger-text {
+    display: block;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+}
+
+.sport-types-field__trigger-text--placeholder {
+    color: var(--text-placeholder);
+}
+
+.sport-types-field__chevron {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid var(--text-secondary);
+    border-bottom: 2px solid var(--text-secondary);
+    transform: translateY(-60%) rotate(45deg);
+    transition: transform 0.2s ease;
+}
+
+.sport-types-field--open .sport-types-field__chevron {
+    transform: translateY(-35%) rotate(-135deg);
+}
+
+.sport-types-field__dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: var(--base-white);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    max-height: 240px;
+    overflow: auto;
+    padding: var(--spacing-xs);
+}
+
+.sport-types-field__option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.sport-types-field__option:hover {
+    background: var(--background-hover);
+}
+
+.sport-types-field__checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-orange);
+    flex: 0 0 auto;
+}
+
+.sport-types-field__option-label {
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+}
+
+.sport-types-field__message {
+    min-height: 18px;
+    font-size: var(--font-size-xs);
+}
+
+.sport-types-field--error .sport-types-field__label,
+.sport-types-field--error .sport-types-field__message {
+    color: var(--error-red);
+}
+
+.sport-types-field--error .sport-types-field__trigger {
+    border-color: var(--error-red);
+    background: var(--error-light);
+}

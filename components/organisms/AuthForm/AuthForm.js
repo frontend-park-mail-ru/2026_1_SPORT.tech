@@ -26,39 +26,156 @@ export const AUTH_MODES = {
   REGISTER_TRAINER: 'register-trainer'
 };
 
-/**
- * Форматирует ввод даты в формате ГГГГ-ММ-ДД
- * @private
- * @param {string} value - Введенное значение
- * @returns {string} Отформатированная дата
- *
- * @example
- * formatDateInput('2024') // '2024'
- * formatDateInput('202412') // '2024-12'
- * formatDateInput('20241225') // '2024-12-25'
- */
-function formatDateInput(value) {
-  // Если уже в правильном формате YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return value;
+let sportTypesPromise = null;
+
+async function loadSportTypes(api) {
+  if (!api?.getSportTypes) {
+    return [];
   }
 
-  // Пробуем парсить DD.MM.YYYY или DD/MM/YYYY
-  const parts = value.split(/[.\/]/);
-  if (parts.length === 3) {
-    const [day, month, year] = parts;
-    if (day && month && year && year.length === 4 && day.length <= 2 && month.length <= 2) {
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  if (!sportTypesPromise) {
+    sportTypesPromise = api.getSportTypes()
+      .then(response => Array.isArray(response?.sport_types) ? response.sport_types : [])
+      .catch(error => {
+        sportTypesPromise = null;
+        throw error;
+      });
+  }
+
+  return sportTypesPromise;
+}
+
+function createSportTypesField(container, {
+  label,
+  placeholder,
+  required,
+  options,
+  onChange
+}) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'sport-types-field sport-types-field--normal';
+  wrapper.innerHTML = `
+    <label class="sport-types-field__label">
+      ${label}${required ? ' *' : ''}
+    </label>
+    <button type="button" class="sport-types-field__trigger" aria-expanded="false">
+      <span class="sport-types-field__trigger-text">${placeholder}</span>
+      <span class="sport-types-field__chevron" aria-hidden="true"></span>
+    </button>
+    <div class="sport-types-field__dropdown" hidden></div>
+    <span class="sport-types-field__message"></span>
+  `;
+
+  const trigger = wrapper.querySelector('.sport-types-field__trigger');
+  const triggerText = wrapper.querySelector('.sport-types-field__trigger-text');
+  const dropdown = wrapper.querySelector('.sport-types-field__dropdown');
+  const message = wrapper.querySelector('.sport-types-field__message');
+  const selectedIds = new Set();
+
+  const updateTriggerText = () => {
+    if (selectedIds.size === 0) {
+      triggerText.textContent = placeholder;
+      triggerText.classList.add('sport-types-field__trigger-text--placeholder');
+      return;
     }
-  }
 
-  // Старая логика для цифрового ввода (20241225 -> 2024-12-25)
-  const digits = value.replace(/\D/g, '');
-  if (digits.length <= 4) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
-  if (digits.length >= 8) return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+    const selectedNames = options
+      .filter(option => selectedIds.has(String(option.sport_type_id)))
+      .map(option => option.name);
 
-  return value;
+    triggerText.textContent = selectedNames.join(', ');
+    triggerText.classList.remove('sport-types-field__trigger-text--placeholder');
+  };
+
+  const openDropdown = () => {
+    dropdown.hidden = false;
+    wrapper.classList.add('sport-types-field--open');
+    trigger.setAttribute('aria-expanded', 'true');
+  };
+
+  const closeDropdown = () => {
+    dropdown.hidden = true;
+    wrapper.classList.remove('sport-types-field--open');
+    trigger.setAttribute('aria-expanded', 'false');
+  };
+
+  options.forEach(option => {
+    const item = document.createElement('label');
+    item.className = 'sport-types-field__option';
+    item.innerHTML = `
+      <input
+        type="checkbox"
+        class="sport-types-field__checkbox"
+        value="${option.sport_type_id}"
+      >
+      <span class="sport-types-field__option-label">${option.name}</span>
+    `;
+
+    const checkbox = item.querySelector('input');
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) {
+        selectedIds.add(String(option.sport_type_id));
+      } else {
+        selectedIds.delete(String(option.sport_type_id));
+      }
+      updateTriggerText();
+      onChange?.(Array.from(selectedIds).map(Number));
+    });
+
+    dropdown.appendChild(item);
+  });
+
+  trigger.addEventListener('click', () => {
+    if (dropdown.hidden) {
+      openDropdown();
+    } else {
+      closeDropdown();
+    }
+  });
+
+  document.addEventListener('click', event => {
+    if (!wrapper.contains(event.target)) {
+      closeDropdown();
+    }
+  });
+
+  container.appendChild(wrapper);
+  updateTriggerText();
+
+  return {
+    element: wrapper,
+    input: trigger,
+    setValue: values => {
+      selectedIds.clear();
+      const normalizedValues = Array.isArray(values) ? values.map(value => String(value)) : [];
+      dropdown.querySelectorAll('.sport-types-field__checkbox').forEach(checkbox => {
+        checkbox.checked = normalizedValues.includes(checkbox.value);
+        if (checkbox.checked) {
+          selectedIds.add(checkbox.value);
+        }
+      });
+      updateTriggerText();
+      onChange?.(Array.from(selectedIds).map(Number));
+    },
+    getValue: () => Array.from(selectedIds).map(Number),
+    focus: () => trigger.focus(),
+    blur: () => trigger.blur(),
+    setError: text => {
+      wrapper.classList.remove('sport-types-field--normal');
+      wrapper.classList.add('sport-types-field--error');
+      message.textContent = text || '';
+    },
+    setNormal: () => {
+      wrapper.classList.remove('sport-types-field--error');
+      wrapper.classList.add('sport-types-field--normal');
+      message.textContent = '';
+    },
+    clearError: () => {
+      wrapper.classList.remove('sport-types-field--error');
+      wrapper.classList.add('sport-types-field--normal');
+      message.textContent = '';
+    }
+  };
 }
 
 /**
@@ -227,14 +344,14 @@ export async function renderAuthForm(container, config = {}) {
           type: INPUT_TYPES.WITHOUTS,
           name: 'career_since_date',
           label: 'Дата начала профессиональной деятельности',
-          placeholder: 'ГГГГ-ММ-ДД',
+          placeholder: 'Выберите дату',
           required: true
         },
         {
           type: INPUT_TYPES.WITHOUTS,
           name: 'sport_discipline',
           label: 'Вид дисциплины/спорта',
-          placeholder: 'например: футбол, плавание, бокс',
+          placeholder: 'Выберите виды спорта',
           required: true
         },
         {
@@ -322,57 +439,26 @@ export async function renderAuthForm(container, config = {}) {
   break;
 }
       case 'career_since_date':
-  if (!value) {
-    result = {
-      isValid: false,
-      errors: [{ field: 'career_since_date', message: 'Дата начала деятельности обязательна' }]
-    };
-  } else {
-    // Проверяем разные форматы
-    const yyyyMmDd = /^\d{4}-\d{2}-\d{2}$/.test(value);
-    const ddMmYyyy = /^\d{2}[.\/]\d{2}[.\/]\d{4}$/.test(value);
-
-    if (yyyyMmDd) {
-      result = { isValid: true, errors: [] };
-    } else if (ddMmYyyy) {
-      // Преобразуем DD.MM.YYYY в YYYY-MM-DD
-      const parts = value.split(/[.\/]/);
-      const [day, month, year] = parts;
-      const converted = `${year}-${month}-${day}`;
-      // Обновляем значение в поле
-      api.setValue(converted);
-      result = { isValid: true, errors: [] };
-    } else {
-      result = {
-        isValid: false,
-        errors: [{ field: 'career_since_date', message: 'Дата должна быть в формате ГГГГ-ММ-ДД или ДД.ММ.ГГГГ' }]
-      };
-    }
-  }
-  break;
-      case 'sport_discipline': {
-  validator.reset();
-  const validationResult = {
-    isValid: true,
-    errors: []
-  };
-
-  if (value && value.trim() !== '') {
-    validator.validateField(value, 'sport_discipline', validator.rules.sports_rank);
-
-    if (validator.hasErrors()) {
-      validationResult.isValid = false;
-      const errors = validator.getErrors().map(err => ({
-        ...err,
-        field: 'sport_discipline'
-      }));
-      validationResult.errors = errors;
-    }
-  }
-
-  result = validationResult;
-  break;
-}
+        result = !value
+          ? {
+            isValid: false,
+            errors: [{ field: 'career_since_date', message: 'Дата начала деятельности обязательна' }]
+          }
+          : /^\d{4}-\d{2}-\d{2}$/.test(value)
+            ? { isValid: true, errors: [] }
+            : {
+              isValid: false,
+              errors: [{ field: 'career_since_date', message: 'Дата должна быть в формате ГГГГ-ММ-ДД' }]
+            };
+        break;
+      case 'sport_discipline':
+        result = Array.isArray(value) && value.length > 0
+          ? { isValid: true, errors: [] }
+          : {
+            isValid: false,
+            errors: [{ field: 'sport_discipline', message: 'Выберите хотя бы один вид спорта' }]
+          };
+        break;
       case 'bio':
         const bioValid = !value || value.length <= 1000;
         result = {
@@ -397,67 +483,43 @@ export async function renderAuthForm(container, config = {}) {
    * Создание полей формы
    * @param {Object} fieldConfig - Конфигурация поля
    */
+  const sportTypeOptions = mode === AUTH_MODES.REGISTER_TRAINER
+    ? await loadSportTypes(api).catch(() => [])
+    : [];
+
   for (const fieldConfig of currentMode.fields) {
     const fieldContainer = document.createElement('div');
     fieldsContainer.appendChild(fieldContainer);
 
-    // AuthForm.js - в цикле создания полей
-
-if (fieldConfig.name === 'career_since_date') {
-    const inputApi = await renderInput(fieldContainer, {
-        type: fieldConfig.type,
-        label: fieldConfig.label,
-        placeholder: fieldConfig.placeholder,
-        name: fieldConfig.name,
-        required: fieldConfig.required,
-        onChange: value => validateField(fieldConfig.name, value)
-    });
-
-    const input = inputApi.input;
-
-    // Маска для автоматического форматирования
-    input.addEventListener('input', e => {
-        let value = e.target.value;
-
-        // Удаляем все не-цифры
-        value = value.replace(/\D/g, '');
-
-        // Форматируем как ГГГГ-ММ-ДД
-        if (value.length >= 4) {
-            let formatted = value.substring(0, 4);
-
-            if (value.length > 4) {
-                formatted += '-' + value.substring(4, 6);
-            }
-
-            if (value.length > 6) {
-                formatted += '-' + value.substring(6, 8);
-            }
-
-            e.target.value = formatted;
-        } else {
-            e.target.value = value;
-        }
-
-        validateField(fieldConfig.name, e.target.value);
-    });
-
-    inputs.set(fieldConfig.name, fieldContainer);
-    inputsApi.set(fieldConfig.name, inputApi);
-}
-    else if (fieldConfig.name === 'sport_discipline') {
+    if (fieldConfig.name === 'career_since_date') {
       const inputApi = await renderInput(fieldContainer, {
         type: fieldConfig.type,
         label: fieldConfig.label,
         placeholder: fieldConfig.placeholder,
         name: fieldConfig.name,
         required: fieldConfig.required,
-        showEye: fieldConfig.showEye,
+        onChange: value => validateField(fieldConfig.name, value)
+      });
+
+      inputApi.input.type = 'date';
+      inputApi.input.max = new Date().toISOString().slice(0, 10);
+      inputApi.input.placeholder = '';
+
+      inputs.set(fieldConfig.name, fieldContainer);
+      inputsApi.set(fieldConfig.name, inputApi);
+    } else if (fieldConfig.name === 'sport_discipline') {
+      const sportFieldApi = createSportTypesField(fieldContainer, {
+        label: fieldConfig.label,
+        placeholder: fieldConfig.placeholder,
+        required: fieldConfig.required,
+        options: sportTypeOptions,
         onChange: value => validateField(fieldConfig.name, value)
       });
 
       const helpText = document.createElement('small');
-      helpText.textContent = 'Можно указать несколько через запятую';
+      helpText.textContent = sportTypeOptions.length > 0
+        ? 'Можно выбрать несколько дисциплин'
+        : 'Не удалось загрузить список дисциплин';
       helpText.style.cssText = `
         font-size: var(--font-size-xs);
         color: var(--text-placeholder);
@@ -467,7 +529,7 @@ if (fieldConfig.name === 'career_since_date') {
       fieldContainer.appendChild(helpText);
 
       inputs.set(fieldConfig.name, fieldContainer);
-      inputsApi.set(fieldConfig.name, inputApi);
+      inputsApi.set(fieldConfig.name, sportFieldApi);
     } else {
       const inputApi = await renderInput(fieldContainer, {
         type: fieldConfig.type,
@@ -530,14 +592,14 @@ const getFormData = () => {
   }
 
   if (mode === AUTH_MODES.REGISTER_TRAINER) {
+    const selectedSportTypes = Array.isArray(data.sport_discipline) ? data.sport_discipline : [];
     data.trainer_details = {
       education_degree: data.education_degree || '',
       career_since_date: data.career_since_date,
-      sports: [{
-        sport_type_id: 1,
-        experience_years: 0,
-        sports_rank: data.sports_rank || data.sport_discipline || ''
-      }]
+      sports: selectedSportTypes.map(sportTypeId => ({
+        sport_type_id: Number(sportTypeId),
+        experience_years: 0
+      }))
     };
   }
 
@@ -551,7 +613,10 @@ const getFormData = () => {
     if (!errors || !Array.isArray(errors)) return;
 
     errors.forEach(error => {
-      const api = inputsApi.get(error.field);
+      const fieldName = error.field === 'sports' || error.field?.startsWith('sports[')
+        ? 'sport_discipline'
+        : error.field;
+      const api = inputsApi.get(fieldName);
       if (api) {
         api.setError(error.message);
       }

@@ -92,14 +92,16 @@ export async function renderAuthPage(container, api) {
  */
 async function handleTrainerRegister(data) {
     try {
-        // Дата уже отформатирована маской в AuthForm.js
-        const careerDate = data.career_since_date?.trim() || '';
+        const careerDate = data.trainer_details?.career_since_date?.trim() || '';
+        const sports = Array.isArray(data.trainer_details?.sports) ? data.trainer_details.sports : [];
 
-
-
-        // Простая проверка формата перед отправкой
         if (!/^\d{4}-\d{2}-\d{2}$/.test(careerDate)) {
             alert('Введите дату в формате ГГГГ-ММ-ДД (например, 2020-01-01)');
+            return;
+        }
+
+        if (sports.length === 0) {
+            alert('Выберите хотя бы один вид спорта');
             return;
         }
 
@@ -111,13 +113,9 @@ async function handleTrainerRegister(data) {
             first_name: data.first_name,
             last_name: data.last_name,
             trainer_details: {
-                education_degree: data.education_degree || '',
+                education_degree: data.trainer_details?.education_degree || '',
                 career_since_date: careerDate,
-                sports: [{
-                    sport_type_id: 1,
-                    experience_years: 1,   // ← 1 вместо 0 (на всякий случай)
-                    sports_rank: data.sport_discipline || ''
-                }]
+                sports
             }
         });
 
