@@ -43,7 +43,7 @@
       </div>
     </div>
     
-    <!-- Текущий пользователь с меню -->
+    <!-- Текущий пользователь -->
     <div class="sidebar__current-user" data-user-id="{{currentUser.id}}">
       <div class="sidebar__current-user-avatar">
         {{#if currentUser.avatar}}
@@ -56,29 +56,15 @@
         <div class="sidebar__user-name">{{currentUser.name}}</div>
         <div class="sidebar__user-role">{{currentUser.role}}</div>
       </div>
-      
-      <!-- Кнопка с тремя точками (без ID) -->
-      <div class="sidebar__menu-container">
-        <button class="sidebar__menu-btn" title="Меню">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="1"/>
-            <circle cx="12" cy="5" r="1"/>
-            <circle cx="12" cy="19" r="1"/>
-          </svg>
-        </button>
-        
-        <!-- Выпадающее меню (без ID) -->
-        <div class="sidebar__dropdown">
-          <button class="sidebar__dropdown-item sidebar__logout-option">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-            <span>Выход</span>
-          </button>
-        </div>
-      </div>
+
+      <button class="sidebar__logout-btn sidebar__logout-option" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span>Выход</span>
+      </button>
     </div>
   </div>
 </aside>

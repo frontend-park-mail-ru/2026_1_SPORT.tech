@@ -165,45 +165,11 @@ export async function renderSidebar(container, {
     });
   });
 
-  /**
-   * Обработчик для меню с тремя точками
-   */
-  const menuBtn = element.querySelector('.sidebar__menu-btn');
-  const dropdown = element.querySelector('.sidebar__dropdown');
-
-  if (menuBtn && dropdown) {
-    /**
-     * Открытие/закрытие меню
-     * @param {MouseEvent} e - Событие клика
-     */
-    menuBtn.addEventListener('click', e => {
-      e.stopPropagation();
+  const logoutBtn = element.querySelector('.sidebar__logout-option');
+  if (logoutBtn && onLogout) {
+    logoutBtn.addEventListener('click', async e => {
       e.preventDefault();
-      dropdown.classList.toggle('sidebar__dropdown--active');
-    });
-
-    /**
-     * Обработчик кнопки выхода
-     * @param {MouseEvent} e - Событие клика
-     */
-    const logoutBtn = dropdown.querySelector('.sidebar__logout-option');
-    if (logoutBtn && onLogout) {
-      logoutBtn.addEventListener('click', async e => {
-        e.stopPropagation();
-        e.preventDefault();
-        dropdown.classList.remove('sidebar__dropdown--active');
-        await onLogout();
-      });
-    }
-
-    /**
-     * Закрытие меню при клике вне его
-     * @param {MouseEvent} e - Событие клика
-     */
-    document.addEventListener('click', e => {
-      if (!menuBtn.contains(e.target) && !dropdown.contains(e.target)) {
-        dropdown.classList.remove('sidebar__dropdown--active');
-      }
+      await onLogout();
     });
   }
 
