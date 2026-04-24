@@ -1,315 +1,298 @@
 /**
  * @fileoverview API клиент для взаимодействия с бэкендом
- * Предоставляет методы для всех эндпоинтов API
+ * Поддерживает CSRF-токены для защищённых эндпоинтов
  *
  * @module src/utils/api
  */
 
 import { API_BASE_URL } from '../config/constants.js';
 
-/**
- * Класс API клиента
- * @class
- */
 export class ApiClient {
-  /**
-   * Создает экземпляр API клиента
-   * @param {string} baseURL - Базовый URL API (по умолчанию из constants.js)
-   */
   constructor(baseURL = API_BASE_URL) {
     this.baseURL = baseURL;
+    this.csrfToken = null;
+  }
+
+  /**
+   * Получение CSRF-токена с бэкенда
+   * @returns {Promise<string|null>}
+   */
+  async fetchCsrfToken() {
+    try {
+      const response = await fetch(`${this.baseURL}/v1/auth/csrf`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.csrfToken = data.csrf_token;
+        return this.csrfToken;
+      }
+    } catch (error) {
+      console.error('Failed to fetch CSRF token:', error);
+    }
+    return null;
+  }
+
+  /**
+   * Убедиться, что CSRF-токен получен
+   * @returns {Promise<string|null>}
+   */
+  async ensureCsrfToken() {
+    if (!this.csrfToken) {
+      await this.fetchCsrfToken();
+    }
+    return this.csrfToken;
+  }
+
+  /**
+   * Парсинг ответа от сервера
+   * @param {Response} response
+   * @returns {Promise<any>}
+   */
+  async parseResponse(response) {
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json();
+    }
+    const text = await response.text();
+    return { error: { message: text || `HTTP ${response.status}` } };
   }
 
   /**
    * Базовый метод для выполнения HTTP запросов
-   * @async
-   * @param {string} endpoint - Эндпоинт API (напр. '/auth/login')
-   * @param {Object} [options={}] - Опции fetch запроса
-   * @returns {Promise<Object|null>} Ответ от API или null для 204
-   * @throws {Error} Ошибка запроса
-   * @private
+   * @param {string} endpoint - Эндпоинт API
+   * @param {Object} options - Опции fetch запроса
+   * @returns {Promise<Object|null>}
    */
+  async request(endpoint, options = {}) {
+    const url = `${this.baseURL}${endpoint}`;
+    const method = options.method || 'GET';
+    const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
-// src/utils/api.js
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers
+    };
 
-// src/utils/api.js
-
-async request(endpoint, options = {}) {
-  const url = `${this.baseURL}${endpoint}`;
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
+    if (isMutating) {
+      await this.ensureCsrfToken();
+      if (this.csrfToken) {
+        headers['X-CSRF-Token'] = this.csrfToken;
       }
-    });
-
-    if (response.status === 204) {
-      return null;
     }
 
-    let data;
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      data = await response.json();
-    } else {
-      const text = await response.text();
-      data = { error: { message: text || `HTTP ${response.status}` } };
-    }
+    try {
+      const response = await fetch(url, {
+        ...options,
+        credentials: 'include',
+        headers
+      });
 
-    if (!response.ok) {
-      const error = new Error(data.error?.message || `HTTP ${response.status}`);
-      error.data = data;
-      error.status = response.status;
+      // При 403 пробуем обновить токен и повторить запрос
+      if (response.status === 403 && isMutating) {
+        await this.fetchCsrfToken();
+        if (this.csrfToken) {
+          headers['X-CSRF-Token'] = this.csrfToken;
+          const retryResponse = await fetch(url, {
+            ...options,
+            credentials: 'include',
+            headers
+          });
+
+          if (retryResponse.status === 204) {
+            return null;
+          }
+
+          const retryData = await this.parseResponse(retryResponse);
+          if (!retryResponse.ok) {
+            const error = new Error(retryData.error?.message || `HTTP ${retryResponse.status}`);
+            error.data = retryData;
+            error.status = retryResponse.status;
+            throw error;
+          }
+          return retryData;
+        }
+      }
+
+      if (response.status === 204) {
+        return null;
+      }
+
+      const data = await this.parseResponse(response);
+
+      if (!response.ok) {
+        const error = new Error(data.error?.message || `HTTP ${response.status}`);
+        error.data = data;
+        error.status = response.status;
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
       throw error;
     }
-
-    return data;
-  } catch (error) {
-    throw error;
   }
-}
+
   // ===== AUTH METHODS =====
 
-  /**
-   * Вход пользователя
-   * @async
-   * @param {string} email - Email пользователя
-   * @param {string} password - Пароль
-   * @returns {Promise<Object>} Данные пользователя
-   */
   async login(email, password) {
+    await this.ensureCsrfToken();
     return this.request('/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
   }
 
-  /**
-   * Регистрация клиента
-   * @async
-   * @param {Object} userData - Данные пользователя
-   * @returns {Promise<Object>} Данные зарегистрированного пользователя
-   */
   async registerClient(userData) {
+    await this.ensureCsrfToken();
     return this.request('/v1/auth/register/client', {
       method: 'POST',
       body: JSON.stringify(userData)
     });
   }
 
-  /**
-   * Регистрация тренера
-   * @async
-   * @param {Object} userData - Данные тренера
-   * @returns {Promise<Object>} Данные зарегистрированного тренера
-   */
   async registerTrainer(userData) {
+    await this.ensureCsrfToken();
     return this.request('/v1/auth/register/trainer', {
       method: 'POST',
       body: JSON.stringify(userData)
     });
   }
 
-  /**
-   * Получение информации о текущем пользователе
-   * @async
-   * @returns {Promise<Object|null>} Данные пользователя или null если не авторизован
-   */
   async getCurrentUser() {
     try {
       return await this.request('/v1/auth/me');
     } catch (error) {
-      if (error.message === 'Не авторизован') {
+      if (error.message === 'Не авторизован' || error.status === 401) {
         return null;
       }
       throw error;
     }
   }
 
-  /**
-   * Выход пользователя
-   * @async
-   * @returns {Promise<null>}
-   */
   async logout() {
+    await this.ensureCsrfToken();
     return this.request('/v1/auth/logout', { method: 'POST' });
   }
 
   // ===== PROFILE METHODS =====
 
-  /**
-   * Получение профиля пользователя
-   * @async
-   * @param {number} userId - ID пользователя
-   * @returns {Promise<Object>} Данные профиля
-   */
   async getProfile(userId) {
     return this.request(`/v1/profiles/${userId}`);
   }
 
-  /**
-   * Получение списка тренеров
-   * @async
-   * @returns {Promise<Object>} Список тренеров
-   */
   async getTrainers() {
     return this.request('/v1/trainers');
   }
 
-  /**
-   * Получение постов пользователя
-   * @async
-   * @param {number} userId - ID пользователя
-   * @returns {Promise<Object>} Список постов
-   */
   async getUserPosts(userId) {
     return this.request(`/v1/profiles/${userId}/posts`);
   }
 
+  async updateMyProfile(payload) {
+    await this.ensureCsrfToken();
+    return this.request('/v1/profiles/me', {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    });
+  }
+
   // ===== POSTS METHODS =====
 
-  /**
-   * Получение полного поста
-   * @async
-   * @param {number} postId - ID поста
-   * @returns {Promise<Object>} Данные поста
-   */
   async getPost(postId) {
     return this.request(`/v1/posts/${postId}`);
   }
 
-  /**
-   * Создание поста
-   *
-   * **Эндпоинт:** `POST /posts`
-   *
-   * Тело запроса (JSON): `{ title, text_content, min_tier_id? }`
-   *
-   * @async
-   * @param {Object} payload - Поля поста
-   * @param {string} payload.title - Заголовок
-   * @param {string} payload.text_content - Текст
-   * @param {number|null} [payload.min_tier_id] - Минимальный tier для просмотра
-   * @returns {Promise<Object>} Созданный пост
-   */
   async createPost(payload) {
+    await this.ensureCsrfToken();
     return this.request('/v1/posts', {
       method: 'POST',
       body: JSON.stringify(payload)
     });
   }
 
-  /**
-   * Обновление поста
-   *
-   * **Эндпоинт:** `PATCH /posts/{postId}`
-   *
-   * @async
-   * @param {number} postId - ID поста
-   * @param {Object} payload - Поля для обновления
-   * @returns {Promise<Object>} Обновлённый пост
-   */
   async updatePost(postId, payload) {
+    await this.ensureCsrfToken();
     return this.request(`/v1/posts/${postId}`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
     });
   }
 
-  /**
-   * Удаление поста
-   *
-   * **Эндпоинт:** `DELETE /posts/{postId}`
-   *
-   * @async
-   * @param {number} postId - ID поста
-   * @returns {Promise<null>}
-   */
   async deletePost(postId) {
+    await this.ensureCsrfToken();
     return this.request(`/v1/posts/${postId}`, { method: 'DELETE' });
   }
 
-  /**
-   * Лайк поста
-   *
-   * **Эндпоинт:** `POST /posts/{postId}/like`
-   *
-   * @async
-   * @param {number} postId - ID поста
-   * @returns {Promise<Object| null>}
-   */
   async likePost(postId) {
+    await this.ensureCsrfToken();
     return this.request(`/v1/posts/${postId}/likes`, { method: 'POST' });
   }
 
-  /**
-   * Снять лайк с поста
-   *
-   * **Эндпоинт:** `DELETE /posts/{postId}/like`
-   *
-   * @async
-   * @param {number} postId - ID поста
-   * @returns {Promise<null>}
-   */
   async unlikePost(postId) {
+    await this.ensureCsrfToken();
     return this.request(`/v1/posts/${postId}/likes`, { method: 'DELETE' });
   }
 
-  /**
-   * Пожертвование тренеру (если реализовано на бэкенде)
-   *
-   * **Эндпоинт:** `POST /donations`
-   *
-   * Тело (пример): `{ amount_rub, email, recipient_user_id }`
-   *
-   * @async
-   * @param {Object} payload - Данные платежа
-   * @returns {Promise<Object>}
-   */
-// src/utils/api.js
+  // ===== DONATIONS =====
 
-async createDonation(userId, amountValue, currency = 'RUB', message = null) {
-  const payload = {
-    amount_value: amountValue,
-    currency: currency,
-    message: message || null  // ← null вместо пустой строки
-  };
+  async createDonation(userId, amountValue, currency = 'RUB', message = null) {
+    await this.ensureCsrfToken();
+    const payload = {
+      amount_value: amountValue,
+      currency: currency,
+      message: message || null
+    };
+    return this.request(`/v1/profiles/${userId}/donations`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
 
+  // ===== SPORT TYPES =====
 
-
-  return this.request(`/v1/profiles/${userId}/donations`, {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
-
-  // ===== SPORT TYPES METHODS =====
-
-  /**
-   * Получение списка видов спорта
-   * @async
-   * @returns {Promise<Object>} Список видов спорта
-   */
   async getSportTypes() {
     return this.request('/v1/sport-types');
   }
 
-  async likePost(postId) {
-  return this.request(`/v1/posts/${postId}/likes`, { method: 'POST' });
-}
+  // ===== AVATAR =====
 
-async unlikePost(postId) {
-  return this.request(`/v1/posts/${postId}/likes`, { method: 'DELETE' });
-}
+  async uploadAvatar(file) {
+    await this.ensureCsrfToken();
 
-async deleteAvatar() {
-  return this.request('/v1/profiles/me/avatar', {
-    method: 'DELETE'
-  });
-}
+    const formData = new FormData();
+    formData.append('avatar', file);
 
+    const url = `${this.baseURL}/v1/profiles/me/avatar`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'X-CSRF-Token': this.csrfToken || ''
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const error = new Error(`HTTP ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async deleteAvatar() {
+    await this.ensureCsrfToken();
+    return this.request('/v1/profiles/me/avatar', {
+      method: 'DELETE'
+    });
+  }
 }
