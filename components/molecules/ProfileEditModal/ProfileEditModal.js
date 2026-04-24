@@ -398,7 +398,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
     if (avatarFile) {
       const formData = new FormData();
       formData.append('avatar', avatarFile, avatarFile.name || 'avatar.jpg');
-      await fetch(`${api.baseURL}/profiles/me/avatar`, {
+      await fetch(`${api.baseURL}/v1/profiles/me/avatar`, {
         method: 'POST',
         credentials: 'include',
         body: formData

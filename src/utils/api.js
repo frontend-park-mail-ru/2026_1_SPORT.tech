@@ -82,7 +82,7 @@ async request(endpoint, options = {}) {
    * @returns {Promise<Object>} Данные пользователя
    */
   async login(email, password) {
-    return this.request('/auth/login', {
+    return this.request('/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
@@ -95,7 +95,7 @@ async request(endpoint, options = {}) {
    * @returns {Promise<Object>} Данные зарегистрированного пользователя
    */
   async registerClient(userData) {
-    return this.request('/auth/register/client', {
+    return this.request('/v1/auth/register/client', {
       method: 'POST',
       body: JSON.stringify(userData)
     });
@@ -108,7 +108,7 @@ async request(endpoint, options = {}) {
    * @returns {Promise<Object>} Данные зарегистрированного тренера
    */
   async registerTrainer(userData) {
-    return this.request('/auth/register/trainer', {
+    return this.request('/v1/auth/register/trainer', {
       method: 'POST',
       body: JSON.stringify(userData)
     });
@@ -121,7 +121,7 @@ async request(endpoint, options = {}) {
    */
   async getCurrentUser() {
     try {
-      return await this.request('/auth/me');
+      return await this.request('/v1/auth/me');
     } catch (error) {
       if (error.message === 'Не авторизован') {
         return null;
@@ -136,7 +136,7 @@ async request(endpoint, options = {}) {
    * @returns {Promise<null>}
    */
   async logout() {
-    return this.request('/auth/logout', { method: 'POST' });
+    return this.request('/v1/auth/logout', { method: 'POST' });
   }
 
   // ===== PROFILE METHODS =====
@@ -148,7 +148,7 @@ async request(endpoint, options = {}) {
    * @returns {Promise<Object>} Данные профиля
    */
   async getProfile(userId) {
-    return this.request(`/profiles/${userId}`);
+    return this.request(`/v1/profiles/${userId}`);
   }
 
   /**
@@ -157,7 +157,7 @@ async request(endpoint, options = {}) {
    * @returns {Promise<Object>} Список тренеров
    */
   async getTrainers() {
-    return this.request('/trainers');
+    return this.request('/v1/trainers');
   }
 
   /**
@@ -167,7 +167,7 @@ async request(endpoint, options = {}) {
    * @returns {Promise<Object>} Список постов
    */
   async getUserPosts(userId) {
-    return this.request(`/profiles/${userId}/posts`);
+    return this.request(`/v1/profiles/${userId}/posts`);
   }
 
   // ===== POSTS METHODS =====
@@ -179,7 +179,7 @@ async request(endpoint, options = {}) {
    * @returns {Promise<Object>} Данные поста
    */
   async getPost(postId) {
-    return this.request(`/posts/${postId}`);
+    return this.request(`/v1/posts/${postId}`);
   }
 
   /**
@@ -197,7 +197,7 @@ async request(endpoint, options = {}) {
    * @returns {Promise<Object>} Созданный пост
    */
   async createPost(payload) {
-    return this.request('/posts', {
+    return this.request('/v1/posts', {
       method: 'POST',
       body: JSON.stringify(payload)
     });
@@ -214,7 +214,7 @@ async request(endpoint, options = {}) {
    * @returns {Promise<Object>} Обновлённый пост
    */
   async updatePost(postId, payload) {
-    return this.request(`/posts/${postId}`, {
+    return this.request(`/v1/posts/${postId}`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
     });
@@ -230,7 +230,7 @@ async request(endpoint, options = {}) {
    * @returns {Promise<null>}
    */
   async deletePost(postId) {
-    return this.request(`/posts/${postId}`, { method: 'DELETE' });
+    return this.request(`/v1/posts/${postId}`, { method: 'DELETE' });
   }
 
   /**
@@ -243,7 +243,7 @@ async request(endpoint, options = {}) {
    * @returns {Promise<Object| null>}
    */
   async likePost(postId) {
-    return this.request(`/posts/${postId}/likes`, { method: 'POST' });
+    return this.request(`/v1/posts/${postId}/likes`, { method: 'POST' });
   }
 
   /**
@@ -256,7 +256,7 @@ async request(endpoint, options = {}) {
    * @returns {Promise<null>}
    */
   async unlikePost(postId) {
-    return this.request(`/posts/${postId}/likes`, { method: 'DELETE' });
+    return this.request(`/v1/posts/${postId}/likes`, { method: 'DELETE' });
   }
 
   /**
@@ -281,7 +281,7 @@ async createDonation(userId, amountValue, currency = 'RUB', message = null) {
 
 
 
-  return this.request(`/profiles/${userId}/donations`, {
+  return this.request(`/v1/profiles/${userId}/donations`, {
     method: 'POST',
     body: JSON.stringify(payload)
   });
@@ -295,19 +295,19 @@ async createDonation(userId, amountValue, currency = 'RUB', message = null) {
    * @returns {Promise<Object>} Список видов спорта
    */
   async getSportTypes() {
-    return this.request('/sport-types');
+    return this.request('/v1/sport-types');
   }
 
   async likePost(postId) {
-  return this.request(`/posts/${postId}/likes`, { method: 'POST' });
+  return this.request(`/v1/posts/${postId}/likes`, { method: 'POST' });
 }
 
 async unlikePost(postId) {
-  return this.request(`/posts/${postId}/likes`, { method: 'DELETE' });
+  return this.request(`/v1/posts/${postId}/likes`, { method: 'DELETE' });
 }
 
 async deleteAvatar() {
-  return this.request('/profiles/me/avatar', {
+  return this.request('/v1/profiles/me/avatar', {
     method: 'DELETE'
   });
 }
