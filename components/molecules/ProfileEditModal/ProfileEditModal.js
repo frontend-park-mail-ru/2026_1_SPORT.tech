@@ -390,7 +390,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
         })
       };
     }
-    await api.request('v1/profiles/me', {
+    await api.request('/v1/profiles/me', {
       method: 'PATCH',
       body: JSON.stringify(updatePayload)
     });
@@ -407,7 +407,7 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
       try {
         await api.deleteAvatar();
       } catch (error) {
-        await api.request('v1/profiles/me', {
+        await api.request('/v1/profiles/me', {
           method: 'PATCH',
           body: JSON.stringify({ avatar_url: null })
         });
