@@ -3,16 +3,36 @@
   "version": "1.0.0",
   "description": "SPORT.tech frontend components",
   "type": "module",
+  
   "scripts": {
-    "dev": "python3 -m http.server 5173 --bind 127.0.0.1",
-    "start": "npm run dev",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "lint:watch": "eslint . --watch"
+    "dev": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.js",
+    "lint:fix": "eslint src --ext .ts,.js --fix"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/plugin-transform-runtime": "^7.29.0",
+    "@babel/preset-env": "^7.29.2",
+    "@babel/preset-typescript": "^7.28.5",
+    "@typescript-eslint/eslint-plugin": "^8.59.0",
+    "@typescript-eslint/parser": "^8.59.0",
+    "babel-loader": "^10.1.1",
+    "copy-webpack-plugin": "^14.0.0",
+    "css-loader": "^7.1.4",
     "eslint": "^8.57.0",
-    "eslint-plugin-import": "^2.29.1"
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-webpack-plugin": "^6.0.0",
+    "file-loader": "^6.2.0",
+    "html-webpack-plugin": "^5.6.7",
+    "mini-css-extract-plugin": "^2.10.2",
+    "style-loader": "^4.0.0",
+    "terser-webpack-plugin": "^5.5.0",
+    "typescript": "^6.0.3",
+    "webpack": "^5.106.2",
+    "webpack-cli": "^7.0.2",
+    "webpack-dev-server": "^5.2.3"
   },
   "author": "",
   "license": "ISC"
