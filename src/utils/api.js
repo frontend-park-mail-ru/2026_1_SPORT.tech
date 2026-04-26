@@ -66,74 +66,73 @@ export class ApiClient {
    * @param {Object} options - Опции fetch запроса
    * @returns {Promise<Object|null>}
    */
-  async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
-    const method = options.method || 'GET';
-    const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+async request(endpoint, options = {}) {
+  const url = `${this.baseURL}${endpoint}`;
+  const method = options.method || 'GET';
+  const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
-    const headers = {
-      'Content-Type': 'application/json',
-      ...options.headers
-    };
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
 
-    if (isMutating) {
-      await this.ensureCsrfToken();
-      if (this.csrfToken) {
-        headers['X-CSRF-Token'] = this.csrfToken;
-      }
-    }
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        credentials: 'include',
-        headers
-      });
-
-      // При 403 пробуем обновить токен и повторить запрос
-      if (response.status === 403 && isMutating) {
-        await this.fetchCsrfToken();
-        if (this.csrfToken) {
-          headers['X-CSRF-Token'] = this.csrfToken;
-          const retryResponse = await fetch(url, {
-            ...options,
-            credentials: 'include',
-            headers
-          });
-
-          if (retryResponse.status === 204) {
-            return null;
-          }
-
-          const retryData = await this.parseResponse(retryResponse);
-          if (!retryResponse.ok) {
-            const error = new Error(retryData.error?.message || `HTTP ${retryResponse.status}`);
-            error.data = retryData;
-            error.status = retryResponse.status;
-            throw error;
-          }
-          return retryData;
-        }
-      }
-
-      if (response.status === 204) {
-        return null;
-      }
-
-      const data = await this.parseResponse(response);
-
-      if (!response.ok) {
-        const error = new Error(data.error?.message || `HTTP ${response.status}`);
-        error.data = data;
-        error.status = response.status;
-        throw error;
-      }
-
-      return data;
-    } catch (error) {
-      throw error;
+  if (isMutating) {
+    await this.ensureCsrfToken();
+    if (this.csrfToken) {
+      headers['X-CSRF-Token'] = this.csrfToken;
     }
   }
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      credentials: 'include',
+      headers
+    });
+
+    if (response.status === 403 && isMutating) {
+      await this.fetchCsrfToken();
+      if (this.csrfToken) {
+        headers['X-CSRF-Token'] = this.csrfToken;
+        const retryResponse = await fetch(url, {
+          ...options,
+          credentials: 'include',
+          headers
+        });
+
+        if (retryResponse.status === 204) {
+          return null;
+        }
+
+        const retryData = await this.parseResponse(retryResponse);
+        if (!retryResponse.ok) {
+          const error = new Error(retryData.error?.message || `HTTP ${retryResponse.status}`);
+          error.data = retryData;
+          error.status = retryResponse.status;
+          throw error;
+        }
+        return retryData;
+      }
+    }
+
+    if (response.status === 204) {
+      return null;
+    }
+
+    const data = await this.parseResponse(response);
+
+    if (!response.ok) {
+      const error = new Error(data.error?.message || `HTTP ${response.status}`);
+      error.data = data;
+      error.status = response.status;
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
 
   // ===== AUTH METHODS =====
 
