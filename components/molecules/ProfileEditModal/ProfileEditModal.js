@@ -394,26 +394,18 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
       method: 'PATCH',
       body: JSON.stringify(updatePayload)
     });
-
-    if (avatarFile) {
-      const formData = new FormData();
-      formData.append('avatar', avatarFile, avatarFile.name || 'avatar.jpg');
-      await fetch(`${api.baseURL}/v1/profiles/me/avatar`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-    } else if (avatarRemoved) {
-      try {
-        await api.deleteAvatar();
-      } catch (error) {
-        await api.request('/v1/profiles/me', {
-          method: 'PATCH',
-          body: JSON.stringify({ avatar_url: null })
-        });
-      }
-    }
-
+if (avatarFile) {
+  await api.uploadAvatar(avatarFile);
+} else if (avatarRemoved) {
+  try {
+    await api.deleteAvatar();
+  } catch (error) {
+    await api.request('/v1/profiles/me', {
+      method: 'PATCH',
+      body: JSON.stringify({ avatar_url: null })
+    });
+  }
+}
     onUpdated?.();
     close();
   } catch (error) {

@@ -329,10 +329,10 @@ export class ApiClient {
     }
   }
 
-  async deleteAvatar() {
+  async deleteAvatar() {  
     await this.ensureCsrfToken();
     return this.request('/v1/profiles/me/avatar', {
       method: 'DELETE'
     });
   }
-}
+} 
