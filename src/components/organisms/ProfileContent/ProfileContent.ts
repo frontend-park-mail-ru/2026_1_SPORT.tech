@@ -91,7 +91,7 @@ async function showTrainerAbout(container, api, userId) {
 
     if (!trainerDetails) {
       setPostsContainerMessageState(container, true);
-      container.innerHTML = `<div class="profile-content__empty"><p>Информация о тренере недоступна</p></div>`;
+      container.innerHTML = '<div class="profile-content__empty"><p>Информация о тренере недоступна</p></div>';
       return;
     }
 
@@ -155,7 +155,7 @@ async function showTrainerAbout(container, api, userId) {
     `;
   } catch (error) {
     setPostsContainerMessageState(container, true);
-    container.innerHTML = `<div class="profile-content__empty"><p>Не удалось загрузить информацию</p></div>`;
+    container.innerHTML = '<div class="profile-content__empty"><p>Не удалось загрузить информацию</p></div>';
   }
 }
 

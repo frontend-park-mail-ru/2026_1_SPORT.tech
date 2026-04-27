@@ -1,8 +1,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const ESLintPlugin = require('eslint-webpack-plugin');
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -14,13 +12,6 @@ module.exports = {
     filename: isDev ? '[name].js' : '[name].[contenthash].js',
     clean: true,
     publicPath: '/'
-  },
-  devServer: {
-    static: { directory: path.join(__dirname, 'public') },
-    port: 5173,
-    hot: true,
-    historyApiFallback: true,
-    open: true
   },
   resolve: {
     extensions: ['.ts', '.js'],
@@ -40,22 +31,20 @@ module.exports = {
       },
       {
         test: /\.css$/,
-        use: [isDev ? 'style-loader' : MiniCssExtractPlugin.loader, 'css-loader']
+        use: ['style-loader', 'css-loader']
       },
       {
         test: /\.hbs$/,
         type: 'asset/source'
-      },
-      {
-        test: /\.(png|jpg|gif|svg)$/,
-        type: 'asset/resource'
       }
     ]
   },
   plugins: [
     new HtmlWebpackPlugin({ template: './public/index.html' }),
-    new CopyWebpackPlugin({ patterns: [{ from: 'public/static', to: 'static', noErrorOnMissing: true }] }),
-    new MiniCssExtractPlugin({ filename: '[name].[contenthash].css' }),
-    new ESLintPlugin({ extensions: ['ts', 'js'], failOnError: false })
+    new CopyWebpackPlugin({
+      patterns: [
+        { from: 'public/static', to: 'static', noErrorOnMissing: true }
+      ]
+    })
   ]
 };

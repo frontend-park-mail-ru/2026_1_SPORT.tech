@@ -3,9 +3,9 @@
  * @module static/js/main
  */
 
-import { API_BASE_URL } from '/src/config/constants.ts';
-import { ApiClient } from '/src/utils/api.ts';
-import { loadProfilePageData } from '/src/utils/profilePageData.ts';
+import { API_BASE_URL } from './config/constants.ts';
+import { ApiClient } from './utils/api.ts';
+import { loadProfilePageData } from './utils/profilePageData.ts';
 
 // ===== РЕГИСТРАЦИЯ ШАБЛОНОВ HANDLEBARS =====
 
@@ -149,7 +149,7 @@ function createRouter(api) {
     document.body.classList.add('auth-page');
 
     try {
-      const { renderAuthPage } = await import('/pages/AuthPage/AuthPage.ts');
+      const { renderAuthPage } = await import('./pages/AuthPage/AuthPage');
       await renderAuthPage(app, api);
     } catch (error) {
       console.error('Failed to load AuthPage:', error);
@@ -168,7 +168,7 @@ function createRouter(api) {
     document.body.classList.remove('auth-page');
 
     try {
-      const { renderHomePage } = await import('/pages/HomePage/HomePage.ts');
+      const { renderHomePage } = await import('./pages/HomePage/HomePage');
 
       await renderHomePage(api, app, {
         currentUser,
@@ -192,7 +192,7 @@ function createRouter(api) {
 
     try {
       const [{ renderProfilePage }, data] = await Promise.all([
-        import('/pages/ProfilePage/ProfilePage.ts'),
+        import('./pages/ProfilePage/ProfilePage'),
         loadProfilePageData(api, viewedUserId, currentUser)
       ]);
 

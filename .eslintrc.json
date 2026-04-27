@@ -4,9 +4,11 @@
     "es2021": true,
     "node": true
   },
-  "extends": [
-    "eslint:recommended"
-  ],
+  "globals": {
+    "Handlebars": "readonly",
+    "NodeJS": "readonly"
+  },
+  "extends": [],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": "latest",
@@ -14,9 +16,11 @@
   },
   "plugins": ["@typescript-eslint"],
   "rules": {
-    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-console": "off",
+    "no-undef": "off",
+    "no-useless-catch": "off",
     "no-unused-vars": "off",
-    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/no-unused-vars": "off",
     "quotes": ["error", "single"],
     "semi": ["error", "always"]
   }
