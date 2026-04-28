@@ -1,0 +1,198 @@
+/* ===== БАЗОВЫЙ КОМПОНЕНТ ПОЛЯ ВВОДА ===== */
+/* Поддерживает все состояния из UI Kit:
+   - Типы: mail, password, name, withouts
+   - Состояния: normal, active, error, warning, correct, disabled
+   - Глазок: open/close, active/non-active
+   - Сообщения под полем
+   - Обработка длинного текста
+*/
+
+.input-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    width: 100%;
+    position: relative;
+}
+
+.input-field__label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--base-black);
+    margin-bottom: var(--spacing-xs);
+    transition: color 0.2s ease;
+}
+
+.input-field__wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.input-field__input {
+    width: 100%;
+    height: 40px;
+    padding: 0 var(--spacing-xl) 0 var(--spacing-md);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-family: var(--font-primary);
+    font-size: var(--font-size-sm);
+    transition: all 0.2s ease;
+    background: var(--base-white);
+    color: var(--base-black);
+}
+
+.input-field__input::placeholder {
+    color: var(--text-placeholder);
+    font-size: var(--font-size-sm);
+}
+
+/* ===== ГЛАЗОК (ДЛЯ ПАРОЛЯ) ===== */
+.input-field__eye {
+    position: absolute;
+    right: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-placeholder);
+    transition: color 0.2s ease;
+}
+
+.input-field__eye:hover {
+    color: var(--base-purple);
+}
+
+.input-field__eye svg {
+    width: 100%;
+    height: 100%;
+}
+
+.input-field__eye--non-active {
+    opacity: 0.5;
+}
+
+.input-field__eye--active {
+    opacity: 1;
+    color: var(--base-purple);
+}
+
+/* ===== СОСТОЯНИЯ ПОЛЯ ===== */
+
+/* NORMAL (обычное) */
+.input-field--normal .input-field__input {
+    border-color: var(--border-light);
+    background: var(--base-white);
+}
+
+.input-field--normal .input-field__input:hover {
+    border-color: var(--base-purple-light);
+}
+
+/* ACTIVE (в фокусе) */
+.input-field--active .input-field__input {
+    border-color: var(--base-purple);
+    box-shadow: var(--shadow-focus);
+    outline: none;
+}
+
+/* ERROR (ошибка) */
+.input-field--error .input-field__input {
+    border-color: var(--error-red);
+    background: var(--error-light);
+}
+
+.input-field--error .input-field__label {
+    color: var(--error-red);
+}
+
+/* WARNING (предупреждение) */
+.input-field--warning .input-field__input {
+    border-color: var(--warning-orange);
+    background: var(--warning-light);
+}
+
+.input-field--warning .input-field__label {
+    color: #ff8800;
+}
+
+/* CORRECT (правильно) */
+.input-field--correct .input-field__input {
+    border-color: var(--success-green);
+    background: var(--success-light);
+}
+
+.input-field--correct .input-field__label {
+    color: var(--success-dark);
+}
+
+/* DISABLED (отключено) */
+.input-field--disabled .input-field__input {
+    background: var(--background-light);
+    border-color: var(--border-light);
+    color: var(--text-placeholder);
+    cursor: not-allowed;
+}
+
+.input-field--disabled .input-field__label {
+    color: var(--text-placeholder);
+}
+
+/* ===== СООБЩЕНИЕ ПОД ПОЛЕМ ===== */
+.input-field__message {
+    font-size: var(--font-size-xs);
+    margin-top: var(--spacing-xs);
+    min-height: 18px;
+    transition: color 0.2s ease;
+    display: block;
+    visibility: visible;
+}
+
+.input-field__message:empty {
+    display: block;
+    content: "";
+    min-height: 18px;
+}
+.input-field--error .input-field__message {
+    color: var(--error-red);
+}
+
+.input-field--warning .input-field__message {
+    color: #ff8800;
+}
+
+.input-field--correct .input-field__message {
+    color: var(--success-dark);
+}
+
+/* ===== ДЛИННЫЙ ТЕКСТ В ИНПУТЕ ===== */
+.input-field__input {
+    text-overflow: ellipsis;
+}
+
+/* ===== ИКОНКИ ДЛЯ РАЗНЫХ ТИПОВ ===== */
+.input-field__icon {
+    position: absolute;
+    left: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    color: var(--text-placeholder);
+}
+
+.input-field__icon + .input-field__input {
+    padding-left: calc(var(--spacing-xl) + 20px);
+}
+
+@media (max-width: 768px) {
+    .input-field__input {
+        font-size: 16px;
+    }
+}

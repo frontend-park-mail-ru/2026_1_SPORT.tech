@@ -1,0 +1,63 @@
+.profile-page {
+  display: flex;
+  min-height: 100vh;
+  background: #e8f4f8;
+}
+
+.profile-page__sidebar {
+  flex-shrink: 0;
+  width: 240px;
+}
+
+.profile-page__main {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  /* Убираем align-items: center */
+}
+
+.profile-page__container {
+  width: 100%;
+  /* Убираем max-width */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.profile-page__header {
+  width: 100%;
+}
+
+.profile-page__content {
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .profile-page {
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+
+  .profile-page__sidebar {
+    width: 100%;
+  }
+
+  .profile-page__main {
+    padding: 16px;
+  }
+
+  .profile-page__container {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-page__main {
+    padding: 12px;
+  }
+
+  .profile-page__container {
+    gap: 12px;
+  }
+}
