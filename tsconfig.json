@@ -16,8 +16,10 @@
     "noImplicitAny": false,
     "strictNullChecks": false,
     "noUnusedLocals": false,
-    "noUnusedParameters": false
+    "noUnusedParameters": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false
   },
-  "include": ["src/**/*", "src/types/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "public"]
 }

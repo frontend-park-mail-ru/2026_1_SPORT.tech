@@ -1,34 +1,9 @@
-/**
- * @fileoverview API клиент для взаимодействия с бэкендом
- * Поддерживает CSRF-токены для защищённых эндпоинтов
- *
- * @module src/utils/api
- */
-
 import { API_BASE_URL } from '../config/constants';
 
-// Импорты типов
-import type {
-  AuthResponse,
-  ClientRegisterRequest,
-  TrainerRegisterRequest,
-  Profile,
-  TrainerListItem,
-  PostListItem,
-  Post,
-  CreatePostRequest,
-  UpdatePostRequest,
-  PostLikeResponse,
-  SportType,
-  AvatarUploadResponse,
-  UpdateProfileRequest,
-  CsrfResponse,
-  GetTrainersResponse,
-  ProfilePostsResponse,
-  SportTypesResponse,
-  CreateDonationRequest,
-  DonationResponse
-} from '../types/api.types';
+export interface ApiResponse<T = unknown> {
+  data?: T;
+  error?: { message: string };
+}
 
 export class ApiClient {
   private baseURL: string;
@@ -38,24 +13,16 @@ export class ApiClient {
     this.baseURL = baseURL;
   }
 
-  /**
-   * Получение CSRF-токена с бэкенда
-   * @returns {Promise<string|null>}
-   */
   async fetchCsrfToken(): Promise<string | null> {
     try {
       const response = await fetch(`${this.baseURL}/v1/auth/csrf`, {
         method: 'GET',
         credentials: 'include'
       });
-
       if (response.ok) {
-        const data = await response.json() as CsrfResponse;
+        const data = await response.json() as { csrf_token: string };
         this.csrfToken = data.csrf_token;
-        console.log('CSRF Token fetched:', this.csrfToken ? '✅' : '❌');
         return this.csrfToken;
-      } else {
-        console.error('CSRF fetch failed:', response.status);
       }
     } catch (error) {
       console.error('Failed to fetch CSRF token:', error);
@@ -63,30 +30,11 @@ export class ApiClient {
     return null;
   }
 
-  /**
-   * Убедиться, что CSRF-токен получен
-   * @returns {Promise<string|null>}
-   */
   async ensureCsrfToken(): Promise<string | null> {
     await this.fetchCsrfToken();
     return this.csrfToken;
   }
 
-  /**
-   * Парсинг ответа от сервера
-   */
-  private async parseResponse<T>(response: Response): Promise<T | { error: { message: string } }> {
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      return await response.json() as T;
-    }
-    const text = await response.text();
-    return { error: { message: text || `HTTP ${response.status}` } };
-  }
-
-  /**
-   * Базовый метод для выполнения HTTP запросов
-   */
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     const method = options.method || 'GET';
@@ -104,152 +52,76 @@ export class ApiClient {
       }
     }
 
-    try {
-      const response = await fetch(url, {
-        ...options,
-        credentials: 'include',
-        headers
-      });
+    const response = await fetch(url, {
+      ...options,
+      credentials: 'include',
+      headers
+    });
 
-      if (response.status === 403 && isMutating) {
-        await this.fetchCsrfToken();
-        if (this.csrfToken) {
-          headers['X-CSRF-Token'] = this.csrfToken;
-          const retryResponse = await fetch(url, {
-            ...options,
-            credentials: 'include',
-            headers
-          });
+    if (response.status === 204) {
+      return null as T;
+    }
 
-          if (retryResponse.status === 204) {
-            return null as T;
-          }
+    const data = await response.json() as T;
 
-          const retryData = await this.parseResponse<T>(retryResponse);
-          if (!retryResponse.ok) {
-            const error = new Error((retryData as any)?.error?.message || `HTTP ${retryResponse.status}`);
-            (error as any).data = retryData;
-            (error as any).status = retryResponse.status;
-            throw error;
-          }
-          return retryData as T;
-        }
-      }
-
-      if (response.status === 204) {
-        return null as T;
-      }
-
-      const data = await this.parseResponse<T>(response);
-
-      if (!response.ok) {
-        const error = new Error((data as any)?.error?.message || `HTTP ${response.status}`);
-        (error as any).data = data;
-        (error as any).status = response.status;
-        throw error;
-      }
-
-      return data as T;
-    } catch (error) {
+    if (!response.ok) {
+      const error = new Error((data as { error?: { message: string } })?.error?.message || `HTTP ${response.status}`);
+      (error as any).data = data;
       throw error;
     }
+
+    return data;
   }
 
-  // ===== AUTH METHODS =====
-
-  async login(email: string, password: string): Promise<AuthResponse> {
+  async login(email: string, password: string): Promise<{ user: { user_id: number; username: string; email: string; first_name: string; last_name: string; avatar_url: string | null; bio: string | null; is_trainer: boolean } }> {
     await this.ensureCsrfToken();
-    const response = await this.request<AuthResponse>('/v1/auth/login', {
+    return this.request('/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
-    if (response?.user) {
-      await this.fetchCsrfToken();
-    }
-    return response;
-  }
-
-  async registerClient(userData: ClientRegisterRequest): Promise<AuthResponse> {
-    await this.ensureCsrfToken();
-    const response = await this.request<AuthResponse>('/v1/auth/register/client', {
-      method: 'POST',
-      body: JSON.stringify(userData)
-    });
-    if (response?.user) {
-      await this.fetchCsrfToken();
-    }
-    return response;
-  }
-
-  async registerTrainer(userData: TrainerRegisterRequest): Promise<AuthResponse> {
-    await this.ensureCsrfToken();
-    const response = await this.request<AuthResponse>('/v1/auth/register/trainer', {
-      method: 'POST',
-      body: JSON.stringify(userData)
-    });
-    if (response?.user) {
-      await this.fetchCsrfToken();
-    }
-    return response;
-  }
-
-  async getCurrentUser(): Promise<AuthResponse | null> {
-    try {
-      return await this.request<AuthResponse>('/v1/auth/me');
-    } catch (error) {
-      const err = error as Error & { status?: number };
-      if (err.message === 'Не авторизован' || err.status === 401) {
-        return null;
-      }
-      throw error;
-    }
   }
 
   async logout(): Promise<void> {
     await this.ensureCsrfToken();
-    await this.request<void>('/v1/auth/logout', { method: 'POST' });
+    await this.request('/v1/auth/logout', { method: 'POST' });
     this.csrfToken = null;
   }
 
-  // ===== PROFILE METHODS =====
-
-  async getProfile(userId: number): Promise<Profile> {
-    return this.request<Profile>(`/v1/profiles/${userId}`);
+  async getCurrentUser(): Promise<{ user: { user_id: number; username: string; email: string; first_name: string; last_name: string; avatar_url: string | null; bio: string | null; is_trainer: boolean } } | null> {
+    try {
+      return await this.request('/v1/auth/me');
+    } catch {
+      return null;
+    }
   }
 
-  async getTrainers(): Promise<GetTrainersResponse> {
-    return this.request<GetTrainersResponse>('/v1/trainers');
+  async getProfile(userId: number): Promise<any> {
+    return this.request(`/v1/profiles/${userId}`);
   }
 
-  async getUserPosts(userId: number): Promise<ProfilePostsResponse> {
-    return this.request<ProfilePostsResponse>(`/v1/profiles/${userId}/posts`);
+  async getTrainers(): Promise<{ trainers: any[] }> {
+    return this.request('/v1/trainers');
   }
 
-  async updateMyProfile(payload: UpdateProfileRequest): Promise<Profile> {
+  async getUserPosts(userId: number): Promise<{ posts: any[]; user_id: number }> {
+    return this.request(`/v1/profiles/${userId}/posts`);
+  }
+
+  async getPost(postId: number): Promise<any> {
+    return this.request(`/v1/posts/${postId}`);
+  }
+
+  async createPost(payload: { title: string; text_content: string }): Promise<any> {
     await this.ensureCsrfToken();
-    return this.request<Profile>('/v1/profiles/me', {
-      method: 'PATCH',
-      body: JSON.stringify(payload)
-    });
-  }
-
-  // ===== POSTS METHODS =====
-
-  async getPost(postId: number): Promise<Post> {
-    return this.request<Post>(`/v1/posts/${postId}`);
-  }
-
-  async createPost(payload: CreatePostRequest): Promise<Post> {
-    await this.ensureCsrfToken();
-    return this.request<Post>('/v1/posts', {
+    return this.request('/v1/posts', {
       method: 'POST',
       body: JSON.stringify(payload)
     });
   }
 
-  async updatePost(postId: number, payload: UpdatePostRequest): Promise<Post> {
+  async updatePost(postId: number, payload: { title?: string; text_content?: string }): Promise<any> {
     await this.ensureCsrfToken();
-    return this.request<Post>(`/v1/posts/${postId}`, {
+    return this.request(`/v1/posts/${postId}`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
     });
@@ -257,76 +129,41 @@ export class ApiClient {
 
   async deletePost(postId: number): Promise<void> {
     await this.ensureCsrfToken();
-    await this.request<void>(`/v1/posts/${postId}`, { method: 'DELETE' });
+    await this.request(`/v1/posts/${postId}`, { method: 'DELETE' });
   }
 
-  async likePost(postId: number): Promise<PostLikeResponse> {
+  async likePost(postId: number): Promise<{ is_liked: boolean; likes_count: number }> {
     await this.ensureCsrfToken();
-    return this.request<PostLikeResponse>(`/v1/posts/${postId}/likes`, { method: 'POST' });
+    return this.request(`/v1/posts/${postId}/likes`, { method: 'POST' });
   }
 
-  async unlikePost(postId: number): Promise<PostLikeResponse> {
+  async unlikePost(postId: number): Promise<{ is_liked: boolean; likes_count: number }> {
     await this.ensureCsrfToken();
-    return this.request<PostLikeResponse>(`/v1/posts/${postId}/likes`, { method: 'DELETE' });
+    return this.request(`/v1/posts/${postId}/likes`, { method: 'DELETE' });
   }
 
-  // ===== DONATIONS =====
-
-  async createDonation(
-    userId: number,
-    amountValue: number,
-    currency: string = 'RUB',
-    message: string | null = null
-  ): Promise<DonationResponse> {
+  async uploadAvatar(file: File): Promise<{ avatar_url: string }> {
     await this.ensureCsrfToken();
-    const payload: CreateDonationRequest = {
-      amount_value: amountValue,
-      currency: currency,
-      message: message || null
-    };
-    return this.request<DonationResponse>(`/v1/profiles/${userId}/donations`, {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-  }
-
-  // ===== SPORT TYPES =====
-
-  async getSportTypes(): Promise<SportTypesResponse> {
-    return this.request<SportTypesResponse>('/v1/sport-types');
-  }
-
-  // ===== AVATAR =====
-
-  async uploadAvatar(file: File): Promise<AvatarUploadResponse> {
-    await this.ensureCsrfToken();
-
     const formData = new FormData();
     formData.append('avatar', file);
-
     const headers: Record<string, string> = {};
     if (this.csrfToken) {
       headers['X-CSRF-Token'] = this.csrfToken;
     }
-
     const response = await fetch(`${this.baseURL}/v1/profiles/me/avatar`, {
       method: 'POST',
       credentials: 'include',
       headers,
       body: formData
     });
-
     if (!response.ok) {
-      const error = new Error(`HTTP ${response.status}`);
-      (error as any).status = response.status;
-      throw error;
+      throw new Error(`HTTP ${response.status}`);
     }
-
-    return await response.json() as AvatarUploadResponse;
+    return response.json();
   }
 
   async deleteAvatar(): Promise<void> {
     await this.ensureCsrfToken();
-    await this.request<void>('/v1/profiles/me/avatar', { method: 'DELETE' });
+    await this.request('/v1/profiles/me/avatar', { method: 'DELETE' });
   }
 }

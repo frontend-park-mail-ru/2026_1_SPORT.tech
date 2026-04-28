@@ -1,8 +1,3 @@
-/**
- * @fileoverview Загрузка и маппинг данных страницы профиля (посты, шапка)
- * @module src/utils/profilePageData
- */
-
 import { mapPostEngagement } from './postEngagement';
 import type { ApiClient } from './api';
 import type { Profile, Post, PostListItem, AuthResponse, User } from '../types/api.types';

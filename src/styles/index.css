@@ -1,0 +1,25 @@
+/* Глобальные стили */
+@import './global.css';
+
+/* Атомы */
+@import '../components/atoms/Button/Button.css';
+@import '../components/atoms/Input/Input.css';
+@import '../components/atoms/Avatar/Avatar.css';
+@import '../components/atoms/UserPhotoItem/UserPhotoItem.css';
+
+/* Молекулы */
+@import '../components/molecules/PostCard/PostCard.css';
+@import '../components/molecules/PostFormModal/PostFormModal.css';
+@import '../components/molecules/DonationModal/DonationModal.css';
+@import '../components/molecules/ProfileHeader/ProfileHeader.css';
+@import '../components/molecules/ProfileEditModal/ProfileEditModal.css';
+
+/* Организмы */
+@import '../components/organisms/AuthForm/AuthForm.css';
+@import '../components/organisms/Sidebar/Sidebar.css';
+@import '../components/organisms/ProfileContent/ProfileContent.css';
+
+/* Страницы */
+@import '../pages/AuthPage/AuthPage.css';
+@import '../pages/ProfilePage/ProfilePage.css';
+@import '../pages/HomePage/HomePage.css';

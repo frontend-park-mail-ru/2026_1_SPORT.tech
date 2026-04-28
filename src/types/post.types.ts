@@ -1,5 +1,3 @@
-// src/types/post.types.ts
-
 import type { PostAttachment } from './api.types';
 
 export interface PostWithAuthor {

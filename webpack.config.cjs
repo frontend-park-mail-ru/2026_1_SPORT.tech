@@ -10,6 +10,7 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: isDev ? '[name].js' : '[name].[contenthash].js',
+    chunkFilename: isDev ? '[name].chunk.js' : '[name].[contenthash].chunk.js',
     clean: true,
     publicPath: '/'
   },
@@ -40,7 +41,11 @@ module.exports = {
     ]
   },
   plugins: [
-    new HtmlWebpackPlugin({ template: './public/index.html' }),
+    new HtmlWebpackPlugin({
+      template: './public/index.html',
+      inject: true,
+      scriptLoading: 'module'
+    }),
     new CopyWebpackPlugin({
       patterns: [
         { from: 'public/static', to: 'static', noErrorOnMissing: true }

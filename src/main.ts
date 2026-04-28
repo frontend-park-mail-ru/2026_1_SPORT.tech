@@ -1,20 +1,18 @@
-/**
- * @fileoverview Главный файл приложения (Production версия)
- * @module static/js/main
- */
+import Handlebars from 'handlebars';
+import { API_BASE_URL } from './config/constants';
+import { ApiClient } from './utils/api';
+import { loadProfilePageData } from './utils/profilePageData';
+import type { AuthResponse } from './types/auth.types';
+import type { Router, CurrentUser } from './types/router.types';
+import './styles/index.css';
+import templates from './templates';
 
-import { API_BASE_URL } from './config/constants.ts';
-import { ApiClient } from './utils/api.ts';
-import { loadProfilePageData } from './utils/profilePageData.ts';
+// Регистрируем шаблоны глобально
+(window as Window).Handlebars = Handlebars;
+(Handlebars as any).templates = templates;
 
-// ===== РЕГИСТРАЦИЯ ШАБЛОНОВ HANDLEBARS =====
-
-Handlebars.templates = {};
-let templatesPromise = null;
-
-function renderBootScreen(container, message = 'Загружаем интерфейс') {
+function renderBootScreen(container: HTMLElement, message = 'Загружаем интерфейс'): void {
   if (!container) return;
-
   container.innerHTML = `
     <div class="app-loader" aria-live="polite" aria-busy="true">
       <div class="app-loader__panel">
@@ -26,11 +24,10 @@ function renderBootScreen(container, message = 'Загружаем интерф�
   `;
 }
 
-function renderProfileShell(container) {
+function renderProfileShell(container: HTMLElement): void {
   if (!container) return;
-
   container.innerHTML = `
-    <div class="profile-page profile-page--loading" aria-live="polite" aria-busy="true">
+    <div class="profile-page profile-page--loading">
       <div class="profile-page__sidebar">
         <div class="page-skeleton page-skeleton--sidebar">
           <div class="page-skeleton__block page-skeleton__block--title"></div>
@@ -67,7 +64,11 @@ function renderProfileShell(container) {
   `;
 }
 
-function createLogoutHandler(api, setCurrentUser, navigateTo) {
+function createLogoutHandler(
+  api: ApiClient,
+  setCurrentUser: (user: AuthResponse | null) => void,
+  navigateTo: (path: string) => void
+): () => Promise<void> {
   return async () => {
     try {
       await api.logout();
@@ -80,57 +81,19 @@ function createLogoutHandler(api, setCurrentUser, navigateTo) {
   };
 }
 
-async function loadTemplates() {
-  if (templatesPromise) {
-    return templatesPromise;
-  }
+function createRouter(api: ApiClient): Router {
+  let currentUserPromise: Promise<AuthResponse | null> | null = null;
 
-  const templates = [
-    { name: 'Button', folder: 'atoms' }, { name: 'Input', folder: 'atoms' },
-    { name: 'Avatar', folder: 'atoms' }, { name: 'UserPhotoItem', folder: 'atoms' },
-    { name: 'AuthForm', folder: 'organisms' },
-    { name: 'ProfileHeader', folder: 'molecules' },
-    { name: 'PostCard', folder: 'molecules' },
-    { name: 'DonationModal', folder: 'molecules' },
-    { name: 'PostFormModal', folder: 'molecules' },
-    { name: 'Sidebar', folder: 'organisms' },
-    { name: 'ProfileContent', folder: 'organisms' },
-    { name: 'AuthPage', folder: 'pages' }, { name: 'ProfilePage', folder: 'pages' },
-    { name: 'HomePage', folder: 'pages' },
-    { name: 'ProfileEditModal', folder: 'molecules' }
-  ];
-
-  templatesPromise = Promise.all(templates.map(async ({ name, folder }) => {
-    try {
-      const path = folder === 'pages'
-        ? `/pages/${name}/${name}.hbs`
-        : `/components/${folder}/${name}/${name}.hbs`;
-
-      const response = await fetch(path);
-      const source = await response.text();
-      Handlebars.templates[`${name}.hbs`] = Handlebars.compile(source);
-    } catch (error) {
-      console.error(`❌ Failed to load template ${name}:`, error);
-    }
-  }));
-
-  return templatesPromise;
-}
-// ===== РОУТЕР =====
-
-function createRouter(api) {
-  let currentUserPromise = null;
-
-  function setCurrentUser(user) {
+  function setCurrentUser(user: AuthResponse | null): void {
     currentUserPromise = Promise.resolve(user);
   }
 
-  async function getCurrentUser({ force = false } = {}) {
-    if (!force && currentUserPromise) {
+  async function getCurrentUser(options?: { force: boolean }): Promise<AuthResponse | null> {
+    if (!options?.force && currentUserPromise) {
       return currentUserPromise;
     }
 
-    currentUserPromise = api.getCurrentUser().catch(error => {
+    currentUserPromise = api.getCurrentUser().catch((error: Error) => {
       currentUserPromise = null;
       throw error;
     });
@@ -138,64 +101,57 @@ function createRouter(api) {
     return currentUserPromise;
   }
 
-  function navigateTo(path) {
+  function navigateTo(path: string): void {
     history.pushState({}, '', path);
     handleRouting();
   }
 
-  async function showAuthPage() {
+  async function showAuthPage(): Promise<void> {
     const app = document.getElementById('app');
+    if (!app) return;
     renderBootScreen(app, 'Загружаем страницу входа');
     document.body.classList.add('auth-page');
-
     try {
       const { renderAuthPage } = await import('./pages/AuthPage/AuthPage');
       await renderAuthPage(app, api);
     } catch (error) {
       console.error('Failed to load AuthPage:', error);
-      app.innerHTML = `
-        <div style="color: red; padding: 20px;">
-          <h2>Ошибка загрузки страницы авторизации</h2>
-          <p>${error.message}</p>
-        </div>
-      `;
+      app.innerHTML = `<div style="color: red; padding: 20px;"><h2>Ошибка</h2><p>${(error as Error).message}</p></div>`;
     }
   }
 
-  async function showHomePage(currentUser) {
+  async function showHomePage(currentUser: AuthResponse | null): Promise<void> {
     const app = document.getElementById('app');
+    if (!app) return;
     renderProfileShell(app);
     document.body.classList.remove('auth-page');
-
     try {
       const { renderHomePage } = await import('./pages/HomePage/HomePage');
-
       await renderHomePage(api, app, {
         currentUser,
         onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
       });
     } catch (error) {
       console.error('Failed to load HomePage:', error);
-      app.innerHTML = `
-        <div style="color: red; padding: 20px; text-align: center;">
-          <h3>Ошибка загрузки главной страницы</h3>
-          <p>${error.message}</p>
-        </div>
-      `;
+      app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${(error as Error).message}</p></div>`;
     }
   }
 
-  async function showProfilePage(currentUser, viewedUserId = currentUser?.user?.user_id) {
+  async function showProfilePage(currentUser: AuthResponse | null, viewedUserId?: number): Promise<void> {
     const app = document.getElementById('app');
+    if (!app) return;
     renderProfileShell(app);
     document.body.classList.remove('auth-page');
-
+    const userId = viewedUserId ?? currentUser?.user?.user_id;
+    if (!userId) {
+      navigateTo('/auth');
+      return;
+    }
     try {
       const [{ renderProfilePage }, data] = await Promise.all([
         import('./pages/ProfilePage/ProfilePage'),
-        loadProfilePageData(api, viewedUserId, currentUser)
+        loadProfilePageData(api, userId, currentUser)
       ]);
-
       await renderProfilePage(api, app, {
         profile: data.profile,
         currentUser: data.currentUser,
@@ -208,31 +164,12 @@ function createRouter(api) {
       });
     } catch (error) {
       console.error('Failed to load ProfilePage:', error);
-      app.innerHTML = `
-        <div style="color: red; padding: 20px; text-align: center;">
-          <h3>Ошибка загрузки профиля</h3>
-          <p>${error.message}</p>
-          <button onclick="window.router.navigateTo('/auth')" style="
-            margin-top: 16px;
-            padding: 8px 16px;
-            background: var(--primary-orange);
-            color: white;
-            border: none;
-            border-radius: var(--radius-md);
-            cursor: pointer;
-          ">
-            Вернуться к авторизации
-          </button>
-        </div>
-      `;
+      app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${(error as Error).message}</p></div>`;
     }
   }
 
-  async function handleRouting() {
-    const [, currentUser] = await Promise.all([
-      loadTemplates(),
-      getCurrentUser()
-    ]);
+  async function handleRouting(): Promise<void> {
+    const currentUser = await getCurrentUser();
     const isAuthenticated = !!currentUser;
     const path = window.location.pathname;
     const viewedProfileMatch = path.match(/^\/profile\/(\d+)$/);
@@ -241,64 +178,43 @@ function createRouter(api) {
       navigateTo(isAuthenticated ? '/' : '/auth');
       return;
     }
-
     if (path === '/') {
-      if (!isAuthenticated) {
-        navigateTo('/auth');
-      } else {
-        await showHomePage(currentUser);
-      }
+      if (!isAuthenticated) navigateTo('/auth');
+      else await showHomePage(currentUser);
       return;
     }
-
     if (path === '/auth') {
-      if (isAuthenticated) {
-        navigateTo('/');
-      } else {
-        await showAuthPage();
-      }
+      if (isAuthenticated) navigateTo('/');
+      else await showAuthPage();
       return;
     }
-
     if (path === '/profile') {
-      if (!isAuthenticated) {
-        navigateTo('/auth');
-      } else {
-        await showProfilePage(currentUser);
-      }
+      if (!isAuthenticated) navigateTo('/auth');
+      else await showProfilePage(currentUser);
       return;
     }
-
     if (viewedProfileMatch) {
-      if (!isAuthenticated) {
-        navigateTo('/auth');
-      } else {
-        await showProfilePage(currentUser, Number(viewedProfileMatch[1]));
-      }
+      if (!isAuthenticated) navigateTo('/auth');
+      else await showProfilePage(currentUser, Number(viewedProfileMatch[1]));
       return;
     }
-
     navigateTo(isAuthenticated ? '/' : '/auth');
   }
 
   return { handleRouting, navigateTo, setCurrentUser, getCurrentUser };
 }
 
-// ===== ЗАПУСК ПРИЛОЖЕНИЯ (PRODUCTION) =====
-
 document.addEventListener('DOMContentLoaded', async () => {
-  // Service Worker (опционально - для офлайн режима)
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/static/sw.ts').catch(() => {});
+  const app = document.getElementById('app');
+  if (!app) {
+    console.error('App container not found');
+    return;
   }
-
+  
   const apiClient = new ApiClient(API_BASE_URL);
   const router = createRouter(apiClient);
-  window.router = router;
-  renderBootScreen(document.getElementById('app'));
+  (window as Window).router = router;
+  renderBootScreen(app);
   await router.handleRouting();
-
-  window.addEventListener('popstate', () => {
-    router.handleRouting();
-  });
+  window.addEventListener('popstate', () => router.handleRouting());
 });
