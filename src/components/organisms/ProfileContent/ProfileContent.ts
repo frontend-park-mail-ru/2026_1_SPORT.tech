@@ -366,7 +366,7 @@ export async function renderProfileContent(
         if (addButtonContainer) addButtonContainer.style.display = 'none';
         sectionTitle.textContent = 'Понравившиеся';
 
-        
+
         const freshPosts = await loadProfilePageData(api, viewedUserId);
 
         await fillProfilePostsSection(postsContainer, {
@@ -385,10 +385,10 @@ export async function renderProfileContent(
           addButtonContainer.style.display = (canAddPost && tabId === 'publications') ? 'block' : 'none';
         }
         sectionTitle.textContent = sectionTitles[tabId] || 'Публикации';
-
+        const freshPosts = await loadProfilePageData(api, viewedUserId);
         await fillProfilePostsSection(postsContainer, {
           activeTab: tabId,
-          posts: posts,
+          posts: freshPosts.posts,
           api,
           canManagePosts,
           onPostsUpdated: onPostsUpdated ?? undefined
@@ -433,9 +433,11 @@ export async function renderProfileContent(
       onPostsUpdated: onPostsUpdated ?? undefined
     });
   } else {
+    const freshPosts = await loadProfilePageData(api, viewedUserId);
     await fillProfilePostsSection(postsContainer, {
+
       activeTab: currentTab,
-      posts,
+      posts: freshPosts.posts,
       api,
       canManagePosts,
       onPostsUpdated: onPostsUpdated ?? undefined
