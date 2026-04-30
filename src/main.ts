@@ -3,13 +3,14 @@ import { API_BASE_URL } from './config/constants';
 import { ApiClient } from './utils/api';
 import { loadProfilePageData } from './utils/profilePageData';
 import type { AuthResponse } from './types/auth.types';
-import type { Router, CurrentUser } from './types/router.types';
+import type { Router } from './types/router.types';
 import './styles/index.css';
 import templates from './templates';
 
 // Регистрируем шаблоны глобально
 (window as Window).Handlebars = Handlebars;
-(Handlebars as any).templates = templates;
+// Исправлено: убран any
+(Handlebars as typeof Handlebars & { templates: Record<string, Handlebars.TemplateDelegate> }).templates = templates;
 
 function renderBootScreen(container: HTMLElement, message = 'Загружаем интерфейс'): void {
   if (!container) return;
@@ -75,7 +76,7 @@ function createLogoutHandler(
       setCurrentUser(null);
       localStorage.removeItem('user');
       navigateTo('/auth');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Logout error:', error);
     }
   };
@@ -103,7 +104,7 @@ function createRouter(api: ApiClient): Router {
 
   function navigateTo(path: string): void {
     history.pushState({}, '', path);
-    handleRouting();
+    void handleRouting();
   }
 
   async function showAuthPage(): Promise<void> {
@@ -114,9 +115,10 @@ function createRouter(api: ApiClient): Router {
     try {
       const { renderAuthPage } = await import('./pages/AuthPage/AuthPage');
       await renderAuthPage(app, api);
-    } catch (error) {
-      console.error('Failed to load AuthPage:', error);
-      app.innerHTML = `<div style="color: red; padding: 20px;"><h2>Ошибка</h2><p>${(error as Error).message}</p></div>`;
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Failed to load AuthPage:', err);
+      app.innerHTML = `<div style="color: red; padding: 20px;"><h2>Ошибка</h2><p>${err.message}</p></div>`;
     }
   }
 
@@ -131,9 +133,10 @@ function createRouter(api: ApiClient): Router {
         currentUser,
         onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
       });
-    } catch (error) {
-      console.error('Failed to load HomePage:', error);
-      app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${(error as Error).message}</p></div>`;
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Failed to load HomePage:', err);
+      app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${err.message}</p></div>`;
     }
   }
 
@@ -162,9 +165,10 @@ function createRouter(api: ApiClient): Router {
         viewedUserId: data.viewedUserId,
         onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
       });
-    } catch (error) {
-      console.error('Failed to load ProfilePage:', error);
-      app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${(error as Error).message}</p></div>`;
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Failed to load ProfilePage:', err);
+      app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${err.message}</p></div>`;
     }
   }
 
@@ -210,11 +214,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('App container not found');
     return;
   }
-  
+
   const apiClient = new ApiClient(API_BASE_URL);
   const router = createRouter(apiClient);
   (window as Window).router = router;
   renderBootScreen(app);
   await router.handleRouting();
-  window.addEventListener('popstate', () => router.handleRouting());
+  window.addEventListener('popstate', () => {
+    void router.handleRouting();
+  });
 });

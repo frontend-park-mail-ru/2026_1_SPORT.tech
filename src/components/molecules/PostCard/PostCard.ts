@@ -5,30 +5,33 @@
  * @module components/molecules/PostCard
  */
 
-import { mapPostEngagement } from '/src/utils/postEngagement.ts';
-import { openPostFormModal } from '../PostFormModal/PostFormModal.ts';
+import type { ApiClient } from '../../../utils/api';
+import { openPostFormModal } from '../PostFormModal/PostFormModal';
+
+export interface PostCardData {
+  post_id: number;
+  title: string;
+  content: string;
+  authorName: string;
+  authorRole: string;
+  authorAvatar: string | null;
+  likes?: number;
+  liked?: boolean;
+  comments?: number;
+  can_view?: boolean;
+  raw_text?: string;
+  isOwner?: boolean;
+  api: ApiClient;
+  onPostsUpdated?: (() => Promise<void>) | null;
+}
 
 /**
  * Рендерит карточку публикации
- * @async
- * @param {HTMLElement} container - DOM элемент для вставки
- * @param {Object} post - Данные поста
- * @param {number} post.post_id - ID поста
- * @param {string} post.title - Заголовок
- * @param {string} post.content - HTML-содержимое поста
- * @param {string} post.authorName - Имя автора
- * @param {string} post.authorRole - Роль автора
- * @param {number} [post.likes=0] - Количество лайков
- * @param {boolean} [post.liked=false] - Лайкнуто текущим пользователем
- * @param {number} [post.comments=0] - Комментарии
- * @param {boolean} [post.can_view=true] - Доступ к содержимому
- * @param {string} [post.raw_text=''] - Сырой текст для редактора
- * @param {boolean} [post.isOwner=false] - Можно ли редактировать/удалять
- * @param {import('/src/utils/api.ts').ApiClient} post.api - API
- * @param {Function} [post.onPostsUpdated] - После изменений списка постов
- * @returns {Promise<HTMLElement>} DOM элемент карточки
  */
-export async function renderPostCard(container, post) {
+export async function renderPostCard(
+  container: HTMLElement,
+  post: PostCardData
+): Promise<HTMLElement> {
   const {
     post_id: postId,
     title,
@@ -46,11 +49,11 @@ export async function renderPostCard(container, post) {
     onPostsUpdated
   } = post;
 
-  const template = Handlebars.templates['PostCard.hbs'];
+  const template = (window as any).Handlebars.templates['PostCard.hbs'];
 
   const initials = authorName
     .split(' ')
-    .map(n => n[0])
+    .map((n: string) => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
@@ -72,20 +75,15 @@ export async function renderPostCard(container, post) {
 
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
-  const element = wrapper.firstElementChild;
+  const element = wrapper.firstElementChild as HTMLElement;
 
-  const likeBtn = element.querySelector('[data-post-like]');
-  const likeCountEl = element.querySelector('[data-post-like-count]');
-  const editBtn = element.querySelector('[data-post-edit]');
-  const deleteBtn = element.querySelector('[data-post-delete]');
-  const shareBtn = element.querySelector('[data-post-share]');
+  const likeBtn = element.querySelector('[data-post-like]') as HTMLButtonElement | null;
+  const likeCountEl = element.querySelector('[data-post-like-count]') as HTMLElement | null;
+  const editBtn = element.querySelector('[data-post-edit]') as HTMLButtonElement | null;
+  const deleteBtn = element.querySelector('[data-post-delete]') as HTMLButtonElement | null;
+  const shareBtn = element.querySelector('[data-post-share]') as HTMLButtonElement | null;
 
-  /**
-   * Обновляет UI лайка
-   * @param {boolean} nextLiked
-   * @param {number} nextCount
-   */
-  const setLikeUi = (nextLiked, nextCount) => {
+  const setLikeUi = (nextLiked: boolean, nextCount: number): void => {
     if (!likeBtn || !likeCountEl) return;
     likeBtn.classList.toggle('post-card__action--liked', nextLiked);
     likeBtn.setAttribute('aria-pressed', nextLiked ? 'true' : 'false');
@@ -97,32 +95,30 @@ export async function renderPostCard(container, post) {
   };
 
   if (likeBtn && api && canView) {
-  likeBtn.addEventListener('click', async () => {
-    if (likeBtn.disabled) return;
-    const wasLiked = likeBtn.classList.contains('post-card__action--liked');
-    likeBtn.disabled = true;
-    try {
-      let response;
-      if (wasLiked) {
-        response = await api.unlikePost(postId);
-      } else {
-        response = await api.likePost(postId);
-      }
+    likeBtn.addEventListener('click', async () => {
+      if (likeBtn.disabled) return;
+      const wasLiked = likeBtn.classList.contains('post-card__action--liked');
+      likeBtn.disabled = true;
+      try {
+        let response;
+        if (wasLiked) {
+          response = await api.unlikePost(postId);
+        } else {
+          response = await api.likePost(postId);
+        }
 
-      // Обновляем UI
-      setLikeUi(response.is_liked, response.likes_count);
+        setLikeUi(response.is_liked, response.likes_count);
 
-      // Если есть колбэк для обновления списка постов — вызываем его
-      if (onPostsUpdated) {
-        await onPostsUpdated();
+        if (onPostsUpdated) {
+          await onPostsUpdated();
+        }
+      } catch (error) {
+        console.error('Like error:', error);
+      } finally {
+        likeBtn.disabled = false;
       }
-    } catch (error) {
-      
-    } finally {
-      likeBtn.disabled = false;
-    }
-  });
-}
+    });
+  }
 
   if (editBtn && api && isOwner) {
     editBtn.addEventListener('click', async () => {
@@ -130,7 +126,7 @@ export async function renderPostCard(container, post) {
         api,
         mode: 'edit',
         postId,
-        initial: { title, text_content: rawText || content || ''  },
+        initial: { title, text_content: rawText || content || '' },
         onSaved: onPostsUpdated
       });
     });
@@ -143,7 +139,7 @@ export async function renderPostCard(container, post) {
         await api.deletePost(postId);
         onPostsUpdated?.();
       } catch (error) {
-
+        console.error('Delete error:', error);
       } finally {
         deleteBtn.disabled = false;
       }

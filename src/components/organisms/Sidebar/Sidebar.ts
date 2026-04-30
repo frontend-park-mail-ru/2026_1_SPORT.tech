@@ -1,55 +1,39 @@
 /**
  * @fileoverview Компонент бокового меню
- * Отображает навигацию, список подписок и текущего пользователя
- * 
  * @module components/organisms/Sidebar
  */
 
-/**
- * Рендерит боковое меню
- * @async
- * @param {HTMLElement} container - DOM элемент для вставки
- * @param {Object} params - Параметры отображения
- * @param {string} [params.activePage='home'] - Активная страница
- * @param {Object} params.currentUser - Текущий пользователь
- * @param {number} params.currentUser.id - ID пользователя
- * @param {string} params.currentUser.name - Имя пользователя
- * @param {string} params.currentUser.role - Роль пользователя
- * @param {string} [params.currentUser.avatar] - URL аватара
- * @param {Array} [params.users=[]] - Список подписок
- * @param {Object} [params.api] - API клиент
- * @param {Function} [params.onLogout=null] - Обработчик выхода
- * @returns {Promise<HTMLElement>} DOM элемент сайдбара
- * 
- * @example
- * await renderSidebar(container, {
- *   activePage: 'profile',
- *   currentUser: {
- *     id: 123,
- *     name: 'Иван Петров',
- *     role: 'Тренер'
- *   },
- *   users: subscriptions,
- *   onLogout: async () => await api.logout()
- * });
- */
-export async function renderSidebar(container, {
-  activePage = 'home',
-  currentUser = {},
-  users = [],
-  api,
-  onLogout = null
-}) {
-  const template = Handlebars.templates['Sidebar.hbs'];
+import type { ApiClient } from '../../../utils/api';
 
-  /**
-   * @constant {Array} navItems - Пункты навигации
-   * @property {string} id - ID пункта
-   * @property {string} label - Текст пункта
-   * @property {string} url - URL для перехода
-   * @property {string} icon - HTML иконки
-   * @property {boolean} active - Активен ли пункт
-   */
+interface SidebarUser {
+  id: number;
+  name: string;
+  role: string;
+  avatar?: string | null;
+}
+
+interface SidebarParams {
+  activePage?: string;
+  currentUser?: SidebarUser | null;
+  users?: SidebarUser[];
+  api: ApiClient;
+  onLogout?: (() => Promise<void>) | null;
+}
+
+export async function renderSidebar(
+  container: HTMLElement,
+  params: SidebarParams
+): Promise<HTMLElement> {
+  const {
+    activePage = 'home',
+    currentUser = null,
+    users = [],
+    api: _api,
+    onLogout = null
+  } = params;
+
+  const template = (window as any).Handlebars.templates['Sidebar.hbs'];
+
   const navItems = [
     {
       id: 'home',
@@ -102,23 +86,15 @@ export async function renderSidebar(container, {
     }
   ];
 
-  /**
-   * Добавляет инициалы пользователям
-   * @param {Array} userList - Список пользователей
-   * @returns {Array} Пользователи с инициалами
-   */
-  const usersWithInitials = users.map(u => ({
+  const usersWithInitials = users.map((u: SidebarUser) => ({
     ...u,
-    initials: u.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    initials: u.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
   }));
 
-  /**
-   * Текущий пользователь с инициалами
-   */
-  const currentWithInitials = {
+  const currentWithInitials = currentUser ? {
     ...currentUser,
-    initials: currentUser.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'
-  };
+    initials: currentUser.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || '??'
+  } : null;
 
   const html = template({
     navItems,
@@ -128,46 +104,34 @@ export async function renderSidebar(container, {
 
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
-  const element = wrapper.firstElementChild;
+  const element = wrapper.firstElementChild as HTMLElement;
 
-  /**
-   * @constant {Object} urls - Маппинг страниц в URL
-   */
-  const urls = {
+  const urls: Record<string, string> = {
     'profile': '/profile',
     'home': '/',
     'auth': '/auth'
   };
 
-  /**
-   * Обработчик клика по пунктам навигации
-   * @param {MouseEvent} e - Событие клика
-   */
-  element.querySelectorAll('.sidebar__nav-item').forEach(item => {
-    item.addEventListener('click', e => {
+  element.querySelectorAll('.sidebar__nav-item').forEach((item: Element) => {
+    item.addEventListener('click', (e: Event) => {
       e.preventDefault();
-      const page = item.dataset.page;
-
-      if (urls[page]) {
+      const page = (item as HTMLElement).dataset.page;
+      if (page && urls[page]) {
         window.router.navigateTo(urls[page]);
       }
     });
   });
 
-  /**
-   * Обработчик клика по подписке
-   * @param {MouseEvent} _event - Событие клика
-   */
-  element.querySelectorAll('.sidebar__user-item').forEach(item => {
+  element.querySelectorAll('.sidebar__user-item').forEach((item: Element) => {
     item.addEventListener('click', () => {
-      const userId = item.dataset.userId;
+      const _userId = (item as HTMLElement).dataset.userId;
       // TODO: Переход на профиль другого пользователя
     });
   });
 
-  const logoutBtn = element.querySelector('.sidebar__logout-option');
+  const logoutBtn = element.querySelector('.sidebar__logout-option') as HTMLElement;
   if (logoutBtn && onLogout) {
-    logoutBtn.addEventListener('click', async e => {
+    logoutBtn.addEventListener('click', async (e: Event) => {
       e.preventDefault();
       await onLogout();
     });

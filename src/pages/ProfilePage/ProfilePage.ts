@@ -5,66 +5,85 @@
  * @module pages/ProfilePage
  */
 
-import { openDonationModal } from '../../components/molecules/DonationModal/DonationModal.ts';
-import { renderProfileHeader } from '../../components/molecules/ProfileHeader/ProfileHeader.ts';
+import type { ApiClient } from '../../utils/api';
+import type { PostWithAuthor, ProfilePageData } from '../../types/post.types';
+import { openDonationModal } from '../../components/molecules/DonationModal/DonationModal';
+import { renderProfileHeader } from '../../components/molecules/ProfileHeader/ProfileHeader';
 import {
   fillProfilePostsSection,
   renderProfileContent
-} from '../../components/organisms/ProfileContent/ProfileContent.ts';
-import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar.ts';
-import { loadProfilePageData } from '/src/utils/profilePageData.ts';
+} from '../../components/organisms/ProfileContent/ProfileContent';
+import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar';
+import { loadProfilePageData } from '../../utils/profilePageData';
+
+interface ProfilePageParams {
+  viewedUserId: number;
+  profile?: {
+    name: string;
+    role: string;
+    avatar: string | null;
+    isOwnProfile: boolean;
+    isTrainer: boolean;
+  };
+  currentUser?: {
+    id: number;
+    name: string;
+    role: string;
+    avatar: string | null;
+  } | null;
+  subscriptions?: Array<{
+    id: number;
+    name: string;
+    role: string;
+  }>;
+  posts?: PostWithAuthor[];
+  popularPosts?: any[];
+  activeTab?: string;
+  onLogout?: (() => Promise<void>) | null;
+}
 
 /**
  * Рендерит страницу профиля
- * @async
- * @param {import('/src/utils/api.ts').ApiClient} api - API клиент
- * @param {HTMLElement} container - DOM элемент для вставки
- * @param {Object} params - Параметры страницы
- * @param {number} params.viewedUserId - ID пользователя, чей профиль открыт
- * @param {Object} [params.profile] - Данные профиля
- * @param {Object} [params.currentUser] - Текущий пользователь
- * @param {Array} [params.subscriptions=[]] - Подписки для сайдбара
- * @param {Array} [params.posts=[]] - Посты
- * @param {Array} [params.popularPosts=[]] - Популярные посты
- * @param {string} [params.activeTab='publications'] - Вкладка
- * @param {Function} [params.onLogout=null] - Выход
- * @returns {Promise<HTMLElement>} Корневой элемент страницы
  */
-export async function renderProfilePage(api, container, {
-  viewedUserId,
-  profile = {
-    name: 'Абдурахман Гасанов',
-    role: 'Фитнес-тренер',
-    avatar: null,
-    isOwnProfile: false,
-    isTrainer: false
-  },
-  currentUser = {
-    name: 'Абдурахман Гасанов',
-    role: 'Фитнес-тренер'
-  },
-  subscriptions = [
-    { id: 1, name: 'Ярослав-Лют... Владимиров', role: 'Физиолог' },
-    { id: 2, name: 'Антон Переславль-З...', role: 'Тренер ОФП' },
-    { id: 3, name: 'Ксения Бортникова', role: 'Тренер по КОНК...' }
-  ],
-  posts = [],
-  popularPosts = [],
-  activeTab = 'publications',
-  onLogout = null
-} = {}) {
-  const template = Handlebars.templates['ProfilePage.hbs'];
+export async function renderProfilePage(
+  api: ApiClient,
+  container: HTMLElement,
+  params: ProfilePageParams = {} as ProfilePageParams
+): Promise<HTMLElement> {
+  const {
+    viewedUserId,
+    profile = {
+      name: 'Абдурахман Гасанов',
+      role: 'Фитнес-тренер',
+      avatar: null,
+      isOwnProfile: false,
+      isTrainer: false
+    },
+    currentUser = {
+      id: 0,
+      name: 'Абдурахман Гасанов',
+      role: 'Фитнес-тренер',
+      avatar: null
+    },
+    subscriptions = [],
+    posts = [],
+    popularPosts = [],
+    activeTab = 'publications',
+    onLogout = null
+  } = params;
+
+  const template = (window as any).Handlebars.templates['ProfilePage.hbs'];
   const html = template({});
 
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
-  const page = wrapper.firstElementChild;
+  const page = wrapper.firstElementChild as HTMLElement;
 
   container.innerHTML = '';
   container.appendChild(page);
 
-  const sidebarContainer = page.querySelector('#sidebar-container');
-  const profileContainer = page.querySelector('#profile-container');
+  const sidebarContainer = page.querySelector('#sidebar-container') as HTMLElement;
+  const profileContainer = page.querySelector('#profile-container') as HTMLElement;
 
   const headerContainer = document.createElement('div');
   headerContainer.className = 'profile-page__header';
@@ -77,9 +96,9 @@ export async function renderProfilePage(api, container, {
   /**
    * Перезагрузка списка постов после лайка, редактирования и т.д.
    */
-  async function reloadPosts() {
-    const data = await loadProfilePageData(api, viewedUserId);
-    const postsContainer = contentContainer.querySelector('#posts-container');
+  async function reloadPosts(): Promise<void> {
+    const data: ProfilePageData = await loadProfilePageData(api, viewedUserId);
+    const postsContainer = contentContainer.querySelector('#posts-container') as HTMLElement;
     if (!postsContainer) return;
     await fillProfilePostsSection(postsContainer, {
       activeTab: 'publications',

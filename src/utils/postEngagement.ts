@@ -3,12 +3,26 @@
  * @module src/utils/postEngagement
  */
 
+import type { PostEngagement } from '../types/post.types';
+
+interface RawPostData {
+  likes_count?: number;
+  like_count?: number;
+  likes?: number;
+  comments_count?: number;
+  comments?: number;
+  comment_count?: number;
+  liked_by_me?: boolean;
+  is_liked?: boolean;
+  liked?: boolean;
+  user_liked?: boolean;
+  [key: string]: unknown;
+}
+
 /**
- * Извлекает счётчики и признак «лайкнуто мной» из объекта поста (разные имена полей на бэкенде)
- * @param {Object|null|undefined} fullPost - Тело ответа GET /posts/:id или вложенный объект
- * @returns {{ likes: number, liked: boolean, comments: number }}
+ * Извлекает счётчики и признак «лайкнуто мной» из объекта поста
  */
-export function mapPostEngagement(fullPost) {
+export function mapPostEngagement(fullPost: RawPostData | null | undefined): PostEngagement {
   if (!fullPost || typeof fullPost !== 'object') {
     return { likes: 0, liked: false, comments: 0 };
   }

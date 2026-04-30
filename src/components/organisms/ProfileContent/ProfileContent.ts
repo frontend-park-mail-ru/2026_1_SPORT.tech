@@ -1,30 +1,53 @@
 /**
  * @fileoverview Компонент контента профиля
- * Содержит вкладки, список постов и правую колонку с популярным
- *
  * @module components/organisms/ProfileContent
  */
 
-import { renderButton } from '../../atoms/Button/Button.ts';
-import { renderPostCard } from '../../molecules/PostCard/PostCard.ts';
-import { openPostFormModal } from '../../molecules/PostFormModal/PostFormModal.ts';
+import type { ApiClient } from '../../../utils/api';
+import type { PostWithAuthor } from '../../../types/post.types';
+import type { Profile, TrainerDetails } from '../../../types/api.types';
+import { renderButton } from '../../atoms/Button/Button';
+import { renderPostCard } from '../../molecules/PostCard/PostCard';
+import { openPostFormModal } from '../../molecules/PostFormModal/PostFormModal';
 
-function setPostsContainerMessageState(container, isMessageState) {
+interface ProfileContentParams {
+  activeTab?: string;
+  posts?: PostWithAuthor[];
+  popularPosts?: Array<{ description?: string; [key: string]: unknown }>;
+  canAddPost?: boolean;
+  api: ApiClient;
+  canManagePosts?: boolean;
+  onPostsUpdated?: (() => Promise<void>) | null;
+  viewedUserId: number;
+  isTrainer?: boolean;
+}
+
+interface FillPostsParams {
+  activeTab: string;
+  posts: PostWithAuthor[];
+  api: ApiClient;
+  canManagePosts: boolean;
+  onPostsUpdated?: (() => Promise<void>) | null;
+}
+
+function setPostsContainerMessageState(container: HTMLElement, isMessageState: boolean): void {
   if (!container) return;
   container.classList.toggle('profile-content__posts-container--message', isMessageState);
   container.closest('.profile-content__main')?.classList.toggle('profile-content__main--message', isMessageState);
 }
 
-/**
- * Заполняет контейнер постов
- */
-export async function fillProfilePostsSection(postsContainer, {
-  activeTab,
-  posts = [],
-  api,
-  canManagePosts = false,
-  onPostsUpdated
-}) {
+export async function fillProfilePostsSection(
+  postsContainer: HTMLElement,
+  params: FillPostsParams
+): Promise<void> {
+  const {
+    activeTab,
+    posts = [],
+    api,
+    canManagePosts = false,
+    onPostsUpdated
+  } = params;
+
   if (posts.length === 0 && activeTab !== 'about') {
     setPostsContainerMessageState(postsContainer, true);
     postsContainer.innerHTML = `
@@ -43,14 +66,14 @@ export async function fillProfilePostsSection(postsContainer, {
   setPostsContainerMessageState(postsContainer, false);
   postsContainer.innerHTML = '';
   await Promise.all(posts.map(post => renderPostCard(postsContainer, {
-      ...post,
-      api,
-      isOwner: canManagePosts,
-      onPostsUpdated
-    })));
+    ...post,
+    api,
+    isOwner: canManagePosts,
+    onPostsUpdated: onPostsUpdated ?? undefined
+  })));
 }
 
-function getYearsWord(years) {
+function getYearsWord(years: number): string {
   const lastDigit = years % 10;
   const lastTwoDigits = years % 100;
 
@@ -60,18 +83,7 @@ function getYearsWord(years) {
   return 'лет';
 }
 
-function formatPostContent(textContent) {
-  if (!textContent) return '';
-  return String(textContent)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('\'', '&#39;')
-    .replace(/\n/g, '<br>');
-}
-
-function escapeHtml(value) {
+function escapeHtml(value: string | null | undefined): string {
   if (value === null || value === undefined) return '';
   return String(value)
     .replaceAll('&', '&amp;')
@@ -81,13 +93,17 @@ function escapeHtml(value) {
     .replaceAll('\'', '&#39;');
 }
 
-async function showTrainerAbout(container, api, userId) {
+async function showTrainerAbout(
+  container: HTMLElement,
+  api: ApiClient,
+  userId: number
+): Promise<void> {
   try {
     const [profile, sportTypesResponse] = await Promise.all([
       api.getProfile(userId),
       api.getSportTypes?.().catch(() => ({ sport_types: [] })) ?? { sport_types: [] }
     ]);
-    const trainerDetails = profile.trainer_details;
+    const trainerDetails: TrainerDetails | undefined = profile.trainer_details;
 
     if (!trainerDetails) {
       setPostsContainerMessageState(container, true);
@@ -97,11 +113,11 @@ async function showTrainerAbout(container, api, userId) {
 
     setPostsContainerMessageState(container, false);
 
-    const careerDate = trainerDetails.career_since_date
+    const careerDate: Date | null = trainerDetails.career_since_date
       ? new Date(trainerDetails.career_since_date)
       : null;
 
-    const careerDateStr = careerDate
+    const careerDateStr: string = careerDate
       ? careerDate.toLocaleDateString('ru-RU')
       : 'Не указано';
 
@@ -118,10 +134,10 @@ async function showTrainerAbout(container, api, userId) {
 
     const sports = trainerDetails.sports || [];
     const sportTypes = Array.isArray(sportTypesResponse?.sport_types) ? sportTypesResponse.sport_types : [];
-    const sportNamesById = new Map(
-      sportTypes.map(sportType => [Number(sportType.sport_type_id), sportType.name])
+    const sportNamesById = new Map<number, string>(
+      sportTypes.map((sportType: { sport_type_id: number; name: string }) => [Number(sportType.sport_type_id), sportType.name])
     );
-    const sportsList = sports.length > 0
+    const sportsList: string = sports.length > 0
       ? sports.map(s => `
           <div class="trainer-about__sport-item">
             <span class="trainer-about__sport-name">${escapeHtml(sportNamesById.get(Number(s.sport_type_id)) || 'Не указано')}</span>
@@ -153,15 +169,16 @@ async function showTrainerAbout(container, api, userId) {
         </div>
       </div>
     `;
-  } catch (error) {
+  } catch (error: unknown) {
+    console.error('Failed to load trainer about:', error);
     setPostsContainerMessageState(container, true);
     container.innerHTML = '<div class="profile-content__empty"><p>Не удалось загрузить информацию</p></div>';
   }
 }
 
-function showClientAbout(container, profile) {
+function showClientAbout(container: HTMLElement, profile: Profile): void {
   setPostsContainerMessageState(container, false);
-  const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Не указано';
+  const fullName: string = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Не указано';
 
   container.innerHTML = `
     <div class="trainer-about">
@@ -181,17 +198,35 @@ function showClientAbout(container, profile) {
   `;
 }
 
-async function loadLikedPosts(api, userId) {
+interface LikedPost {
+  post_id: number;
+  title: string;
+  content: string;
+  raw_text: string;
+  authorName: string;
+  authorRole: string;
+  authorAvatar: string | null;
+  likes: number;
+  liked: boolean;
+  comments: number;
+  can_view: boolean;
+  created_at: string;
+  min_tier_id: number | null;
+  attachments: unknown[];
+  isOwner: boolean;
+}
+
+async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost[]> {
   try {
     const postsData = await api.getUserPosts(userId);
     const postList = Array.isArray(postsData?.posts) ? postsData.posts : [];
 
     const likedPosts = postList.filter(post => post.is_liked);
 
-    const fullPosts = await Promise.all(likedPosts.map(async post => {
+    const fullPosts = await Promise.all(likedPosts.map(async (post): Promise<LikedPost | null> => {
       try {
         const fullPost = await api.getPost(post.post_id);
-        const authorProfile = await api.getProfile(post.trainer_id).catch(() => ({}));
+        const authorProfile = await api.getProfile(post.trainer_id).catch(() => ({} as Profile));
 
         return {
           post_id: post.post_id,
@@ -215,40 +250,56 @@ async function loadLikedPosts(api, userId) {
       }
     }));
 
-    return fullPosts.filter(p => p !== null);
-  } catch (error) {
+    return fullPosts.filter((p): p is LikedPost => p !== null);
+  } catch (error: unknown) {
     console.error('Failed to load liked posts:', error);
     return [];
   }
 }
 
-export async function renderProfileContent(container, {
-  activeTab = 'main',
-  posts = [],
-  popularPosts = [],
-  canAddPost = false,
-  api,
-  canManagePosts = false,
-  onPostsUpdated = null,
-  viewedUserId = null,
-  isTrainer = true
-}) {
-  const template = Handlebars.templates['ProfileContent.hbs'];
+function formatPostContent(textContent: string): string {
+  if (!textContent) return '';
+  return String(textContent)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('\'', '&#39;')
+    .replace(/\n/g, '<br>');
+}
+
+export async function renderProfileContent(
+  container: HTMLElement,
+  params: ProfileContentParams
+): Promise<HTMLElement> {
+  const {
+    activeTab = 'main',
+    posts = [],
+    popularPosts = [],
+    canAddPost = false,
+    api,
+    canManagePosts = false,
+    onPostsUpdated = null,
+    viewedUserId,
+    isTrainer = true
+  } = params;
+
+  const template = (window as any).Handlebars.templates['ProfileContent.hbs'];
 
   const tabs = isTrainer
     ? [
-        { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
-        { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
-        { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
-        { id: 'about', label: 'О тренере', active: activeTab === 'about' }
-      ]
+      { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
+      { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
+      { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
+      { id: 'about', label: 'О тренере', active: activeTab === 'about' }
+    ]
     : [
-        { id: 'publications', label: 'Понравившиеся', active: activeTab === 'publications' || activeTab === 'main' },
-        { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
-        { id: 'about', label: 'О себе', active: activeTab === 'about' }
-      ];
+      { id: 'publications', label: 'Понравившиеся', active: activeTab === 'publications' || activeTab === 'main' },
+      { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
+      { id: 'about', label: 'О себе', active: activeTab === 'about' }
+    ];
 
-  const sectionTitles = {
+  const sectionTitles: Record<string, string> = {
     main: 'Недавние публикации',
     publications: isTrainer ? 'Все публикации' : 'Понравившиеся',
     subscriptions: 'Подписки',
@@ -263,7 +314,7 @@ export async function renderProfileContent(container, {
 
   const popularWithDescriptions = popularPosts.map(post => ({
     ...post,
-    description: post.description || 'Практические советы и рекомендации'
+    description: (post as Record<string, unknown>).description || 'Практические советы и рекомендации'
   }));
 
   const html = template({
@@ -277,25 +328,26 @@ export async function renderProfileContent(container, {
 
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
-  const element = wrapper.firstElementChild;
-  const sectionTitle = element.querySelector('.profile-content__section-title');
-  const filtersElement = element.querySelector('.profile-content__filters');
-  const addButtonContainer = element.querySelector('#add-post-button-container');
-  const postsContainer = element.querySelector('#posts-container');
+  const element = wrapper.firstElementChild as HTMLElement;
+  const sectionTitle = element.querySelector('.profile-content__section-title') as HTMLElement;
+  const filtersElement = element.querySelector('.profile-content__filters') as HTMLElement | null;
+  const addButtonContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
+  const postsContainer = element.querySelector('#posts-container') as HTMLElement;
 
   if (!isTrainer) {
     if (filtersElement) filtersElement.style.display = 'none';
     if (addButtonContainer) addButtonContainer.style.display = 'none';
   }
 
-  element.querySelectorAll('.profile-content__tab').forEach(tab => {
+  element.querySelectorAll('.profile-content__tab').forEach((tab: Element) => {
     tab.addEventListener('click', async () => {
-      const tabId = tab.dataset.tab;
+      const htmlTab = tab as HTMLElement;
+      const tabId = htmlTab.dataset.tab as string;
 
-      element.querySelectorAll('.profile-content__tab').forEach(t => {
+      element.querySelectorAll('.profile-content__tab').forEach((t: Element) => {
         t.classList.remove('profile-content__tab--active');
       });
-      tab.classList.add('profile-content__tab--active');
+      htmlTab.classList.add('profile-content__tab--active');
 
       if (tabId === 'about') {
         if (filtersElement) filtersElement.style.display = 'none';
@@ -316,10 +368,10 @@ export async function renderProfileContent(container, {
         const likedPosts = await loadLikedPosts(api, viewedUserId);
         await fillProfilePostsSection(postsContainer, {
           activeTab: tabId,
-          posts: likedPosts,
+          posts: likedPosts as PostWithAuthor[],
           api,
           canManagePosts: false,
-          onPostsUpdated
+          onPostsUpdated: onPostsUpdated ?? undefined
         });
       } else {
         if (filtersElement) {
@@ -335,14 +387,14 @@ export async function renderProfileContent(container, {
           posts: posts,
           api,
           canManagePosts,
-          onPostsUpdated
+          onPostsUpdated: onPostsUpdated ?? undefined
         });
       }
     });
   });
 
   if (canAddPost && currentTab === 'publications' && isTrainer) {
-    const btnContainer = element.querySelector('#add-post-button-container');
+    const btnContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
     if (btnContainer) {
       await renderButton(btnContainer, {
         text: 'Добавить публикацию',
@@ -371,10 +423,10 @@ export async function renderProfileContent(container, {
     const likedPosts = await loadLikedPosts(api, viewedUserId);
     await fillProfilePostsSection(postsContainer, {
       activeTab: currentTab,
-      posts: likedPosts,
+      posts: likedPosts as PostWithAuthor[],
       api,
       canManagePosts: false,
-      onPostsUpdated
+      onPostsUpdated: onPostsUpdated ?? undefined
     });
   } else {
     await fillProfilePostsSection(postsContainer, {
@@ -382,7 +434,7 @@ export async function renderProfileContent(container, {
       posts,
       api,
       canManagePosts,
-      onPostsUpdated
+      onPostsUpdated: onPostsUpdated ?? undefined
     });
   }
 

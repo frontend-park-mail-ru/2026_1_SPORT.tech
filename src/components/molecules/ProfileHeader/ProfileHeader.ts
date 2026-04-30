@@ -5,60 +5,48 @@
  * @module components/molecules/ProfileHeader
  */
 
-import { renderButton } from '../../atoms/Button/Button.ts';
-import { openProfileEditModal } from '../ProfileEditModal/ProfileEditModal.ts';
+import type { ApiClient } from '../../../utils/api';
+import { renderButton } from '../../atoms/Button/Button';
+import { openProfileEditModal } from '../ProfileEditModal/ProfileEditModal';
+
+export interface ProfileHeaderConfig {
+  name: string;
+  role: string;
+  avatar?: string | null;
+  isOwnProfile?: boolean;
+  api: ApiClient;
+  onEdit?: (() => void) | null;
+  showDonate?: boolean;
+  onDonate?: (() => void) | null;
+}
 
 /**
  * Рендерит шапку профиля
- * @async
- * @param {HTMLElement} container - DOM элемент для вставки
- * @param {Object} profile - Данные профиля
- * @param {string} profile.name - Имя пользователя
- * @param {string} profile.role - Роль пользователя
- * @param {string} [profile.avatar=null] - URL аватара
- * @param {boolean} [profile.isOwnProfile=false] - Свой ли это профиль
- * @param {Object} [profile.api] - API клиент
- * @param {Function} [profile.onEdit=null] - Обработчик редактирования профиля
- * @param {boolean} [profile.showDonate=false] - Показать кнопку пожертвования
- * @param {Function} [profile.onDonate=null] - Обработчик пожертвования
- * @returns {Promise<HTMLElement>} DOM элемент шапки
- *
- * @example
- * // Чужой профиль
- * await renderProfileHeader(container, {
- *   name: 'Иван Петров',
- *   role: 'Тренер',
- *   isOwnProfile: false
- * });
  */
-export async function renderProfileHeader(container, {
-  name,
-  role,
-  avatar = null,
-  isOwnProfile = false,
-  api,
-  onEdit = null,
-  showDonate = false,
-  onDonate = null
-}) {
-  const template = Handlebars.templates['ProfileHeader.hbs'];
+export async function renderProfileHeader(
+  container: HTMLElement,
+  config: ProfileHeaderConfig
+): Promise<HTMLElement> {
+  const {
+    name,
+    role,
+    avatar = null,
+    isOwnProfile = false,
+    api,
+    onEdit: _onEdit = null,
+    showDonate = false,
+    onDonate = null
+  } = config;
 
-  /**
-   * Получить инициалы пользователя
-   * @param {string} fullName - Полное имя
-   * @returns {string} Инициалы
-   */
+  const template = (window as any).Handlebars.templates['ProfileHeader.hbs'];
+
   const initials = name
     .split(' ')
-    .map(n => n[0])
+    .map((n: string) => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
 
-  /**
-   * Уникальный ID для элементов шапки
-   * @type {string}
-   */
   const id = 'header-' + Date.now();
 
   const html = template({
@@ -72,9 +60,9 @@ export async function renderProfileHeader(container, {
 
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
-  const element = wrapper.firstElementChild;
-  const donateContainer = element.querySelector(`#profile-donate-${id}`);
-  const actionsContainer = element.querySelector(`#profile-actions-${id}`);
+  const element = wrapper.firstElementChild as HTMLElement;
+  const donateContainer = element.querySelector(`#profile-donate-${id}`) as HTMLElement | null;
+  const actionsContainer = element.querySelector(`#profile-actions-${id}`) as HTMLElement | null;
 
   if (showDonate && donateContainer && onDonate) {
     await renderButton(donateContainer, {
@@ -94,18 +82,15 @@ export async function renderProfileHeader(container, {
       state: 'normal',
       size: 'medium',
       onClick: async () => {
-        // Получаем базовые данные текущего пользователя
         const currentUser = await api.getCurrentUser();
         let userData = currentUser?.user;
 
-        // Если пользователь тренер, запрашиваем полный профиль с trainer_details
         if (userData?.is_trainer) {
           try {
-
             const fullProfile = await api.getProfile(userData.user_id);
             userData = { ...userData, ...fullProfile };
-
           } catch (error) {
+            console.error('Failed to load full profile:', error);
           }
         }
 
@@ -118,11 +103,7 @@ export async function renderProfileHeader(container, {
     });
   }
 
-  /**
-   * Обработчик клика по кнопке статистики
-   * @param {MouseEvent} _event - Событие клика (не используется)
-   */
-  const statBtn = element.querySelector(`#stat-btn-${id}`);
+  const statBtn = element.querySelector(`#stat-btn-${id}`) as HTMLElement | null;
   if (statBtn) {
     statBtn.addEventListener('click', () => {
       statBtn.classList.add('button--active');
@@ -130,11 +111,7 @@ export async function renderProfileHeader(container, {
     });
   }
 
-  /**
-   * Обработчик клика по кнопке подписок
-   * @param {MouseEvent} _event - Событие клика (не используется)
-   */
-  const subsBtn = element.querySelector(`#subscriptions-btn-${id}`);
+  const subsBtn = element.querySelector(`#subscriptions-btn-${id}`) as HTMLElement | null;
   if (subsBtn) {
     subsBtn.addEventListener('click', () => {
       subsBtn.classList.add('button--active');
@@ -143,25 +120,24 @@ export async function renderProfileHeader(container, {
   }
 
   // Кнопка камеры для смены аватара
-  const cameraBtn = element.querySelector('.profile-header__camera-btn');
+  const cameraBtn = element.querySelector('.profile-header__camera-btn') as HTMLElement | null;
   if (cameraBtn) {
     cameraBtn.addEventListener('click', async () => {
-      if (!api) {
-        return;
-      }
+      if (!api) return;
+
       const currentUser = await api.getCurrentUser();
       let userData = currentUser?.user;
 
-      // Если тренер - запрашиваем полный профиль
       if (userData?.is_trainer) {
         try {
           const fullProfile = await api.getProfile(userData.user_id);
           userData = { ...userData, ...fullProfile };
         } catch (error) {
+          console.error('Failed to load full profile:', error);
         }
       }
 
-      const { openProfileEditModal } = await import('../ProfileEditModal/ProfileEditModal.ts');
+      const { openProfileEditModal } = await import('../ProfileEditModal/ProfileEditModal');
       openProfileEditModal({
         api,
         currentUser: { user: userData },

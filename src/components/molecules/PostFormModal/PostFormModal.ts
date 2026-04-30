@@ -3,20 +3,27 @@
  * @module components/molecules/PostFormModal
  */
 
-import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button.ts';
-import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input.ts';
-import { Validator } from '/src/utils/validator.ts';
+import type { ApiClient } from '../../../utils/api';
+import type { ButtonAPI } from '../../atoms/Button/Button';
+import type { InputAPI } from '../../atoms/Input/Input';
+import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
+import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
+import { Validator } from '../../../utils/validator';
+
+export interface PostFormModalOptions {
+  api: ApiClient;
+  mode: 'create' | 'edit';
+  postId?: number;
+  initial?: {
+    title?: string;
+    text_content?: string;
+    raw_text?: string;
+  };
+  onSaved?: (() => void) | null;
+}
 
 /**
  * Открывает форму поста
- * @async
- * @param {Object} options
- * @param {import('/src/utils/api.ts').ApiClient} options.api - API
- * @param {'create'|'edit'} options.mode - Режим
- * @param {number} [options.postId] - ID поста для редактирования
- * @param {{ title?: string, text_content?: string }} [options.initial] - Начальные значения
- * @param {Function} [options.onSaved] - Вызывается после успешного сохранения
- * @returns {Promise<void>}
  */
 export async function openPostFormModal({
   api,
@@ -24,24 +31,24 @@ export async function openPostFormModal({
   postId,
   initial = {},
   onSaved
-}) {
-  const template = Handlebars.templates['PostFormModal.hbs'];
+}: PostFormModalOptions): Promise<void> {
+  const template = (window as any).Handlebars.templates['PostFormModal.hbs'];
   const modalTitle = mode === 'edit' ? 'Изменить публикацию' : 'Новая публикация';
 
   const root = document.createElement('div');
   root.innerHTML = template({ modalTitle }).trim();
-  const modal = root.firstElementChild;
+  const modal = root.firstElementChild as HTMLElement;
 
-  const form = modal.querySelector('.post-form-modal__form');
-  const titleHost = modal.querySelector('#post-form-title-field');
-  const bodyInput = modal.querySelector('#post-form-body-input');
-  const bodyErr = modal.querySelector('[data-post-body-error]');
-  const globalErr = modal.querySelector('[data-post-form-global-error]');
-  const cancelWrap = modal.querySelector('#post-form-cancel-wrap');
-  const submitWrap = modal.querySelector('#post-form-submit-wrap');
+  const form = modal.querySelector('.post-form-modal__form') as HTMLFormElement;
+  const titleHost = modal.querySelector('#post-form-title-field') as HTMLElement;
+  const bodyInput = modal.querySelector('#post-form-body-input') as HTMLTextAreaElement;
+  const bodyErr = modal.querySelector('[data-post-body-error]') as HTMLElement;
+  const globalErr = modal.querySelector('[data-post-form-global-error]') as HTMLElement;
+  const cancelWrap = modal.querySelector('#post-form-cancel-wrap') as HTMLElement;
+  const submitWrap = modal.querySelector('#post-form-submit-wrap') as HTMLElement;
   const validator = new Validator();
 
-  const titleApi = await renderInput(titleHost, {
+  const titleApi: InputAPI = await renderInput(titleHost, {
     type: INPUT_TYPES.WITHOUTS,
     label: 'Заголовок',
     placeholder: 'Введите заголовок',
@@ -53,14 +60,11 @@ export async function openPostFormModal({
   });
 
   const textContent = initial.text_content || initial.raw_text || '';
-if (textContent) {
-  bodyInput.value = textContent;
-}
+  if (textContent) {
+    bodyInput.value = textContent;
+  }
 
-  /**
-   * @param {string} msg
-   */
-  const setBodyError = msg => {
+  const setBodyError = (msg: string | null): void => {
     if (!msg) {
       bodyErr.hidden = true;
       bodyErr.textContent = '';
@@ -74,40 +78,37 @@ if (textContent) {
 
   bodyInput.addEventListener('input', () => setBodyError(''));
 
-  /**
-   * @param {KeyboardEvent} e
-   */
-  function onKey(e) {
+  function onKey(e: KeyboardEvent): void {
     if (e.key === 'Escape') {
       close();
     }
   }
 
-  function close() {
+  function close(): void {
     document.removeEventListener('keydown', onKey);
     modal.remove();
   }
 
   await renderButton(cancelWrap, {
-  text: 'Отмена',
-  variant: BUTTON_VARIANTS.TEXT_ORANGE,
-  size: BUTTON_SIZES.MEDIUM,
-  type: 'button',
-  onClick: () => close()
-});
+    text: 'Отмена',
+    variant: BUTTON_VARIANTS.TEXT_ORANGE,
+    size: BUTTON_SIZES.MEDIUM,
+    type: 'button',
+    onClick: () => close()
+  });
 
-const saveBtn = await renderButton(submitWrap, {
-  text: mode === 'edit' ? 'Сохранить' : 'Опубликовать',
-  variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
-  size: BUTTON_SIZES.MEDIUM,
-  type: 'submit'
-});
+  const saveBtn: ButtonAPI = await renderButton(submitWrap, {
+    text: mode === 'edit' ? 'Сохранить' : 'Опубликовать',
+    variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
+    size: BUTTON_SIZES.MEDIUM,
+    type: 'submit'
+  });
 
   modal.querySelectorAll('[data-post-form-close]').forEach(el => {
     el.addEventListener('click', close);
   });
 
-  form.addEventListener('submit', async e => {
+  form.addEventListener('submit', async (e: Event) => {
     e.preventDefault();
     globalErr.hidden = true;
     globalErr.textContent = '';
@@ -118,7 +119,7 @@ const saveBtn = await renderButton(submitWrap, {
 
     const validation = validator.validatePostEditor({ title, text_content });
     if (!validation.isValid) {
-      validation.errors.forEach(err => {
+      validation.errors.forEach((err: { field: string; message: string }) => {
         if (err.field === 'title') {
           titleApi.setError(err.message);
         }
@@ -144,8 +145,9 @@ const saveBtn = await renderButton(submitWrap, {
 
       onSaved?.();
       close();
-    } catch (error) {
-      globalErr.textContent = error.message || 'Не удалось сохранить публикацию';
+    }  catch (error: unknown) {
+      const err = error as { message?: string };
+      globalErr.textContent = err.message || 'Не удалось сохранить публикацию';
       globalErr.hidden = false;
     } finally {
       saveBtn.setDisabled(false);
@@ -154,6 +156,6 @@ const saveBtn = await renderButton(submitWrap, {
 
   document.addEventListener('keydown', onKey);
   document.body.appendChild(modal);
-  modal.focus({ preventScroll: true });
+  modal.focus({ preventScroll: true } as FocusOptions);
   titleApi.focus();
 }

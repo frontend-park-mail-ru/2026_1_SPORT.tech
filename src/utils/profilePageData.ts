@@ -108,7 +108,8 @@ export async function loadProfilePageData(
       }
     }
     const textContent: string = fullPost?.text_content || '';
-    const engagement: PostEngagement = mapPostEngagement(fullPost);
+    // Строка 109 - изменить вызов mapPostEngagement
+    const engagement: PostEngagement = mapPostEngagement(fullPost as unknown as Record<string, unknown>);
 
     return {
       post_id: post.post_id,

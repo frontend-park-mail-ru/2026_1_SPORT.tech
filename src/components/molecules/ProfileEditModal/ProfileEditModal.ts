@@ -1,145 +1,211 @@
-// components/molecules/ProfileEditModal/ProfileEditModal.ts
-import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button.ts';
-import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input.ts';
-import { createSportTypesField, loadSportTypes } from '../../organisms/AuthForm/AuthForm.ts';
-import { Validator } from '/src/utils/validator.ts';
+/**
+ * @fileoverview Модальное окно редактирования профиля
+ * @module components/molecules/ProfileEditModal
+ */
 
-export async function openProfileEditModal({ api, currentUser, onUpdated }) {
-  const template = Handlebars.templates['ProfileEditModal.hbs'];
+import type { ApiClient } from '../../../utils/api';
+import type { User, Profile, TrainerDetails } from '../../../types/api.types';
+import type { ButtonAPI } from '../../atoms/Button/Button';
+import type { InputAPI, InputType } from '../../atoms/Input/Input';
+import type { SportTypeFieldApi, SportTypeFieldOption } from '../../../types/components.types';
+import type { ValidationResult } from '../../../types/validation.types';
+import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
+import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
+import { createSportTypesField, loadSportTypes } from '../../organisms/AuthForm/AuthForm';
+import { Validator } from '../../../utils/validator';
 
-  let user = currentUser?.user || currentUser;
+export interface ProfileEditModalOptions {
+  api: ApiClient;
+  currentUser: { user: User } | User;
+  onUpdated?: () => void;
+}
+
+interface FieldConfig {
+  name: string;
+  label: string;
+  type: InputType;
+  required: boolean;
+  maxlength: number;
+  placeholder: string;
+}
+
+interface ExtendedUser extends User {
+  trainer_details?: TrainerDetails;
+}
+
+export async function openProfileEditModal({
+  api,
+  currentUser,
+  onUpdated
+}: ProfileEditModalOptions): Promise<void> {
+  const template = (window as any).Handlebars.templates['ProfileEditModal.hbs'];
+
+  let user: ExtendedUser = ('user' in currentUser ? currentUser.user : currentUser) as ExtendedUser;
 
   if (user.is_trainer && !user.trainer_details) {
     try {
-      const profileData = await api.getProfile(user.user_id);
+      const profileData: Profile = await api.getProfile(user.user_id);
       user = { ...user, ...profileData };
     } catch (error) {
+      console.error('Failed to load profile:', error);
     }
   }
 
-  const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-  const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
-  const avatarUrl = user.avatar_url || '';
-  const originalIsTrainer = user.is_trainer;
+  const fullName: string = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+  const initials: string = fullName
+    .split(' ')
+    .map((n: string) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || '?';
+  const avatarUrl: string = user.avatar_url || '';
+  const originalIsTrainer: boolean = user.is_trainer;
 
   const root = document.createElement('div');
   root.innerHTML = template({ avatar: avatarUrl, initials }).trim();
-  const modal = root.firstElementChild;
+  const modal = root.firstElementChild as HTMLElement;
 
-  const form = modal.querySelector('.profile-edit-modal__form');
-  const fieldsContainer = modal.querySelector('#profile-edit-fields');
-  const globalErr = modal.querySelector('[data-profile-edit-global-error]');
-  const cancelWrap = modal.querySelector('#profile-edit-cancel-wrap');
-  const submitWrap = modal.querySelector('#profile-edit-submit-wrap');
+  const form = modal.querySelector('.profile-edit-modal__form') as HTMLFormElement;
+  const fieldsContainer = modal.querySelector('#profile-edit-fields') as HTMLElement;
+  const globalErr = modal.querySelector('[data-profile-edit-global-error]') as HTMLElement;
+  const cancelWrap = modal.querySelector('#profile-edit-cancel-wrap') as HTMLElement;
+  const submitWrap = modal.querySelector('#profile-edit-submit-wrap') as HTMLElement;
 
-  const avatarInput = modal.querySelector('#profile-avatar-input');
-  const avatarPreview = modal.querySelector('#profile-avatar-preview');
-  const avatarPlaceholder = modal.querySelector('.profile-edit-modal__avatar-placeholder');
-  const removeAvatarBtn = modal.querySelector('#profile-avatar-remove');
+  const avatarInput = modal.querySelector('#profile-avatar-input') as HTMLInputElement;
+  const avatarPreview = modal.querySelector('#profile-avatar-preview') as HTMLImageElement;
+  const avatarPlaceholder = modal.querySelector('.profile-edit-modal__avatar-placeholder') as HTMLElement;
+  const removeAvatarBtn = modal.querySelector('#profile-avatar-remove') as HTMLButtonElement;
 
-  let avatarFile = null;
-  let avatarRemoved = false;
-  let becomingTrainer = false;
-  let sportTypeOptions = [];
-  let sportTypesLoaded = false;
+  let avatarFile: File | null = null;
+  let avatarRemoved: boolean = false;
+  const becomingTrainer: boolean = false;
+  let sportTypeOptions: SportTypeFieldOption[] = [];
+  let sportTypesLoaded: boolean = false;
 
   const validator = new Validator();
-  const inputsApi = new Map();
+  const inputsApi = new Map<string, InputAPI | SportTypeFieldApi>();
 
-  const baseFields = [
-    { name: 'username', label: 'Имя пользователя', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 30, placeholder: 'john_doe' },
-    { name: 'first_name', label: 'Имя', type: INPUT_TYPES.NAME, required: true, maxlength: 100, placeholder: 'Введите имя' },
-    { name: 'last_name', label: 'Фамилия', type: INPUT_TYPES.NAME, required: true, maxlength: 100, placeholder: 'Введите фамилию' },
-    { name: 'bio', label: 'О себе', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 1000, placeholder: 'Расскажите о себе' }
+  const baseFields: FieldConfig[] = [
+    { name: 'username', label: 'Имя пользователя', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 30, placeholder: 'john_doe' },
+    { name: 'first_name', label: 'Имя', type: INPUT_TYPES.NAME as InputType, required: true, maxlength: 100, placeholder: 'Введите имя' },
+    { name: 'last_name', label: 'Фамилия', type: INPUT_TYPES.NAME as InputType, required: true, maxlength: 100, placeholder: 'Введите фамилию' },
+    { name: 'bio', label: 'О себе', type: INPUT_TYPES.WITHOUTS as InputType, required: false, maxlength: 1000, placeholder: 'Расскажите о себе' }
   ];
 
-  const trainerFields = [
-    { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS, required: false, maxlength: 255, placeholder: 'Введите образование' },
-    { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 10, placeholder: 'ГГГГ-ММ-ДД' },
-    { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS, required: true, maxlength: 100, placeholder: 'Выберите виды спорта' }
+  const trainerFields: FieldConfig[] = [
+    { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS as InputType, required: false, maxlength: 255, placeholder: 'Введите образование' },
+    { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 10, placeholder: 'ГГГГ-ММ-ДД' },
+    { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 100, placeholder: 'Выберите виды спорта' }
   ];
 
-  // Функция валидации поля
-  const validateField = (fieldName, value) => {
+  // Безопасное получение значения поля пользователя
+  const getUserFieldValue = (fieldName: string): string => {
+    switch (fieldName) {
+    case 'username': return user.username || '';
+    case 'first_name': return user.first_name || '';
+    case 'last_name': return user.last_name || '';
+    case 'bio': return user.bio || '';
+    case 'education_degree': return user.trainer_details?.education_degree || '';
+    case 'career_since_date': return user.trainer_details?.career_since_date || '';
+    default: return '';
+    }
+  };
+
+  const getSportTypeIds = (): number[] => {
+    return user.trainer_details?.sports
+      ? user.trainer_details.sports
+        .map(sport => Number(sport.sport_type_id))
+        .filter(id => Number.isFinite(id))
+      : [];
+  };
+
+  const validateField = (fieldName: string, value: string | number[]): boolean => {
     const api = inputsApi.get(fieldName);
     if (!api) return true;
 
-    let result;
+    let result: ValidationResult;
 
     switch (fieldName) {
-      case 'username':
-        result = validator.validateUsername(value);
-        break;
-      case 'first_name':
-        result = validator.validateFirstName(value);
-        break;
-      case 'last_name':
-        result = validator.validateLastName(value);
-        break;
-      case 'bio':
-        validator.reset();
-        if (value && value.length > 1000) {
-          result = { isValid: false, errors: [{ field: 'bio', message: 'Максимум 1000 символов' }] };
-        } else {
-          result = { isValid: true, errors: [] };
-        }
-        break;
-      case 'education_degree':
-        validator.reset();
-        if (value && value.trim() !== '') {
-          validator.validateField(value, 'education_degree', validator.rules.education_degree);
-        }
-        result = { isValid: !validator.hasErrors(), errors: validator.getErrors() };
-        break;
-      case 'career_since_date':
-        if (!value) {
-          result = {
-            isValid: false,
-            errors: [{ field: 'career_since_date', message: 'Дата начала деятельности обязательна' }]
-          };
-        } else {
-          const yyyyMmDd = /^\d{4}-\d{2}-\d{2}$/.test(value);
-          if (yyyyMmDd) {
-            result = { isValid: true, errors: [] };
-          } else {
-            result = {
-              isValid: false,
-              errors: [{ field: 'career_since_date', message: 'Формат ГГГГ-ММ-ДД' }]
-            };
-          }
-        }
-        break;
-      case 'sport_discipline':
-        result = Array.isArray(value) && value.length > 0
-          ? { isValid: true, errors: [] }
-          : {
-              isValid: false,
-              errors: [{ field: 'sport_discipline', message: 'Выберите хотя бы один вид спорта' }]
-            };
-        break;
-      default:
-        return true;
+    case 'username':
+      result = validator.validateUsername(value as string);
+      break;
+    case 'first_name':
+      result = validator.validateFirstName(value as string);
+      break;
+    case 'last_name':
+      result = validator.validateLastName(value as string);
+      break;
+    case 'bio':
+      validator.reset();
+      if (typeof value === 'string' && value.length > 1000) {
+        result = { isValid: false, errors: [{ field: 'bio', message: 'Максимум 1000 символов' }] };
+      } else {
+        result = { isValid: true, errors: [] };
+      }
+      break;
+    case 'education_degree':
+      validator.reset();
+      if (typeof value === 'string' && value.trim() !== '') {
+        validator.validateField(value, 'education_degree', validator.rules.education_degree);
+      }
+      result = { isValid: !validator.hasErrors(), errors: validator.getErrors() };
+      break;
+    case 'career_since_date':
+      if (!value || typeof value !== 'string') {
+        result = {
+          isValid: false,
+          errors: [{ field: 'career_since_date', message: 'Дата начала деятельности обязательна' }]
+        };
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        result = { isValid: true, errors: [] };
+      } else {
+        result = {
+          isValid: false,
+          errors: [{ field: 'career_since_date', message: 'Формат ГГГГ-ММ-ДД' }]
+        };
+      }
+      break;
+    case 'sport_discipline':
+      result = Array.isArray(value) && value.length > 0
+        ? { isValid: true, errors: [] }
+        : {
+          isValid: false,
+          errors: [{ field: 'sport_discipline', message: 'Выберите хотя бы один вид спорта' }]
+        };
+      break;
+    default:
+      return true;
     }
 
     if (!result.isValid && result.errors.length > 0) {
-      api.setError(result.errors[0].message);
+      if ('setError' in api) {
+        (api as InputAPI).setError(result.errors[0].message);
+      }
       return false;
     } else {
-      api.setNormal();
+      if ('setNormal' in api) {
+        (api as InputAPI).setNormal();
+      }
       return true;
     }
   };
 
-  const renderFields = async (showTrainerFields) => {
+  const getFieldValue = (fieldName: string): string | number[] => {
+    const api = inputsApi.get(fieldName);
+    if (!api) return '';
+    return api.getValue();
+  };
+
+  const renderFields = async (showTrainerFields: boolean): Promise<void> => {
     fieldsContainer.innerHTML = '';
     inputsApi.clear();
 
     if (showTrainerFields && !sportTypesLoaded) {
       sportTypesLoaded = true;
-      sportTypeOptions = await loadSportTypes(api).catch(() => []);
+      sportTypeOptions = await loadSportTypes(api);
     }
 
-    const fieldsToRender = [...baseFields];
+    const fieldsToRender: FieldConfig[] = [...baseFields];
     if (showTrainerFields) {
       fieldsToRender.push(...trainerFields);
     }
@@ -148,22 +214,12 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
       const container = document.createElement('div');
       fieldsContainer.appendChild(container);
 
-      let value = '';
+      let value: string | number[];
 
-      if (field.name === 'username' || field.name === 'first_name' || field.name === 'last_name') {
-        value = user[field.name] || '';
-      } else if (field.name === 'bio') {
-        value = user.bio || '';
-      } else if (field.name === 'education_degree') {
-        value = user.trainer_details?.education_degree || '';
-      } else if (field.name === 'career_since_date') {
-        value = user.trainer_details?.career_since_date || '';
-      } else if (field.name === 'sport_discipline') {
-        value = Array.isArray(user.trainer_details?.sports)
-          ? user.trainer_details.sports
-              .map(sport => Number(sport.sport_type_id))
-              .filter(Number.isFinite)
-          : [];
+      if (field.name === 'sport_discipline') {
+        value = getSportTypeIds();
+      } else {
+        value = getUserFieldValue(field.name);
       }
 
       if (field.name === 'sport_discipline') {
@@ -172,12 +228,12 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
           placeholder: field.placeholder,
           required: field.required,
           options: sportTypeOptions,
-          onChange: newValue => {
+          onChange: (newValue: number[]) => {
             validateField(field.name, newValue);
           }
-        });
+        }) as SportTypeFieldApi;
 
-        sportFieldApi.setValue(value);
+        sportFieldApi.setValue(value as number[]);
 
         const helpText = document.createElement('small');
         helpText.textContent = sportTypeOptions.length > 0
@@ -195,62 +251,43 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
         continue;
       }
 
-      const api = await renderInput(container, {
+      const inputApi: InputAPI = await renderInput(container, {
         type: field.type,
         label: field.label,
         name: field.name,
-        value: value,
+        value: value as string,
         placeholder: field.placeholder,
         required: field.required,
         maxlength: field.maxlength,
-        onChange: (newValue) => {
+        onChange: (newValue: string) => {
           validateField(field.name, newValue);
         }
       });
 
       if (field.name === 'career_since_date') {
-        const input = api.input;
-        input.addEventListener('input', e => {
-          let val = e.target.value.replace(/\D/g, '');
+        const input = inputApi.input;
+        input.addEventListener('input', (e: Event) => {
+          const target = e.target as HTMLInputElement;
+          let val = target.value.replace(/\D/g, '');
           if (val.length >= 4) {
             let formatted = val.substring(0, 4);
             if (val.length > 4) formatted += '-' + val.substring(4, 6);
             if (val.length > 6) formatted += '-' + val.substring(6, 8);
-            e.target.value = formatted;
+            target.value = formatted;
           } else {
-            e.target.value = val;
+            target.value = val;
           }
-          validateField(field.name, e.target.value);
+          validateField(field.name, target.value);
         });
       }
 
-      inputsApi.set(field.name, api);
+      inputsApi.set(field.name, inputApi);
     }
   };
 
   await renderFields(originalIsTrainer);
 
-  // Кнопка "Стать тренером" для клиента
-  // if (!originalIsTrainer) {
-  //   const becomeTrainerContainer = document.createElement('div');
-  //   becomeTrainerContainer.style.marginTop = 'var(--spacing-md)';
-  //   becomeTrainerContainer.style.textAlign = 'center';
-  //   fieldsContainer.appendChild(becomeTrainerContainer);
-
-  //   await renderButton(becomeTrainerContainer, {
-  //     text: 'Стать тренером',
-  //     variant: BUTTON_VARIANTS.SECONDARY_BLUE,
-  //     size: BUTTON_SIZES.MEDIUM,
-  //     onClick: async () => {
-  //       becomingTrainer = true;
-  //       await renderFields(true);
-  //       becomeTrainerContainer.remove();
-  //     }
-  //   });
-  // }
-
-  // Управление аватаром
-  const updateAvatarPreview = () => {
+  const updateAvatarPreview = (): void => {
     if (avatarFile) {
       const url = URL.createObjectURL(avatarFile);
       avatarPreview.src = url;
@@ -267,14 +304,11 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
     }
   };
 
-  avatarInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (file) {
-      avatarFile = file;
-      avatarRemoved = false;
-    } else {
-      avatarFile = null;
-    }
+  avatarInput.addEventListener('change', (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    const file = target.files?.[0] || null;
+    avatarFile = file;
+    avatarRemoved = false;
     updateAvatarPreview();
   });
 
@@ -285,13 +319,12 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
     updateAvatarPreview();
   });
 
-  // Закрытие
-  const close = () => {
+  const close = (): void => {
     document.removeEventListener('keydown', onKey);
     modal.remove();
   };
 
-  const onKey = e => {
+  const onKey = (e: KeyboardEvent): void => {
     if (e.key === 'Escape') close();
   };
 
@@ -299,7 +332,6 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
     el.addEventListener('click', close);
   });
 
-  // Кнопки
   await renderButton(cancelWrap, {
     text: 'Отмена',
     variant: BUTTON_VARIANTS.TEXT_ORANGE,
@@ -308,20 +340,19 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
     onClick: close
   });
 
-  const saveBtn = await renderButton(submitWrap, {
+  const saveBtn: ButtonAPI = await renderButton(submitWrap, {
     text: 'Сохранить',
     variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
     size: BUTTON_SIZES.MEDIUM,
     type: 'submit'
   });
 
-  // Валидация всей формы перед отправкой
-  const validateForm = () => {
+  const validateForm = (): boolean => {
     let isValid = true;
     const showTrainerFields = originalIsTrainer || becomingTrainer;
 
-    for (const [name, api] of inputsApi) {
-      const value = api.getValue();
+    for (const [name] of inputsApi) {
+      const value = getFieldValue(name);
 
       if (!showTrainerFields && (name === 'education_degree' || name === 'career_since_date' || name === 'sport_discipline')) {
         continue;
@@ -335,95 +366,91 @@ export async function openProfileEditModal({ api, currentUser, onUpdated }) {
     return isValid;
   };
 
-  // Отправка
- form.addEventListener('submit', async e => {
-  e.preventDefault();
-  globalErr.hidden = true;
+  form.addEventListener('submit', async (e: Event) => {
+    e.preventDefault();
+    globalErr.hidden = true;
 
-  if (!validateForm()) return;
+    if (!validateForm()) return;
 
-  saveBtn.setDisabled(true);
+    saveBtn.setDisabled(true);
 
-  try {
-    const profileData = {};
-    for (const [name, api] of inputsApi) {
-      const rawValue = api.getValue();
-      profileData[name] = typeof rawValue === 'string'
-        ? rawValue.trim()
-        : rawValue;
-    }
+    try {
+      const updatePayload: Record<string, unknown> = {
+        username: getFieldValue('username') as string,
+        first_name: getFieldValue('first_name') as string,
+        last_name: getFieldValue('last_name') as string,
+        bio: (getFieldValue('bio') as string) || ''
+      };
 
-    const updatePayload = {
-      username: profileData.username,
-      first_name: profileData.first_name,
-      last_name: profileData.last_name,
-      bio: profileData.bio || ''
-    };
+      if (originalIsTrainer || becomingTrainer) {
+        const careerDateStr = getFieldValue('career_since_date') as string;
+        const careerDate = new Date(careerDateStr);
+        const today = new Date();
+        let experienceYears = today.getFullYear() - careerDate.getFullYear();
 
-    if (originalIsTrainer || becomingTrainer) {
-      const careerDate = new Date(profileData.career_since_date);
-      const today = new Date();
-      let experienceYears = today.getFullYear() - careerDate.getFullYear();
-      const selectedSportTypes = Array.isArray(profileData.sport_discipline)
-        ? profileData.sport_discipline
-        : [];
-      const existingSportsById = new Map(
-        (user.trainer_details?.sports || []).map(sport => [Number(sport.sport_type_id), sport])
-      );
+        const monthDiff = today.getMonth() - careerDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < careerDate.getDate())) {
+          experienceYears--;
+        }
+        if (experienceYears < 0) experienceYears = 0;
 
-      const monthDiff = today.getMonth() - careerDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < careerDate.getDate())) {
-        experienceYears--;
+        const selectedSportTypes = getFieldValue('sport_discipline') as number[];
+        const existingSports = user.trainer_details?.sports || [];
+        const existingSportsById = new Map(
+          existingSports.map(sport => [Number(sport.sport_type_id), sport])
+        );
+
+        updatePayload.trainer_details = {
+          education_degree: (getFieldValue('education_degree') as string) || '',
+          career_since_date: careerDateStr,
+          sports: selectedSportTypes.map(sportTypeId => {
+            const existingSport = existingSportsById.get(Number(sportTypeId));
+            return {
+              sport_type_id: Number(sportTypeId),
+              experience_years: experienceYears,
+              ...(existingSport?.sports_rank ? { sports_rank: existingSport.sports_rank } : {})
+            };
+          })
+        };
       }
 
-      if (experienceYears < 0) experienceYears = 0;
-      updatePayload.trainer_details = {
-        education_degree: profileData.education_degree || '',
-        career_since_date: profileData.career_since_date,
-        sports: selectedSportTypes.map(sportTypeId => {
-          const existingSport = existingSportsById.get(Number(sportTypeId));
-          return {
-            sport_type_id: Number(sportTypeId),
-            experience_years: experienceYears,
-            ...(existingSport?.sports_rank ? { sports_rank: existingSport.sports_rank } : {})
-          };
-        })
-      };
-    }
-    await api.request('/v1/profiles/me', {
-      method: 'PATCH',
-      body: JSON.stringify(updatePayload)
-    });
-if (avatarFile) {
-  await api.uploadAvatar(avatarFile);
-} else if (avatarRemoved) {
-  try {
-    await api.deleteAvatar();
-  } catch (error) {
-    await api.request('/v1/profiles/me', {
-      method: 'PATCH',
-      body: JSON.stringify({ avatar_url: null })
-    });
-  }
-}
-    onUpdated?.();
-    close();
-  } catch (error) {
-
-    let message = error.message || 'Не удалось сохранить изменения';
-    if (error.data?.error?.fields) {
-      error.data.error.fields.forEach(f => {
-        const api = inputsApi.get(f.field);
-        if (api) api.setError(f.message);
+      await api.request('/v1/profiles/me', {
+        method: 'PATCH',
+        body: JSON.stringify(updatePayload)
       });
-      message = error.data.error.message;
+
+      if (avatarFile) {
+        await api.uploadAvatar(avatarFile);
+      } else if (avatarRemoved) {
+        try {
+          await api.deleteAvatar();
+        } catch {
+          // Если deleteAvatar не сработал
+        }
+      }
+
+      onUpdated?.();
+      close();
+    } catch (error: unknown) {
+      const err = error as { message?: string; data?: { error?: { message?: string; fields?: Array<{ field: string; message: string }> } } };
+      let message = err.message || 'Не удалось сохранить изменения';
+
+      if (err.data?.error?.fields) {
+        err.data.error.fields.forEach(f => {
+          const api = inputsApi.get(f.field);
+          if (api && 'setError' in api) {
+            (api as InputAPI).setError(f.message);
+          }
+        });
+        message = err.data.error.message || message;
+      }
+
+      globalErr.textContent = message;
+      globalErr.hidden = false;
+    } finally {
+      saveBtn.setDisabled(false);
     }
-    globalErr.textContent = message;
-    globalErr.hidden = false;
-  } finally {
-    saveBtn.setDisabled(false);
-  }
-});
+  });
 
   document.addEventListener('keydown', onKey);
   document.body.appendChild(modal);

@@ -1,7 +1,7 @@
 /**
  * @fileoverview Базовый компонент поля ввода
  * Поддерживает все состояния из UI Kit:
- * - Типы: mail, password, name, withouts
+ * - Типы: mail, password, name, without
  * - Состояния: normal, active, error, warning, correct, disabled
  * - Глазок: open/close, active/non-active
  * - Сообщения под полем
@@ -10,29 +10,13 @@
  * @module components/atoms/Input
  */
 
-/**
- * @constant {Object} INPUT_TYPES - Доступные типы полей ввода
- * @property {string} MAIL - Поле для email
- * @property {string} PASSWORD - Поле для пароля (с глазком)
- * @property {string} NAME - Поле для имени
- * @property {string} WITHOUTS - Обычное текстовое поле
- */
 export const INPUT_TYPES = {
   MAIL: 'mail',
   PASSWORD: 'password',
   NAME: 'name',
   WITHOUTS: 'without'
-};
+} as const;
 
-/**
- * @constant {Object} INPUT_STATES - Состояния поля ввода
- * @property {string} NORMAL - Обычное состояние
- * @property {string} ACTIVE - В фокусе
- * @property {string} ERROR - Ошибка
- * @property {string} WARNING - Предупреждение
- * @property {string} CORRECT - Правильно заполнено
- * @property {string} DISABLED - Отключено
- */
 export const INPUT_STATES = {
   NORMAL: 'normal',
   ACTIVE: 'active',
@@ -40,52 +24,73 @@ export const INPUT_STATES = {
   WARNING: 'warning',
   CORRECT: 'correct',
   DISABLED: 'disabled'
-};
+} as const;
 
-/**
- * @constant {Object} EYE_STATES - Состояния глазка для пароля
- * @property {string} ACTIVE - Глазок открыт (пароль виден)
- * @property {string} NON_ACTIVE - Глазок закрыт (пароль скрыт)
- */
 export const EYE_STATES = {
   ACTIVE: 'active',
   NON_ACTIVE: 'non-active'
-};
+} as const;
+
+export type InputType = typeof INPUT_TYPES[keyof typeof INPUT_TYPES];
+export type InputState = typeof INPUT_STATES[keyof typeof INPUT_STATES];
+export type EyeState = typeof EYE_STATES[keyof typeof EYE_STATES];
+
+export interface InputConfig {
+  type?: InputType;
+  state?: InputState;
+  label?: string;
+  placeholder?: string;
+  value?: string;
+  name?: string;
+  id?: string;
+  disabled?: boolean;
+  readonly?: boolean;
+  required?: boolean;
+  message?: string;
+  showEye?: boolean;
+  eyeState?: EyeState;
+  icon?: string | null;
+  maxlength?: number | null;
+  autocomplete?: string | null;
+  onChange?: ((value: string) => void) | null;
+  onFocus?: ((e: FocusEvent) => void) | null;
+  onBlur?: ((e: FocusEvent) => void) | null;
+  onEyeClick?: ((isVisible: boolean) => void) | null;
+}
+
+export interface InputAPI {
+  element: HTMLElement;
+  input: HTMLInputElement;
+  setState: (newState: InputState) => void;
+  setMessage: (text: string | null, newState?: InputState | null) => void;
+  setValue: (newValue: string) => void;
+  getValue: () => string;
+  setEyeState: (newEyeState: EyeState) => void;
+  togglePasswordVisibility: () => void;
+  focus: () => void;
+  blur: () => void;
+  setError: (msg: string) => void;
+  setWarning: (msg: string) => void;
+  setCorrect: (msg: string) => void;
+  setNormal: () => void;
+  clearError: () => void;
+}
 
 /**
  * Рендерит поле ввода
- * @async
- * @param {HTMLElement} container - DOM элемент для вставки
- * @param {Object} config - Конфигурация поля
- * @param {string} [config.type=INPUT_TYPES.WITHOUTS] - Тип поля
- * @param {string} [config.state=INPUT_STATES.NORMAL] - Состояние поля
- * @param {string} [config.label] - Подпись над полем
- * @param {string} [config.placeholder=''] - Подсказка внутри поля
- * @param {string} [config.value=''] - Значение по умолчанию
- * @param {string} [config.id] - Уникальный ID (автогенерация если не указан)
- * @param {boolean} [config.disabled=false] - Отключено ли поле
- * @param {boolean} [config.readonly=false] - Только для чтения
- * @param {boolean} [config.required=false] - Обязательное поле
- * @param {string} [config.message=''] - Сообщение под полем
- * @param {boolean} [config.showEye] - Показывать глазок (авто для password)
- * @param {string} [config.eyeState=EYE_STATES.NON_ACTIVE] - Состояние глазка
- * @param {string} [config.icon=null] - HTML иконки слева
- * @param {number} [config.maxlength=null] - Максимальная длина
- * @param {string} [config.autocomplete=null] - autocomplete атрибут
- * @param {Function} [config.onChange=null] - Обработчик изменения
- * @param {Function} [config.onFocus=null] - Обработчик фокуса
- * @param {Function} [config.onBlur=null] - Обработчик потери фокуса
- * @param {Function} [config.onEyeClick=null] - Обработчик клика по глазку
- * @returns {Promise<Object>} API для управления полем
  */
-export async function renderInput(container, config = {}) {
+export async function renderInput(
+  container: HTMLElement,
+  config: InputConfig = {}
+): Promise<InputAPI> {
   const {
     type = INPUT_TYPES.WITHOUTS,
     state = INPUT_STATES.NORMAL,
     label,
     placeholder = '',
     value = '',
-    id = 'input-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+    name = '',
+    id = 'input-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11),
     disabled = false,
     readonly = false,
     required = false,
@@ -101,7 +106,7 @@ export async function renderInput(container, config = {}) {
     onEyeClick = null
   } = config;
 
-  const template = Handlebars.templates['Input.hbs'];
+  const template = (window as any).Handlebars.templates['Input.hbs'];
 
   let inputType = 'text';
   if (type === INPUT_TYPES.PASSWORD) {
@@ -116,6 +121,7 @@ export async function renderInput(container, config = {}) {
     label,
     placeholder,
     value,
+    name,
     id,
     disabled,
     readonly,
@@ -132,10 +138,10 @@ export async function renderInput(container, config = {}) {
 
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
-  const field = wrapper.firstElementChild;
-  const input = field.querySelector('input');
-  const eyeButton = field.querySelector('.input-field__eye');
-  let messageEl = field.querySelector('.input-field__message');
+  const field = wrapper.firstElementChild as HTMLElement;
+  const input = field.querySelector('input') as HTMLInputElement;
+  const eyeButton = field.querySelector('.input-field__eye') as HTMLElement | null;
+  let messageEl = field.querySelector('.input-field__message') as HTMLElement | null;
 
   if (!messageEl) {
     messageEl = document.createElement('span');
@@ -145,9 +151,8 @@ export async function renderInput(container, config = {}) {
 
   /**
    * Установить состояние поля
-   * @param {string} newState - Новое состояние из INPUT_STATES
    */
-  const setState = newState => {
+  const setState = (newState: InputState): void => {
     field.classList.remove(
       `input-field--${INPUT_STATES.NORMAL}`,
       `input-field--${INPUT_STATES.ACTIVE}`,
@@ -167,10 +172,8 @@ export async function renderInput(container, config = {}) {
 
   /**
    * Установить сообщение под полем
-   * @param {string} text - Текст сообщения
-   * @param {string|null} newState - Новое состояние (опционально)
    */
-  const setMessage = (text, newState = null) => {
+  const setMessage = (text: string | null, newState: InputState | null = null): void => {
     if (!messageEl) {
       messageEl = document.createElement('span');
       messageEl.className = 'input-field__message';
@@ -192,24 +195,21 @@ export async function renderInput(container, config = {}) {
 
   /**
    * Установить значение поля
-   * @param {string} newValue - Новое значение
    */
-  const setValue = newValue => {
+  const setValue = (newValue: string): void => {
     input.value = newValue;
     onChange?.(newValue);
   };
 
   /**
    * Получить значение поля
-   * @returns {string} Текущее значение
    */
-  const getValue = () => input.value;
+  const getValue = (): string => input.value;
 
   /**
    * Установить состояние глазка
-   * @param {string} newEyeState - Новое состояние из EYE_STATES
    */
-  const setEyeState = newEyeState => {
+  const setEyeState = (newEyeState: EyeState): void => {
     if (!eyeButton) return;
 
     eyeButton.classList.remove('input-field__eye--active', 'input-field__eye--non-active');
@@ -238,7 +238,7 @@ export async function renderInput(container, config = {}) {
   /**
    * Переключить видимость пароля
    */
-  const togglePasswordVisibility = () => {
+  const togglePasswordVisibility = (): void => {
     if (!eyeButton || type !== INPUT_TYPES.PASSWORD) return;
 
     const currentState = eyeButton.classList.contains('input-field__eye--active')
@@ -255,30 +255,29 @@ export async function renderInput(container, config = {}) {
   /**
    * Установить фокус на поле
    */
-  const focus = () => {
+  const focus = (): void => {
     input.focus();
   };
 
   /**
    * Убрать фокус с поля
    */
-  const blur = () => {
+  const blur = (): void => {
     input.blur();
   };
 
   /**
    * Обработчик ввода
-   * @param {InputEvent} e - Событие ввода
    */
-  input.addEventListener('input', e => {
-    onChange?.(e.target.value);
+  input.addEventListener('input', (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    onChange?.(target.value);
   });
 
   /**
    * Обработчик получения фокуса
-   * @param {FocusEvent} e - Событие фокуса
    */
-  input.addEventListener('focus', e => {
+  input.addEventListener('focus', (e: FocusEvent) => {
     if (!disabled && state !== INPUT_STATES.DISABLED) {
       field.classList.add('input-field--active');
       onFocus?.(e);
@@ -287,9 +286,8 @@ export async function renderInput(container, config = {}) {
 
   /**
    * Обработчик потери фокуса
-   * @param {FocusEvent} e - Событие потери фокуса
    */
-  input.addEventListener('blur', e => {
+  input.addEventListener('blur', (e: FocusEvent) => {
     field.classList.remove('input-field--active');
     onBlur?.(e);
   });
@@ -297,9 +295,8 @@ export async function renderInput(container, config = {}) {
   if (eyeButton) {
     /**
      * Обработчик клика по глазку
-     * @param {MouseEvent} e - Событие клика
      */
-    eyeButton.addEventListener('click', e => {
+    eyeButton.addEventListener('click', (e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       togglePasswordVisibility();
@@ -319,15 +316,10 @@ export async function renderInput(container, config = {}) {
     togglePasswordVisibility,
     focus,
     blur,
-    /** Установить состояние ошибки с сообщением */
-    setError: msg => setMessage(msg, INPUT_STATES.ERROR),
-    /** Установить состояние предупреждения с сообщением */
-    setWarning: msg => setMessage(msg, INPUT_STATES.WARNING),
-    /** Установить состояние корректности с сообщением */
-    setCorrect: msg => setMessage(msg, INPUT_STATES.CORRECT),
-    /** Сбросить состояние в обычное */
+    setError: (msg: string) => setMessage(msg, INPUT_STATES.ERROR),
+    setWarning: (msg: string) => setMessage(msg, INPUT_STATES.WARNING),
+    setCorrect: (msg: string) => setMessage(msg, INPUT_STATES.CORRECT),
     setNormal: () => setMessage('', INPUT_STATES.NORMAL),
-    /** Очистить ошибку */
     clearError: () => setMessage('', INPUT_STATES.NORMAL)
   };
 }

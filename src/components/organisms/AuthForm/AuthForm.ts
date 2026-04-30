@@ -10,25 +10,62 @@
  * @module components/organisms/AuthForm
  */
 
-import { Validator } from '/src/utils/validator.ts';
-import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button.ts';
-import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input.ts';
+import type { ApiClient } from '../../../utils/api';
+import type { InputAPI, InputType } from '../../atoms/Input/Input';
+import type { ButtonAPI } from '../../atoms/Button/Button';
+import type { SportTypeFieldApi, SportTypeFieldOption } from '../../../types/components.types';
+import type { ValidationResult } from '../../../types/validation.types';
+import { Validator } from '../../../utils/validator';
+import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
+import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 
-/**
- * @constant {Object} AUTH_MODES - Режимы работы формы авторизации
- * @property {string} LOGIN - Режим входа
- * @property {string} REGISTER_CLIENT - Регистрация клиента
- * @property {string} REGISTER_TRAINER - Регистрация тренера
- */
 export const AUTH_MODES = {
   LOGIN: 'login',
   REGISTER_CLIENT: 'register-client',
   REGISTER_TRAINER: 'register-trainer'
-};
+} as const;
 
-let sportTypesPromise = null;
+export type AuthMode = typeof AUTH_MODES[keyof typeof AUTH_MODES];
 
-export async function loadSportTypes(api) {
+interface FieldConfig {
+  type: InputType;
+  name: string;
+  label: string;
+  placeholder: string;
+  required: boolean;
+  showEye?: boolean;
+}
+
+interface ModeConfig {
+  title: string;
+  subtitle: string;
+  submitText: string;
+  altText: string;
+  altLinkText: string;
+  fields: FieldConfig[];
+}
+
+interface AuthFormConfig {
+  mode?: AuthMode;
+  onSubmit?: ((data: Record<string, unknown>, mode: string) => Promise<void>) | null;
+  onSwitchMode?: ((mode: string) => void) | null;
+  api?: ApiClient;
+}
+
+export interface AuthFormAPI {
+  element: HTMLFormElement;
+  getData: () => Record<string, unknown>;
+  validate: () => boolean;
+  reset: () => void;
+  setErrors: (errors: Array<{ field: string; message: string }>) => void;
+  setGlobalError: (message: string) => void;
+  clearGlobalError: () => void;
+  inputs: Map<string, InputAPI | SportTypeFieldApi>;
+}
+
+let sportTypesPromise: Promise<SportTypeFieldOption[]> | null = null;
+
+export async function loadSportTypes(api: ApiClient): Promise<SportTypeFieldOption[]> {
   if (!api?.getSportTypes) {
     return [];
   }
@@ -45,13 +82,18 @@ export async function loadSportTypes(api) {
   return sportTypesPromise;
 }
 
-export function createSportTypesField(container, {
-  label,
-  placeholder,
-  required,
-  options,
-  onChange
-}) {
+export function createSportTypesField(
+  container: HTMLElement,
+  config: {
+    label: string;
+    placeholder: string;
+    required: boolean;
+    options: SportTypeFieldOption[];
+    onChange?: (values: number[]) => void;
+  }
+): SportTypeFieldApi {
+  const { label, placeholder, required, options, onChange } = config;
+
   const wrapper = document.createElement('div');
   wrapper.className = 'sport-types-field sport-types-field--normal';
   wrapper.innerHTML = `
@@ -66,13 +108,13 @@ export function createSportTypesField(container, {
     <span class="sport-types-field__message"></span>
   `;
 
-  const trigger = wrapper.querySelector('.sport-types-field__trigger');
-  const triggerText = wrapper.querySelector('.sport-types-field__trigger-text');
-  const dropdown = wrapper.querySelector('.sport-types-field__dropdown');
-  const message = wrapper.querySelector('.sport-types-field__message');
-  const selectedIds = new Set();
+  const trigger = wrapper.querySelector('.sport-types-field__trigger') as HTMLElement;
+  const triggerText = wrapper.querySelector('.sport-types-field__trigger-text') as HTMLElement;
+  const dropdown = wrapper.querySelector('.sport-types-field__dropdown') as HTMLElement;
+  const message = wrapper.querySelector('.sport-types-field__message') as HTMLElement;
+  const selectedIds = new Set<string>();
 
-  const updateTriggerText = () => {
+  const updateTriggerText = (): void => {
     if (selectedIds.size === 0) {
       triggerText.textContent = placeholder;
       triggerText.classList.add('sport-types-field__trigger-text--placeholder');
@@ -87,13 +129,13 @@ export function createSportTypesField(container, {
     triggerText.classList.remove('sport-types-field__trigger-text--placeholder');
   };
 
-  const openDropdown = () => {
+  const openDropdown = (): void => {
     dropdown.hidden = false;
     wrapper.classList.add('sport-types-field--open');
     trigger.setAttribute('aria-expanded', 'true');
   };
 
-  const closeDropdown = () => {
+  const closeDropdown = (): void => {
     dropdown.hidden = true;
     wrapper.classList.remove('sport-types-field--open');
     trigger.setAttribute('aria-expanded', 'false');
@@ -111,7 +153,7 @@ export function createSportTypesField(container, {
       <span class="sport-types-field__option-label">${option.name}</span>
     `;
 
-    const checkbox = item.querySelector('input');
+    const checkbox = item.querySelector('input') as HTMLInputElement;
     checkbox.addEventListener('change', () => {
       if (checkbox.checked) {
         selectedIds.add(String(option.sport_type_id));
@@ -133,8 +175,8 @@ export function createSportTypesField(container, {
     }
   });
 
-  document.addEventListener('click', event => {
-    if (!wrapper.contains(event.target)) {
+  document.addEventListener('click', (event: MouseEvent) => {
+    if (!wrapper.contains(event.target as Node)) {
       closeDropdown();
     }
   });
@@ -145,32 +187,33 @@ export function createSportTypesField(container, {
   return {
     element: wrapper,
     input: trigger,
-    setValue: values => {
+    setValue: (values: number[]): void => {
       selectedIds.clear();
       const normalizedValues = Array.isArray(values) ? values.map(value => String(value)) : [];
       dropdown.querySelectorAll('.sport-types-field__checkbox').forEach(checkbox => {
-        checkbox.checked = normalizedValues.includes(checkbox.value);
-        if (checkbox.checked) {
-          selectedIds.add(checkbox.value);
+        const htmlCheckbox = checkbox as HTMLInputElement;
+        htmlCheckbox.checked = normalizedValues.includes(htmlCheckbox.value);
+        if (htmlCheckbox.checked) {
+          selectedIds.add(htmlCheckbox.value);
         }
       });
       updateTriggerText();
       onChange?.(Array.from(selectedIds).map(Number));
     },
-    getValue: () => Array.from(selectedIds).map(Number),
-    focus: () => trigger.focus(),
-    blur: () => trigger.blur(),
-    setError: text => {
+    getValue: (): number[] => Array.from(selectedIds).map(Number),
+    focus: (): void => trigger.focus(),
+    blur: (): void => trigger.blur(),
+    setError: (text: string): void => {
       wrapper.classList.remove('sport-types-field--normal');
       wrapper.classList.add('sport-types-field--error');
       message.textContent = text || '';
     },
-    setNormal: () => {
+    setNormal: (): void => {
       wrapper.classList.remove('sport-types-field--error');
       wrapper.classList.add('sport-types-field--normal');
       message.textContent = '';
     },
-    clearError: () => {
+    clearError: (): void => {
       wrapper.classList.remove('sport-types-field--error');
       wrapper.classList.add('sport-types-field--normal');
       message.textContent = '';
@@ -178,33 +221,16 @@ export function createSportTypesField(container, {
   };
 }
 
-/**
- * Рендерит форму авторизации
- * @async
- * @param {HTMLElement} container - DOM элемент для вставки
- * @param {Object} config - Конфигурация формы
- * @param {string} [config.mode=AUTH_MODES.LOGIN] - Режим работы формы
- * @param {Function} [config.onSubmit=null] - Обработчик отправки формы
- * @param {Function} [config.onSwitchMode=null] - Обработчик переключения режима
- * @param {Object} [config.api] - API клиент
- * @returns {Promise<Object>} API для управления формой
- */
-export async function renderAuthForm(container, config = {}) {
+export async function renderAuthForm(
+  container: HTMLElement,
+  config: AuthFormConfig = {}
+): Promise<AuthFormAPI> {
   const { mode = AUTH_MODES.LOGIN, onSubmit = null, onSwitchMode = null, api } = config;
 
   const validator = new Validator();
-  const template = Handlebars.templates['AuthForm.hbs'];
+  const template = (window as any).Handlebars.templates['AuthForm.hbs'];
 
-  /**
-   * @constant {Object} modeConfig - Конфигурация для текущего режима
-   * @property {string} title - Заголовок формы
-   * @property {string} subtitle - Подзаголовок
-   * @property {string} submitText - Текст кнопки отправки
-   * @property {string} altText - Текст альтернативного действия
-   * @property {string} altLinkText - Текст ссылки альтернативного действия
-   * @property {Array} fields - Массив полей формы
-   */
-  const modeConfig = {
+  const modeConfig: Record<string, ModeConfig> = {
     [AUTH_MODES.LOGIN]: {
       title: 'Вход в Sporteon',
       subtitle: 'Войдите, чтобы быть в тонусе',
@@ -213,14 +239,14 @@ export async function renderAuthForm(container, config = {}) {
       altLinkText: 'Зарегистрироваться',
       fields: [
         {
-          type: INPUT_TYPES.MAIL,
+          type: INPUT_TYPES.MAIL as InputType,
           name: 'email',
           label: 'Почта',
           placeholder: 'email@example.com',
           required: true
         },
         {
-          type: INPUT_TYPES.PASSWORD,
+          type: INPUT_TYPES.PASSWORD as InputType,
           name: 'password',
           label: 'Пароль',
           placeholder: 'Введите пароль',
@@ -237,35 +263,35 @@ export async function renderAuthForm(container, config = {}) {
       altLinkText: 'Войти',
       fields: [
         {
-          type: INPUT_TYPES.NAME,
+          type: INPUT_TYPES.NAME as InputType,
           name: 'first_name',
           label: 'Имя',
           placeholder: 'Введите имя',
           required: true
         },
         {
-          type: INPUT_TYPES.NAME,
+          type: INPUT_TYPES.NAME as InputType,
           name: 'last_name',
           label: 'Фамилия',
           placeholder: 'Введите фамилию',
           required: true
         },
         {
-          type: INPUT_TYPES.WITHOUTS,
+          type: INPUT_TYPES.WITHOUTS as InputType,
           name: 'username',
           label: 'Имя пользователя',
           placeholder: 'john_doe',
           required: true
         },
         {
-          type: INPUT_TYPES.MAIL,
+          type: INPUT_TYPES.MAIL as InputType,
           name: 'email',
           label: 'Почта',
           placeholder: 'email@example.com',
           required: true
         },
         {
-          type: INPUT_TYPES.PASSWORD,
+          type: INPUT_TYPES.PASSWORD as InputType,
           name: 'password',
           label: 'Пароль',
           placeholder: 'Минимум 8 символов',
@@ -273,7 +299,7 @@ export async function renderAuthForm(container, config = {}) {
           showEye: true
         },
         {
-          type: INPUT_TYPES.PASSWORD,
+          type: INPUT_TYPES.PASSWORD as InputType,
           name: 'password_repeat',
           label: 'Подтверждение пароля',
           placeholder: 'Повторите пароль',
@@ -290,35 +316,35 @@ export async function renderAuthForm(container, config = {}) {
       altLinkText: 'Войти',
       fields: [
         {
-          type: INPUT_TYPES.WITHOUTS,
+          type: INPUT_TYPES.WITHOUTS as InputType,
           name: 'username',
           label: 'Никнейм (отображаемое имя)',
           placeholder: 'john_doe',
           required: true
         },
         {
-          type: INPUT_TYPES.NAME,
+          type: INPUT_TYPES.NAME as InputType,
           name: 'first_name',
           label: 'Имя',
           placeholder: 'Введите имя',
           required: true
         },
         {
-          type: INPUT_TYPES.NAME,
+          type: INPUT_TYPES.NAME as InputType,
           name: 'last_name',
           label: 'Фамилия',
           placeholder: 'Введите фамилию',
           required: true
         },
         {
-          type: INPUT_TYPES.MAIL,
+          type: INPUT_TYPES.MAIL as InputType,
           name: 'email',
           label: 'Почта',
           placeholder: 'email@example.com',
           required: true
         },
         {
-          type: INPUT_TYPES.PASSWORD,
+          type: INPUT_TYPES.PASSWORD as InputType,
           name: 'password',
           label: 'Пароль',
           placeholder: 'Минимум 8 символов',
@@ -326,7 +352,7 @@ export async function renderAuthForm(container, config = {}) {
           showEye: true
         },
         {
-          type: INPUT_TYPES.PASSWORD,
+          type: INPUT_TYPES.PASSWORD as InputType,
           name: 'password_repeat',
           label: 'Подтверждение пароля',
           placeholder: 'Повторите пароль',
@@ -334,28 +360,28 @@ export async function renderAuthForm(container, config = {}) {
           showEye: true
         },
         {
-          type: INPUT_TYPES.WITHOUTS,
+          type: INPUT_TYPES.WITHOUTS as InputType,
           name: 'education_degree',
           label: 'Образование',
           placeholder: 'Введите образование',
           required: false
         },
         {
-          type: INPUT_TYPES.WITHOUTS,
+          type: INPUT_TYPES.WITHOUTS as InputType,
           name: 'career_since_date',
           label: 'Дата начала профессиональной деятельности',
           placeholder: 'Выберите дату',
           required: true
         },
         {
-          type: INPUT_TYPES.WITHOUTS,
+          type: INPUT_TYPES.WITHOUTS as InputType,
           name: 'sport_discipline',
           label: 'Вид дисциплины/спорта',
           placeholder: 'Выберите виды спорта',
           required: true
         },
         {
-          type: INPUT_TYPES.WITHOUTS,
+          type: INPUT_TYPES.WITHOUTS as InputType,
           name: 'bio',
           label: 'О себе',
           placeholder: 'Расскажите о себе',
@@ -377,113 +403,107 @@ export async function renderAuthForm(container, config = {}) {
 
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
-  const form = wrapper.firstElementChild;
+  const form = wrapper.firstElementChild as HTMLFormElement;
   form.setAttribute('novalidate', '');
 
-  const fieldsContainer = form.querySelector('.auth-form__fields');
-  const submitContainer = form.querySelector('.auth-form__submit-container');
+  const fieldsContainer = form.querySelector('.auth-form__fields') as HTMLElement;
+  const submitContainer = form.querySelector('.auth-form__submit-container') as HTMLElement;
 
-  /** @type {Map<string, HTMLElement>} */
-  const inputs = new Map();
-  /** @type {Map<string, Object>} */
-  const inputsApi = new Map();
+  const inputs = new Map<string, HTMLElement>();
+  const inputsApi = new Map<string, InputAPI | SportTypeFieldApi>();
 
-  /**
-   * Валидация поля
-   * @param {string} fieldName - Имя поля
-   * @param {string} value - Значение поля
-   * @returns {boolean} true если валидно
-   */
-  const validateField = (fieldName, value) => {
+  const validateField = (fieldName: string, value: string | number[]): boolean => {
     const api = inputsApi.get(fieldName);
     if (!api) return true;
 
-    let result;
+    let result: ValidationResult;
+
     switch (fieldName) {
-      case 'email':
-        result = validator.validateEmail(value);
-        break;
-      case 'password':
-        result = validator.validatePassword(value);
-        break;
-      case 'username':
-        result = validator.validateUsername(value);
-        break;
-      case 'first_name':
-        result = validator.validateFirstName(value);
-        break;
-      case 'last_name':
-        result = validator.validateLastName(value);
-        break;
-      case 'password_repeat':
-        const password = inputsApi.get('password')?.getValue() || '';
-        result = validator.validatePasswordWithConfirmation(password, value);
-        break;
-      case 'education_degree': {
-  validator.reset();
-  const validationResult = {
-    isValid: true,
-    errors: []
-  };
-
-  if (value && value.trim() !== '') {
-    validator.validateField(value, 'education_degree', validator.rules.education_degree);
-
-    if (validator.hasErrors()) {
-      validationResult.isValid = false;
-      validationResult.errors = validator.getErrors();
+    case 'email':
+      result = validator.validateEmail(value as string);
+      break;
+    case 'password':
+      result = validator.validatePassword(value as string);
+      break;
+    case 'username':
+      result = validator.validateUsername(value as string);
+      break;
+    case 'first_name':
+      result = validator.validateFirstName(value as string);
+      break;
+    case 'last_name':
+      result = validator.validateLastName(value as string);
+      break;
+    case 'password_repeat': {
+      const password = (inputsApi.get('password') as InputAPI)?.getValue() || '';
+      result = validator.validatePasswordWithConfirmation(password, value as string);
+      break;
     }
-  }
-
-  result = validationResult;
-  break;
-}
-      case 'career_since_date':
-        result = !value
-          ? {
-            isValid: false,
-            errors: [{ field: 'career_since_date', message: 'Дата начала деятельности обязательна' }]
-          }
-          : /^\d{4}-\d{2}-\d{2}$/.test(value)
-            ? { isValid: true, errors: [] }
-            : {
-              isValid: false,
-              errors: [{ field: 'career_since_date', message: 'Дата должна быть в формате ГГГГ-ММ-ДД' }]
-            };
-        break;
-      case 'sport_discipline':
-        result = Array.isArray(value) && value.length > 0
-          ? { isValid: true, errors: [] }
-          : {
-            isValid: false,
-            errors: [{ field: 'sport_discipline', message: 'Выберите хотя бы один вид спорта' }]
-          };
-        break;
-      case 'bio':
-        const bioValid = !value || value.length <= 1000;
+    case 'education_degree': {
+      validator.reset();
+      const validationResult: ValidationResult = {
+        isValid: true,
+        errors: []
+      };
+      if (typeof value === 'string' && value.trim() !== '') {
+        validator.validateField(value, 'education_degree', validator.rules.education_degree);
+        if (validator.hasErrors()) {
+          validationResult.isValid = false;
+          validationResult.errors = validator.getErrors();
+        }
+      }
+      result = validationResult;
+      break;
+    }
+    case 'career_since_date':
+      if (!value || typeof value !== 'string') {
         result = {
-          isValid: bioValid,
-          errors: bioValid ? [] : [{ field: 'bio', message: 'Максимум 1000 символов' }]
+          isValid: false,
+          errors: [{ field: 'career_since_date', message: 'Дата начала деятельности обязательна' }]
         };
-        break;
-      default:
-        return true;
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        result = { isValid: true, errors: [] };
+      } else {
+        result = {
+          isValid: false,
+          errors: [{ field: 'career_since_date', message: 'Дата должна быть в формате ГГГГ-ММ-ДД' }]
+        };
+      }
+      break;
+    case 'sport_discipline':
+      result = Array.isArray(value) && value.length > 0
+        ? { isValid: true, errors: [] }
+        : {
+          isValid: false,
+          errors: [{ field: 'sport_discipline', message: 'Выберите хотя бы один вид спорта' }]
+        };
+      break;
+    case 'bio': {
+      const bioValid = !value || (typeof value === 'string' && value.length <= 1000);
+      result = {
+        isValid: bioValid,
+        errors: bioValid ? [] : [{ field: 'bio', message: 'Максимум 1000 символов' }]
+      };
+      break;
+    }
+    default:
+      return true;
     }
 
     if (!result.isValid && result.errors.length > 0) {
-      api.setError(result.errors[0].message);
+      if ('setError' in api) {
+        (api as InputAPI).setError(result.errors[0].message);
+      }
       return false;
     } else {
-      api.setNormal();
+      if ('setNormal' in api) {
+        (api as InputAPI).setNormal();
+      }
       return true;
     }
   };
 
-  /**
-   * Создание полей формы
-   * @param {Object} fieldConfig - Конфигурация поля
-   */
-  const sportTypeOptions = mode === AUTH_MODES.REGISTER_TRAINER
+  const sportTypeOptions: SportTypeFieldOption[] = mode === AUTH_MODES.REGISTER_TRAINER && api
     ? await loadSportTypes(api).catch(() => [])
     : [];
 
@@ -498,7 +518,7 @@ export async function renderAuthForm(container, config = {}) {
         placeholder: fieldConfig.placeholder,
         name: fieldConfig.name,
         required: fieldConfig.required,
-        onChange: value => validateField(fieldConfig.name, value)
+        onChange: (value: string) => validateField(fieldConfig.name, value)
       });
 
       inputApi.input.type = 'date';
@@ -508,12 +528,12 @@ export async function renderAuthForm(container, config = {}) {
       inputs.set(fieldConfig.name, fieldContainer);
       inputsApi.set(fieldConfig.name, inputApi);
     } else if (fieldConfig.name === 'sport_discipline') {
-      const sportFieldApi = createSportTypesField(fieldContainer, {
+      const sportFieldApi: SportTypeFieldApi = createSportTypesField(fieldContainer, {
         label: fieldConfig.label,
         placeholder: fieldConfig.placeholder,
         required: fieldConfig.required,
         options: sportTypeOptions,
-        onChange: value => validateField(fieldConfig.name, value)
+        onChange: (value: number[]) => validateField(fieldConfig.name, value)
       });
 
       const helpText = document.createElement('small');
@@ -538,7 +558,7 @@ export async function renderAuthForm(container, config = {}) {
         name: fieldConfig.name,
         required: fieldConfig.required,
         showEye: fieldConfig.showEye,
-        onChange: value => validateField(fieldConfig.name, value)
+        onChange: (value: string) => validateField(fieldConfig.name, value)
       });
 
       inputs.set(fieldConfig.name, fieldContainer);
@@ -546,18 +566,14 @@ export async function renderAuthForm(container, config = {}) {
     }
   }
 
-  const submitBtn = await renderButton(submitContainer, {
+  const submitBtn: ButtonAPI = await renderButton(submitContainer, {
     text: currentMode.submitText,
     variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
     size: BUTTON_SIZES.MEDIUM,
     fullWidth: true
   });
 
-  /**
-   * Валидация всей формы
-   * @returns {boolean} true если форма валидна
-   */
-  const validateForm = () => {
+  const validateForm = (): boolean => {
     let isValid = true;
 
     for (const [name, api] of inputsApi) {
@@ -568,12 +584,14 @@ export async function renderAuthForm(container, config = {}) {
     }
 
     if (mode !== AUTH_MODES.LOGIN) {
-      const password = inputsApi.get('password')?.getValue();
-      const passwordRepeat = inputsApi.get('password_repeat')?.getValue();
+      const password = (inputsApi.get('password') as InputAPI)?.getValue();
+      const passwordRepeat = (inputsApi.get('password_repeat') as InputAPI)?.getValue();
 
       if (password && passwordRepeat && password !== passwordRepeat) {
         const repeatApi = inputsApi.get('password_repeat');
-        repeatApi.setError('Пароли не совпадают');
+        if (repeatApi && 'setError' in repeatApi) {
+          (repeatApi as InputAPI).setError('Пароли не совпадают');
+        }
         isValid = false;
       }
     }
@@ -581,35 +599,28 @@ export async function renderAuthForm(container, config = {}) {
     return isValid;
   };
 
-  /**
-   * Получить данные формы
-   * @returns {Object} Объект с данными формы
-   */
-const getFormData = () => {
-  const data = {};
-  for (const [name, api] of inputsApi) {
-    data[name] = api.getValue();
-  }
+  const getFormData = (): Record<string, unknown> => {
+    const data: Record<string, unknown> = {};
+    for (const [name, api] of inputsApi) {
+      data[name] = api.getValue();
+    }
 
-  if (mode === AUTH_MODES.REGISTER_TRAINER) {
-    const selectedSportTypes = Array.isArray(data.sport_discipline) ? data.sport_discipline : [];
-    data.trainer_details = {
-      education_degree: data.education_degree || '',
-      career_since_date: data.career_since_date,
-      sports: selectedSportTypes.map(sportTypeId => ({
-        sport_type_id: Number(sportTypeId),
-        experience_years: 0
-      }))
-    };
-  }
+    if (mode === AUTH_MODES.REGISTER_TRAINER) {
+      const selectedSportTypes = Array.isArray(data.sport_discipline) ? data.sport_discipline as number[] : [];
+      data.trainer_details = {
+        education_degree: (data.education_degree as string) || '',
+        career_since_date: data.career_since_date,
+        sports: selectedSportTypes.map(sportTypeId => ({
+          sport_type_id: Number(sportTypeId),
+          experience_years: 0
+        }))
+      };
+    }
 
-  return data;
-};
-  /**
-   * Установить ошибки из API
-   * @param {Array} errors - Массив ошибок
-   */
-  const setApiErrors = errors => {
+    return data;
+  };
+
+  const setApiErrors = (errors: Array<{ field: string; message: string }>): void => {
     if (!errors || !Array.isArray(errors)) return;
 
     errors.forEach(error => {
@@ -617,28 +628,33 @@ const getFormData = () => {
         ? 'sport_discipline'
         : error.field;
       const api = inputsApi.get(fieldName);
-      if (api) {
-        api.setError(error.message);
+      if (api && 'setError' in api) {
+        (api as InputAPI).setError(error.message);
       }
     });
   };
 
-  /**
-   * Сбросить форму
-   */
-  const resetForm = () => {
+  const resetForm = (): void => {
     for (const api of inputsApi.values()) {
-      api.setValue('');
-      api.setNormal();
+    // Определяем тип API и вызываем соответствующий setValue
+      const currentValue = api.getValue();
+      if (Array.isArray(currentValue)) {
+      // Это SportTypeFieldApi - передаем пустой массив
+        (api as SportTypeFieldApi).setValue([]);
+      } else {
+      // Это InputAPI - передаем пустую строку
+        (api as InputAPI).setValue('');
+      }
+
+      // Сбрасываем состояние если возможно
+      if ('setNormal' in api) {
+        (api as InputAPI).setNormal();
+      }
     }
   };
 
-  /**
-   * Показать глобальную ошибку
-   * @param {string} message - Текст ошибки
-   */
-  const setGlobalError = message => {
-    let globalError = form.querySelector('.auth-form__global-error');
+  const setGlobalError = (message: string): void => {
+    let globalError = form.querySelector('.auth-form__global-error') as HTMLElement | null;
     if (!globalError) {
       globalError = document.createElement('div');
       globalError.className = 'auth-form__global-error';
@@ -651,28 +667,20 @@ const getFormData = () => {
         font-size: var(--font-size-sm);
         text-align: center;
       `;
-      fieldsContainer.parentNode.insertBefore(globalError, fieldsContainer);
+      fieldsContainer.parentNode?.insertBefore(globalError, fieldsContainer);
     }
     globalError.textContent = message;
   };
 
-  /**
-   * Очистить глобальную ошибку
-   */
-  const clearGlobalError = () => {
+  const clearGlobalError = (): void => {
     const globalError = form.querySelector('.auth-form__global-error');
     if (globalError) {
       globalError.remove();
     }
   };
 
-  /**
-   * Обработчик отправки формы
-   * @param {MouseEvent} e - Событие клика
-   */
-  submitBtn.element.addEventListener('click', async e => {
+  submitBtn.element.addEventListener('click', async (e: MouseEvent) => {
     e.preventDefault();
-
     clearGlobalError();
 
     if (!validateForm()) {
@@ -684,23 +692,20 @@ const getFormData = () => {
     if (onSubmit) {
       try {
         await onSubmit(formData, mode);
-      } catch (error) {
-        if (error.data?.error?.fields) {
-          setApiErrors(error.data.error.fields);
+      } catch (error: unknown) {
+        const err = error as { message?: string; data?: { error?: { fields?: Array<{ field: string; message: string }> } } };
+        if (err.data?.error?.fields) {
+          setApiErrors(err.data.error.fields);
         } else {
-          setGlobalError(error.message || 'Произошла ошибка');
+          setGlobalError(err.message || 'Произошла ошибка');
         }
       }
     }
   });
 
-  /**
-   * Обработчик переключения режима
-   * @param {MouseEvent} e - Событие клика
-   */
-  const altLink = form.querySelector('.auth-form__link--alt');
+  const altLink = form.querySelector('.auth-form__link--alt') as HTMLElement | null;
   if (altLink && onSwitchMode) {
-    altLink.addEventListener('click', e => {
+    altLink.addEventListener('click', (e: MouseEvent) => {
       e.preventDefault();
       const newMode = mode === AUTH_MODES.LOGIN ? AUTH_MODES.REGISTER_CLIENT : AUTH_MODES.LOGIN;
       onSwitchMode(newMode);
