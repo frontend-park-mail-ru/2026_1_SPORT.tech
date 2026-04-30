@@ -1,4 +1,6 @@
 :root {
+    color-scheme: only light;
+
     /* ===== ЦВЕТОВАЯ ПАЛИТРА ИЗ FIGMA ===== */
     /* Основные цвета */
     --primary-orange: #FF6B4A;  /* Оранжевый для основных кнопок */
