@@ -3,6 +3,7 @@
  * @module components/organisms/ProfileContent
  */
 
+import { loadProfilePageData } from '../../../utils/profilePageData';
 import type { ApiClient } from '../../../utils/api';
 import type { PostWithAuthor } from '../../../types/post.types';
 import type { Profile, TrainerDetails } from '../../../types/api.types';
@@ -365,14 +366,17 @@ export async function renderProfileContent(
         if (addButtonContainer) addButtonContainer.style.display = 'none';
         sectionTitle.textContent = 'Понравившиеся';
 
-        const likedPosts = await loadLikedPosts(api, viewedUserId);
+        
+        const freshPosts = await loadProfilePageData(api, viewedUserId);
+
         await fillProfilePostsSection(postsContainer, {
           activeTab: tabId,
-          posts: likedPosts as PostWithAuthor[],
+          posts: freshPosts.posts,  // ← Свежие данные
           api,
-          canManagePosts: false,
+          canManagePosts,
           onPostsUpdated: onPostsUpdated ?? undefined
         });
+
       } else {
         if (filtersElement) {
           filtersElement.style.display = (tabId === 'main' || tabId === 'publications') ? 'flex' : 'none';
