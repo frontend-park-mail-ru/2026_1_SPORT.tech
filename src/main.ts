@@ -141,37 +141,36 @@ function createRouter(api: ApiClient): Router {
   }
 
   async function showProfilePage(currentUser: AuthResponse | null, viewedUserId?: number): Promise<void> {
-    const app = document.getElementById('app');
-    if (!app) return;
-    renderProfileShell(app);
-    document.body.classList.remove('auth-page');
-    const userId = viewedUserId ?? currentUser?.user?.user_id;
-    if (!userId) {
-      navigateTo('/auth');
-      return;
-    }
-    try {
-      const [{ renderProfilePage }, data] = await Promise.all([
-        import('./pages/ProfilePage/ProfilePage'),
-        loadProfilePageData(api, userId, currentUser)
-      ]);
-      await renderProfilePage(api, app, {
-        profile: data.profile,
-        currentUser: data.currentUser,
-        subscriptions: [],
-        posts: data.posts,
-        activeTab: 'publications',
-        popularPosts: [],
-        viewedUserId: data.viewedUserId,
-        onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
-      });
-    } catch (error: unknown) {
-      const err = error as Error;
-      console.error('Failed to load ProfilePage:', err);
-      app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${err.message}</p></div>`;
-    }
+  const app = document.getElementById('app');
+  if (!app) return;
+  renderProfileShell(app);
+  document.body.classList.remove('auth-page');
+  const userId = viewedUserId ?? currentUser?.user?.user_id;
+  if (!userId) {
+    navigateTo('/auth');
+    return;
   }
+  try {
+    // Всегда загружаем свежие данные
+    const data = await loadProfilePageData(api, userId, currentUser);
 
+    const { renderProfilePage } = await import('./pages/ProfilePage/ProfilePage');
+    await renderProfilePage(api, app, {
+      profile: data.profile,
+      currentUser: data.currentUser,
+      subscriptions: [],
+      posts: data.posts,
+      activeTab: 'publications',
+      popularPosts: [],
+      viewedUserId: data.viewedUserId,
+      onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
+    });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error('Failed to load ProfilePage:', err);
+    app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+  }
+}
   async function handleRouting(): Promise<void> {
     const currentUser = await getCurrentUser();
     const isAuthenticated = !!currentUser;
