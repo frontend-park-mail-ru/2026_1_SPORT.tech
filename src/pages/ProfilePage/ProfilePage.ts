@@ -97,17 +97,22 @@ export async function renderProfilePage(
    * Перезагрузка списка постов после лайка, редактирования и т.д.
    */
   async function reloadPosts(): Promise<void> {
-    const data: ProfilePageData = await loadProfilePageData(api, viewedUserId);
-    const postsContainer = contentContainer.querySelector('#posts-container') as HTMLElement;
-    if (!postsContainer) return;
-    await fillProfilePostsSection(postsContainer, {
-      activeTab: 'publications',
-      posts: data.posts,
-      api,
-      canManagePosts: profile.isOwnProfile,
-      onPostsUpdated: reloadPosts
-    });
-  }
+  const data: ProfilePageData = await loadProfilePageData(api, viewedUserId);
+  const postsContainer = contentContainer.querySelector('#posts-container') as HTMLElement;
+  if (!postsContainer) return;
+
+  // Определяем активную вкладку
+  const activeTabElement = contentContainer.querySelector('.profile-content__tab--active') as HTMLElement;
+  const currentTab = activeTabElement?.dataset?.tab || 'publications';
+
+  await fillProfilePostsSection(postsContainer, {
+    activeTab: currentTab,
+    posts: data.posts,
+    api,
+    canManagePosts: profile.isOwnProfile,
+    onPostsUpdated: reloadPosts
+  });
+}
 
   await Promise.all([
     renderSidebar(sidebarContainer, {
