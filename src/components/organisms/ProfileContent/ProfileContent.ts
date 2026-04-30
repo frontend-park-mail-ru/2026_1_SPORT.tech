@@ -275,7 +275,7 @@ export async function renderProfileContent(
 ): Promise<HTMLElement> {
   const {
     activeTab = 'main',
-    posts = [],
+    posts: _posts = [],
     popularPosts = [],
     canAddPost = false,
     api,
