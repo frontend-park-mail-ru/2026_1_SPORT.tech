@@ -26,6 +26,13 @@ export interface PostFormModalOptions {
   onSaved?: (() => void) | null;
 }
 
+interface ContentBlock {
+  id: string;
+  type: 'text' | 'media';
+  value: string;
+  file: File | null;
+}
+
 export async function openPostFormModal({
   api,
   mode,
@@ -42,14 +49,17 @@ export async function openPostFormModal({
 
   const form = modal.querySelector('.post-form-modal__form') as HTMLFormElement;
   const titleHost = modal.querySelector('#post-form-title-field') as HTMLElement;
-  const bodyInput = modal.querySelector('#post-form-body-input') as HTMLTextAreaElement;
-  const bodyErr = modal.querySelector('[data-post-body-error]') as HTMLElement;
   const globalErr = modal.querySelector('[data-post-form-global-error]') as HTMLElement;
   const cancelWrap = modal.querySelector('#post-form-cancel-wrap') as HTMLElement;
   const submitWrap = modal.querySelector('#post-form-submit-wrap') as HTMLElement;
   const sportFieldContainer = modal.querySelector('#post-form-sport-container') as HTMLElement;
   const tierContainer = modal.querySelector('#post-form-tier-container') as HTMLElement;
-  const validator = new Validator();
+  const blocksContainer = modal.querySelector('#post-form-blocks') as HTMLElement;
+  const _validator = new Validator();
+
+  // Блоки контента
+  const blocks: ContentBlock[] = [];
+  let blockCounter = 0;
 
   // Загружаем виды спорта и создаём чекбоксы
   let sportFieldApi: SportTypeFieldApi | null = null;
@@ -66,17 +76,17 @@ export async function openPostFormModal({
 
   // Создаём чекбоксы для уровней подписки
   let selectedTiers: number[] = [];
-  if (tierContainer && sportTypes.length > 0) {
+  if (tierContainer) {
     const tierOptions = [
-      { id: 1, name: '1 уровень' },
-      { id: 2, name: '2 уровень' },
-      { id: 3, name: '3 уровень' }
+      { sport_type_id: 1, name: '1 уровень' },
+      { sport_type_id: 2, name: '2 уровень' },
+      { sport_type_id: 3, name: '3 уровень' }
     ];
-    const _tierFieldApi = createSportTypesField(tierContainer, {
+    createSportTypesField(tierContainer, {
       label: '',
       placeholder: 'Выберите уровень доступа',
       required: false,
-      options: tierOptions.map(t => ({ sport_type_id: t.id, name: t.name })),
+      options: tierOptions,
       onChange: (ids: number[]) => {
         selectedTiers = ids;
       }
@@ -94,24 +104,93 @@ export async function openPostFormModal({
     onChange: () => titleApi.setNormal()
   });
 
-  const textContent = initial.text_content || initial.raw_text || '';
-  if (textContent) {
-    bodyInput.value = textContent;
+  // Добавление блоков
+  function addBlock(type: 'text' | 'media'): void {
+    const block: ContentBlock = {
+      id: `block-${++blockCounter}`,
+      type,
+      value: '',
+      file: null
+    };
+    blocks.push(block);
+    renderBlocks();
   }
 
-  const setBodyError = (msg: string | null): void => {
-    if (!msg) {
-      bodyErr.hidden = true;
-      bodyErr.textContent = '';
-      bodyInput.classList.remove('post-form-modal__textarea--error');
-      return;
-    }
-    bodyErr.hidden = false;
-    bodyErr.textContent = msg;
-    bodyInput.classList.add('post-form-modal__textarea--error');
-  };
+  function removeBlock(id: string): void {
+    const index = blocks.findIndex(b => b.id === id);
+    if (index !== -1) blocks.splice(index, 1);
+    renderBlocks();
+  }
 
-  bodyInput.addEventListener('input', () => setBodyError(''));
+  function renderBlocks(): void {
+    if (!blocksContainer) return;
+    blocksContainer.innerHTML = '';
+
+    blocks.forEach(block => {
+      const blockEl = document.createElement('div');
+      blockEl.className = 'post-form__block';
+      blockEl.innerHTML = `
+        <button type="button" class="post-form__remove-block" data-remove="${block.id}">×</button>
+      `;
+
+      if (block.type === 'text') {
+        const textarea = document.createElement('textarea');
+        textarea.className = 'post-form__block-textarea';
+        textarea.placeholder = 'Введите текст...';
+        textarea.value = block.value;
+        textarea.addEventListener('input', () => { block.value = textarea.value; });
+        blockEl.appendChild(textarea);
+      } else {
+        const mediaContainer = document.createElement('div');
+        mediaContainer.className = 'post-form__block-media';
+
+        if (block.value) {
+          if (block.file?.type.startsWith('video/')) {
+            mediaContainer.innerHTML = `<video controls src="${block.value}" style="max-width:100%;max-height:300px;"></video>`;
+          } else {
+            mediaContainer.innerHTML = `<img src="${block.value}" alt="Медиа" style="max-width:100%;max-height:300px;object-fit:contain;">`;
+          }
+        } else {
+          mediaContainer.innerHTML = `
+            <div class="post-form__block-media-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <span>Нажмите для загрузки медиа</span>
+            </div>
+          `;
+        }
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*,video/*';
+        fileInput.style.display = 'none';
+        fileInput.addEventListener('change', () => {
+          const file = fileInput.files?.[0];
+          if (file) {
+            block.file = file;
+            const url = URL.createObjectURL(file);
+            block.value = url;
+            mediaContainer.innerHTML = '';
+            if (file.type.startsWith('video/')) {
+              mediaContainer.innerHTML = `<video controls src="${url}" style="max-width:100%;max-height:300px;"></video>`;
+            } else {
+              mediaContainer.innerHTML = `<img src="${url}" alt="Медиа" style="max-width:100%;max-height:300px;object-fit:contain;">`;
+            }
+            mediaContainer.appendChild(fileInput);
+          }
+        });
+
+        mediaContainer.addEventListener('click', () => fileInput.click());
+        mediaContainer.appendChild(fileInput);
+        blockEl.appendChild(mediaContainer);
+      }
+
+      blocksContainer.appendChild(blockEl);
+      blockEl.querySelector('[data-remove]')?.addEventListener('click', () => removeBlock(block.id));
+    });
+  }
+
+  modal.querySelector('[data-add-text]')?.addEventListener('click', () => addBlock('text'));
+  modal.querySelector('[data-add-media]')?.addEventListener('click', () => addBlock('media'));
 
   function onKey(e: KeyboardEvent): void {
     if (e.key === 'Escape') close();
@@ -145,26 +224,32 @@ export async function openPostFormModal({
     e.preventDefault();
     globalErr.hidden = true;
     globalErr.textContent = '';
-    setBodyError('');
 
     const title = titleApi.getValue();
-    const text_content = bodyInput.value;
 
-    const validation = validator.validatePostEditor({ title, text_content });
-    if (!validation.isValid) {
-      validation.errors.forEach((err: { field: string; message: string }) => {
-        if (err.field === 'title') titleApi.setError(err.message);
-        if (err.field === 'text_content') setBodyError(err.message);
-      });
+    if (!title.trim()) {
+      titleApi.setError('Заголовок обязателен');
+      return;
+    }
+
+    if (blocks.length === 0) {
+      globalErr.textContent = 'Добавьте хотя бы один блок контента';
+      globalErr.hidden = false;
       return;
     }
 
     saveBtn.setDisabled(true);
     try {
       const selectedSports = sportFieldApi?.getValue() || [];
+      const contentBlocks = blocks.map(b => ({
+        type: b.type,
+        content: b.value,
+        kind: b.file?.type.startsWith('video/') ? 'video' : 'image'
+      }));
+
       const payload = {
         title: title.trim(),
-        text_content: text_content.trim(),
+        content_blocks: contentBlocks,
         sport_type_id: selectedSports.length > 0 ? selectedSports[0] : undefined,
         min_tier_id: selectedTiers.length > 0 ? Math.min(...selectedTiers) : 0
       };

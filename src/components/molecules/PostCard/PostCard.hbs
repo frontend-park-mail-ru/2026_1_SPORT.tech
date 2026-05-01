@@ -25,21 +25,36 @@
 
   <h3 class="post-card__title">{{title}}</h3>
 
+  <!-- Короткая версия (только первый текстовый блок) -->
   <div class="post-card__body post-card__body--short">
-    <div class="post-card__content">{{{content}}}</div>
-  </div>
-
-  <div class="post-card__body post-card__body--full" style="display:none;">
-    <div class="post-card__content">{{{fullContent}}}</div>
-    {{#if attachments.length}}
-    <div class="post-card__attachments">
-      {{#each attachments}}
-      <div class="post-card__attachment">
-        <img src="{{file_url}}" alt="" loading="lazy">
-      </div>
+    <div class="post-card__content">
+      {{#each contentBlocks}}
+        {{#if (eq type "text")}}
+          <div class="post-card__text-block">{{{content}}}</div>
+        {{/if}}
       {{/each}}
     </div>
-    {{/if}}
+  </div>
+
+  <!-- Полная версия (все блоки) -->
+  <div class="post-card__body post-card__body--full" style="display:none;">
+    <div class="post-card__content">
+      {{#each contentBlocks}}
+        {{#if (eq type "text")}}
+          <div class="post-card__text-block">{{{content}}}</div>
+        {{/if}}
+        {{#if (eq type "attachment")}}
+          <div class="post-card__media-block">
+            {{#if (eq kind "image")}}
+              <img src="{{file_url}}" alt="" loading="lazy">
+            {{/if}}
+            {{#if (eq kind "video")}}
+              <video controls src="{{file_url}}"></video>
+            {{/if}}
+          </div>
+        {{/if}}
+      {{/each}}
+    </div>
     <button type="button" class="post-card__collapse-btn" data-post-collapse>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="18 15 12 9 6 15"/></svg>
       Свернуть

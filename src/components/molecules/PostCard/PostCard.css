@@ -74,35 +74,6 @@
   margin-bottom: 12px;
 }
 
-/* Контент */
-.post-card__content {
-  color: #666;
-  font-size: 14px;
-  line-height: 1.6;
-  margin-bottom: 12px;
-}
-
-/* Короткая версия */
-.post-card__body--short {
-  position: relative;
-}
-
-.post-card__body--short::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
-  background: linear-gradient(transparent, #f0f7ff);
-  pointer-events: none;
-}
-
-/* Полная версия */
-.post-card__body--full {
-  display: none;
-}
-
 /* Спортивный бейдж */
 .post-card__sport-badge {
   display: inline-block;
@@ -129,44 +100,42 @@
   margin-left: auto;
 }
 
-/* Кнопка разворачивания */
-.post-card__expand-btn,
-.post-card__collapse-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  background: #FFF5F0;
-  border: 1px solid #FFD4CC;
-  border-radius: 20px;
-  color: #E85A2B;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  margin-top: 8px;
-  transition: all 0.2s;
+/* Контент с блоками */
+.post-card__body--short {
   position: relative;
-  z-index: 2;
 }
 
-.post-card__expand-btn:hover,
-.post-card__collapse-btn:hover {
-  background: #E85A2B;
-  color: white;
-  border-color: #E85A2B;
+.post-card__body--short::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(transparent, #f0f7ff);
+  pointer-events: none;
 }
 
-/* Аттачи */
-.post-card__attachments {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 8px;
-  margin-top: 12px;
+.post-card__body--full {
+  display: none;
 }
 
-.post-card__attachment img,
-.post-card__attachment video {
-  width: 100%;
+/* Текстовый блок */
+.post-card__text-block {
+  margin-bottom: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666;
+}
+
+/* Медиа блок */
+.post-card__media-block {
+  margin: 12px 0;
+}
+
+.post-card__media-block img,
+.post-card__media-block video {
+  max-width: 100%;
   border-radius: 8px;
 }
 
@@ -232,6 +201,31 @@
   color: #E85A2B;
 }
 
+/* Кнопка разворачивания/сворачивания */
+.post-card__collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #FFF5F0;
+  border: 1px solid #FFD4CC;
+  border-radius: 20px;
+  color: #E85A2B;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s;
+  position: relative;
+  z-index: 2;
+}
+
+.post-card__collapse-btn:hover {
+  background: #E85A2B;
+  color: white;
+  border-color: #E85A2B;
+}
+
 @media (max-width: 768px) {
   .post-card {
     padding: 16px;
@@ -252,7 +246,7 @@
     font-size: 16px;
   }
 
-  .post-card__content {
+  .post-card__text-block {
     font-size: 13px;
   }
 

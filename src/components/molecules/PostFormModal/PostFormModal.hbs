@@ -10,23 +10,35 @@
     <form class="post-form-modal__form" novalidate>
       <div id="post-form-title-field" class="post-form-modal__field"></div>
 
-      <!-- Вид спорта (через чекбоксы из БД) -->
+      <!-- Вид спорта -->
       <div class="post-form-modal__field" id="post-form-sport-field">
         <label class="post-form-modal__label">Вид спорта</label>
         <div id="post-form-sport-container"></div>
       </div>
 
-      <!-- Уровень доступа (через чекбоксы) -->
+      <!-- Уровень доступа -->
       <div class="post-form-modal__field" id="post-form-tier-field">
         <label class="post-form-modal__label">Уровень доступа</label>
         <div id="post-form-tier-container"></div>
       </div>
 
+      <!-- Блоки контента -->
       <div class="post-form-modal__field">
-        <label class="post-form-modal__label" for="post-form-body-input">Текст публикации</label>
-        <textarea id="post-form-body-input" class="post-form-modal__textarea" name="text_content" rows="10" placeholder="Введите текст публикации"></textarea>
-        <span class="post-form-modal__inline-error" data-post-body-error hidden></span>
+        <label class="post-form-modal__label">Содержание публикации</label>
+        <div id="post-form-blocks" class="post-form__blocks"></div>
       </div>
+
+      <div class="post-form__block-actions">
+        <button type="button" class="post-form__add-block-btn" data-add-text>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Добавить текст
+        </button>
+        <button type="button" class="post-form__add-block-btn" data-add-media>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Добавить медиа
+        </button>
+      </div>
+
       <p class="post-form-modal__global-error" data-post-form-global-error hidden></p>
       <div class="post-form-modal__actions">
         <div id="post-form-cancel-wrap"></div>

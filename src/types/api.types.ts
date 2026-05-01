@@ -102,3 +102,11 @@ export interface UpdateProfilePayload {
   bio?: string;
   trainer_details?: TrainerDetails;
 }
+
+export interface PostContentBlock {
+  type: 'text' | 'attachment';
+  content: string;      // текст или URL аттача
+  attachment_id?: number;
+  file_url?: string;
+  kind?: 'image' | 'video';
+}

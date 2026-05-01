@@ -178,10 +178,16 @@ export class ApiClient {
   }
 
   async createPost(payload: {
-    title: string;
-    text_content: string;
-    min_tier_id?: number;
-  }): Promise<Post> {
+  title: string;
+  text_content?: string;
+  content_blocks?: Array<{
+    type: string;
+    content: string;
+    kind?: string;
+  }>;
+  sport_type_id?: number;
+  min_tier_id?: number;
+}): Promise<Post> {
     await this.ensureCsrfToken();
     return this.request<Post>('/v1/posts', {
       method: 'POST',
@@ -190,10 +196,16 @@ export class ApiClient {
   }
 
   async updatePost(postId: number, payload: {
-    title?: string;
-    text_content?: string;
-    min_tier_id?: number;
-  }): Promise<Post> {
+  title?: string;
+  text_content?: string;
+  content_blocks?: Array<{
+    type: string;
+    content: string;
+    kind?: string;
+  }>;
+  sport_type_id?: number;
+  min_tier_id?: number;
+}): Promise<Post> {
     await this.ensureCsrfToken();
     return this.request<Post>(`/v1/posts/${postId}`, {
       method: 'PATCH',

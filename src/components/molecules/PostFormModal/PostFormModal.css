@@ -289,3 +289,112 @@
   padding: 8px;
   font-size: 14px;
 }
+
+/* Блоки контента */
+.post-form__blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.post-form__block {
+  position: relative;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.post-form__block-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+}
+
+.post-form__block-media {
+  position: relative;
+  min-height: 120px;
+  background: #F8FAFC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.post-form__block-media img,
+.post-form__block-media video {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+}
+
+.post-form__block-media-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #999;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 20px;
+}
+
+.post-form__block-media-placeholder svg {
+  width: 32px;
+  height: 32px;
+  opacity: 0.5;
+}
+
+.post-form__remove-block {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: #E85A2B;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.post-form__remove-block:hover {
+  background: #D04A1B;
+}
+
+/* Кнопки добавления блоков */
+.post-form__block-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.post-form__add-block-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px dashed #CBD5E1;
+  border-radius: 8px;
+  background: #F8FAFC;
+  color: #64748B;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.post-form__add-block-btn:hover {
+  border-color: #E85A2B;
+  color: #E85A2B;
+  background: #FFF5F0;
+}
