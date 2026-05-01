@@ -20,9 +20,6 @@ export interface ProfileHeaderConfig {
   onDonate?: (() => void) | null;
 }
 
-/**
- * Рендерит шапку профиля
- */
 export async function renderProfileHeader(
   container: HTMLElement,
   config: ProfileHeaderConfig
@@ -64,7 +61,8 @@ export async function renderProfileHeader(
   const donateContainer = element.querySelector(`#profile-donate-${id}`) as HTMLElement | null;
   const actionsContainer = element.querySelector(`#profile-actions-${id}`) as HTMLElement | null;
 
-  if (showDonate && donateContainer && onDonate) {
+  // Кнопка "Пожертвовать" — только на чужих профилях тренеров
+  if (!isOwnProfile && showDonate && donateContainer && onDonate) {
     await renderButton(donateContainer, {
       text: 'Пожертвовать',
       variant: 'primary-orange',
@@ -74,7 +72,21 @@ export async function renderProfileHeader(
     });
   }
 
-  // Кнопка редактирования для своего профиля
+  // Кнопка "Подписаться" — только на чужих профилях тренеров
+  if (!isOwnProfile && showDonate && actionsContainer) {
+    await renderButton(actionsContainer, {
+      text: 'Подписаться',
+      variant: 'secondary-blue',
+      state: 'normal',
+      size: 'medium',
+      onClick: async () => {
+        // TODO: API запрос на подписку
+        alert('Функция подписки будет доступна позже');
+      }
+    });
+  }
+
+  // Кнопка "Редактировать" — только в своём профиле
   if (isOwnProfile && actionsContainer) {
     await renderButton(actionsContainer, {
       text: 'Редактировать',
@@ -119,7 +131,6 @@ export async function renderProfileHeader(
     });
   }
 
-  // Кнопка камеры для смены аватара
   const cameraBtn = element.querySelector('.profile-header__camera-btn') as HTMLElement | null;
   if (cameraBtn) {
     cameraBtn.addEventListener('click', async () => {

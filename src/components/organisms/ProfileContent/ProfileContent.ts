@@ -87,11 +87,11 @@ function getYearsWord(years: number): string {
 function escapeHtml(value: string | null | undefined): string {
   if (value === null || value === undefined) return '';
   return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('\'', '&#39;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 async function showTrainerAbout(
@@ -261,11 +261,11 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
 function formatPostContent(textContent: string): string {
   if (!textContent) return '';
   return String(textContent)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('\'', '&#39;')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
     .replace(/\n/g, '<br>');
 }
 
@@ -330,7 +330,7 @@ export async function renderProfileContent(
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild as HTMLElement;
-  const sectionTitle = element.querySelector('.profile-content__section-title') as HTMLElement;
+  const sectionTitleEl = element.querySelector('.profile-content__section-title') as HTMLElement;
   const filtersElement = element.querySelector('.profile-content__filters') as HTMLElement | null;
   const addButtonContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
   const postsContainer = element.querySelector('#posts-container') as HTMLElement;
@@ -339,6 +339,32 @@ export async function renderProfileContent(
     if (filtersElement) filtersElement.style.display = 'none';
     if (addButtonContainer) addButtonContainer.style.display = 'none';
   }
+
+  // Фильтр по видам спорта
+  const sportFilter = document.createElement('select');
+  sportFilter.className = 'post-form__tier-select';
+  sportFilter.style.cssText = 'max-width:200px;margin-left:12px;';
+  sportFilter.innerHTML = `
+    <option value="">Все виды</option>
+    <option value="1">Фитнес</option>
+    <option value="2">Бодибилдинг</option>
+    <option value="3">Кроссфит</option>
+    <option value="4">Йога</option>
+    <option value="5">Плавание</option>
+  `;
+  const headerActions = element.querySelector('.profile-content__header-actions');
+  if (headerActions) headerActions.appendChild(sportFilter);
+
+  sportFilter.addEventListener('change', async () => {
+    const selected = sportFilter.value;
+    const freshData = await loadProfilePageData(api, viewedUserId);
+    const filteredPosts = selected
+      ? freshData.posts.filter(p => (p as PostWithAuthor & { sport_type?: string }).sport_type === selected)
+      : freshData.posts;
+    await fillProfilePostsSection(postsContainer, {
+      activeTab: currentTab, posts: filteredPosts, api, canManagePosts, onPostsUpdated: onPostsUpdated ?? undefined
+    });
+  });
 
   element.querySelectorAll('.profile-content__tab').forEach((tab: Element) => {
     tab.addEventListener('click', async () => {
@@ -353,7 +379,7 @@ export async function renderProfileContent(
       if (tabId === 'about') {
         if (filtersElement) filtersElement.style.display = 'none';
         if (addButtonContainer) addButtonContainer.style.display = 'none';
-        sectionTitle.textContent = isTrainer ? 'О тренере' : 'О себе';
+        sectionTitleEl.textContent = isTrainer ? 'О тренере' : 'О себе';
 
         if (isTrainer) {
           await showTrainerAbout(postsContainer, api, viewedUserId);
@@ -364,19 +390,16 @@ export async function renderProfileContent(
       } else if (tabId === 'publications' && !isTrainer) {
         if (filtersElement) filtersElement.style.display = 'none';
         if (addButtonContainer) addButtonContainer.style.display = 'none';
-        sectionTitle.textContent = 'Понравившиеся';
-
+        sectionTitleEl.textContent = 'Понравившиеся';
 
         const freshPosts = await loadProfilePageData(api, viewedUserId);
-
         await fillProfilePostsSection(postsContainer, {
           activeTab: tabId,
-          posts: freshPosts.posts,  // ← Свежие данные
+          posts: freshPosts.posts,
           api,
           canManagePosts,
           onPostsUpdated: onPostsUpdated ?? undefined
         });
-
       } else {
         if (filtersElement) {
           filtersElement.style.display = (tabId === 'main' || tabId === 'publications') ? 'flex' : 'none';
@@ -384,7 +407,7 @@ export async function renderProfileContent(
         if (addButtonContainer) {
           addButtonContainer.style.display = (canAddPost && tabId === 'publications') ? 'block' : 'none';
         }
-        sectionTitle.textContent = sectionTitles[tabId] || 'Публикации';
+        sectionTitleEl.textContent = sectionTitles[tabId] || 'Публикации';
         const freshPosts = await loadProfilePageData(api, viewedUserId);
         await fillProfilePostsSection(postsContainer, {
           activeTab: tabId,
@@ -435,7 +458,6 @@ export async function renderProfileContent(
   } else {
     const freshPosts = await loadProfilePageData(api, viewedUserId);
     await fillProfilePostsSection(postsContainer, {
-
       activeTab: currentTab,
       posts: freshPosts.posts,
       api,

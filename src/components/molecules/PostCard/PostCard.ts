@@ -1,7 +1,5 @@
 /**
  * @fileoverview Компонент карточки публикации
- * Отображает пост в ленте или на странице профиля
- *
  * @module components/molecules/PostCard
  */
 
@@ -23,11 +21,11 @@ export interface PostCardData {
   isOwner?: boolean;
   api: ApiClient;
   onPostsUpdated?: (() => Promise<void>) | null;
+  attachments?: Array<{ file_url: string; kind: string }>;
+  min_tier_id?: number | null;
+  sport_type?: string;
 }
 
-/**
- * Рендерит карточку публикации
- */
 export async function renderPostCard(
   container: HTMLElement,
   post: PostCardData
@@ -46,31 +44,21 @@ export async function renderPostCard(
     raw_text: rawText = '',
     isOwner = false,
     api,
-    onPostsUpdated
+    onPostsUpdated,
+    attachments = [],
+    min_tier_id: minTierId = null,
+    sport_type: sportType = ''
   } = post;
 
   const template = (window as any).Handlebars.templates['PostCard.hbs'];
-
-  const initials = authorName
-    .split(' ')
-    .map((n: string) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+  const initials = authorName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  const shortContent = content.length > 200 ? content.substring(0, 200) + '...' : content;
 
   const html = template({
-    post_id: postId,
-    title,
-    content,
-    authorName,
-    authorRole,
-    authorAvatar,
-    authorInitials: initials,
-    likes,
-    liked,
-    comments,
-    can_view: canView,
-    isOwner
+    post_id: postId, title, content: shortContent, fullContent: content,
+    authorName, authorRole, authorAvatar, authorInitials: initials,
+    likes, liked, comments, can_view: canView, isOwner,
+    attachments, minTierId, sportType
   });
 
   const wrapper = document.createElement('div');
@@ -82,6 +70,28 @@ export async function renderPostCard(
   const editBtn = element.querySelector('[data-post-edit]') as HTMLButtonElement | null;
   const deleteBtn = element.querySelector('[data-post-delete]') as HTMLButtonElement | null;
   const shareBtn = element.querySelector('[data-post-share]') as HTMLButtonElement | null;
+  const expandBtn = element.querySelector('[data-post-expand]') as HTMLButtonElement | null;
+  const collapseBtn = element.querySelector('[data-post-collapse]') as HTMLButtonElement | null;
+  const shortBody = element.querySelector('.post-card__body--short') as HTMLElement | null;
+  const fullBody = element.querySelector('.post-card__body--full') as HTMLElement | null;
+
+  if (expandBtn && shortBody && fullBody) {
+    expandBtn.addEventListener('click', () => {
+      shortBody.style.display = 'none';
+      fullBody.style.display = 'block';
+      expandBtn.style.display = 'none';
+      if (collapseBtn) collapseBtn.style.display = 'inline-flex';
+    });
+  }
+
+  if (collapseBtn && shortBody && fullBody) {
+    collapseBtn.addEventListener('click', () => {
+      shortBody.style.display = 'block';
+      fullBody.style.display = 'none';
+      collapseBtn.style.display = 'none';
+      if (expandBtn) expandBtn.style.display = 'inline-flex';
+    });
+  }
 
   const setLikeUi = (nextLiked: boolean, nextCount: number): void => {
     if (!likeBtn || !likeCountEl) return;
@@ -89,9 +99,7 @@ export async function renderPostCard(
     likeBtn.setAttribute('aria-pressed', nextLiked ? 'true' : 'false');
     likeCountEl.textContent = String(nextCount);
     const svg = likeBtn.querySelector('svg');
-    if (svg) {
-      svg.setAttribute('fill', nextLiked ? 'currentColor' : 'none');
-    }
+    if (svg) svg.setAttribute('fill', nextLiked ? 'currentColor' : 'none');
   };
 
   if (likeBtn && api && canView) {
@@ -100,68 +108,34 @@ export async function renderPostCard(
       const wasLiked = likeBtn.classList.contains('post-card__action--liked');
       likeBtn.disabled = true;
       try {
-        let response;
-        if (wasLiked) {
-          response = await api.unlikePost(postId);
-        } else {
-          response = await api.likePost(postId);
-        }
-
+        const response = wasLiked ? await api.unlikePost(postId) : await api.likePost(postId);
         setLikeUi(response.is_liked, response.likes_count);
-
-        if (onPostsUpdated) {
-          await onPostsUpdated();
-        }
-      } catch (error) {
-        console.error('Like error:', error);
-      } finally {
-        likeBtn.disabled = false;
-      }
+        if (onPostsUpdated) await onPostsUpdated();
+      } catch (error) { console.error('Like error:', error); }
+      finally { likeBtn.disabled = false; }
     });
   }
 
   if (editBtn && api && isOwner) {
     editBtn.addEventListener('click', async () => {
-      await openPostFormModal({
-        api,
-        mode: 'edit',
-        postId,
-        initial: { title, text_content: rawText || content || '' },
-        onSaved: onPostsUpdated
-      });
+      await openPostFormModal({ api, mode: 'edit', postId, initial: { title, text_content: rawText || content || '' }, onSaved: onPostsUpdated });
     });
   }
 
   if (deleteBtn && api && isOwner) {
     deleteBtn.addEventListener('click', async () => {
       deleteBtn.disabled = true;
-      try {
-        await api.deletePost(postId);
-        onPostsUpdated?.();
-      } catch (error) {
-        console.error('Delete error:', error);
-      } finally {
-        deleteBtn.disabled = false;
-      }
+      try { await api.deletePost(postId); onPostsUpdated?.(); }
+      catch (error) { console.error('Delete error:', error); }
+      finally { deleteBtn.disabled = false; }
     });
   }
 
   if (shareBtn) {
     shareBtn.addEventListener('click', async () => {
-      const shareData = {
-        title,
-        text: rawText || title,
-        url: window.location.href
-      };
-      try {
-        if (navigator.share) {
-          await navigator.share(shareData);
-        } else {
-          await navigator.clipboard.writeText(window.location.href);
-        }
-      } catch {
-        // пользователь отменил share
-      }
+      const shareData = { title, text: rawText || title, url: window.location.href };
+      try { if (navigator.share) await navigator.share(shareData); else await navigator.clipboard.writeText(window.location.href); }
+      catch {}
     });
   }
 

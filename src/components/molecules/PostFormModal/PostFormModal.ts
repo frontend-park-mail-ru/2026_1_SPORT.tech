@@ -18,13 +18,12 @@ export interface PostFormModalOptions {
     title?: string;
     text_content?: string;
     raw_text?: string;
+    sport_type?: string;
+    min_tier_id?: number;
   };
   onSaved?: (() => void) | null;
 }
 
-/**
- * Открывает форму поста
- */
 export async function openPostFormModal({
   api,
   mode,
@@ -46,7 +45,17 @@ export async function openPostFormModal({
   const globalErr = modal.querySelector('[data-post-form-global-error]') as HTMLElement;
   const cancelWrap = modal.querySelector('#post-form-cancel-wrap') as HTMLElement;
   const submitWrap = modal.querySelector('#post-form-submit-wrap') as HTMLElement;
+  const sportTypeSelect = modal.querySelector('#post-form-sport-type') as HTMLSelectElement;
+  const tierSelect = modal.querySelector('#post-form-tier') as HTMLSelectElement;
   const validator = new Validator();
+
+  // Установить начальные значения, если редактирование
+  if (mode === 'edit' && initial.sport_type) {
+    sportTypeSelect.value = initial.sport_type;
+  }
+  if (mode === 'edit' && initial.min_tier_id != null) {
+    tierSelect.value = String(initial.min_tier_id);
+  }
 
   const titleApi: InputAPI = await renderInput(titleHost, {
     type: INPUT_TYPES.WITHOUTS,
@@ -94,7 +103,7 @@ export async function openPostFormModal({
     variant: BUTTON_VARIANTS.TEXT_ORANGE,
     size: BUTTON_SIZES.MEDIUM,
     type: 'button',
-    onClick: () => close()
+    onClick: close
   });
 
   const saveBtn: ButtonAPI = await renderButton(submitWrap, {
@@ -120,12 +129,8 @@ export async function openPostFormModal({
     const validation = validator.validatePostEditor({ title, text_content });
     if (!validation.isValid) {
       validation.errors.forEach((err: { field: string; message: string }) => {
-        if (err.field === 'title') {
-          titleApi.setError(err.message);
-        }
-        if (err.field === 'text_content') {
-          setBodyError(err.message);
-        }
+        if (err.field === 'title') titleApi.setError(err.message);
+        if (err.field === 'text_content') setBodyError(err.message);
       });
       return;
     }
@@ -134,7 +139,9 @@ export async function openPostFormModal({
     try {
       const payload = {
         title: title.trim(),
-        text_content: text_content.trim()
+        text_content: text_content.trim(),
+        sport_type_id: sportTypeSelect.value || undefined,
+        min_tier_id: tierSelect.value ? Number(tierSelect.value) : 0
       };
 
       if (mode === 'edit' && postId != null) {
@@ -145,7 +152,7 @@ export async function openPostFormModal({
 
       onSaved?.();
       close();
-    }  catch (error: unknown) {
+    } catch (error: unknown) {
       const err = error as { message?: string };
       globalErr.textContent = err.message || 'Не удалось сохранить публикацию';
       globalErr.hidden = false;
