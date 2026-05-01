@@ -527,3 +527,11 @@
     white-space: normal;
   }
 }
+
+/* Поиск внутри основной колонки */
+.profile-content__main .profile-content__search {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  margin-bottom: 20px;
+}
