@@ -52,29 +52,24 @@
     <aside class="profile-content__sidebar-right">
       <!-- Популярные публикации со скроллом -->
       <div class="profile-content__popular">
-        <h3>Популярные публикации</h3>
-        <div class="profile-content__popular-list">
-          {{#each popularPosts}}
-          <div class="profile-content__popular-item">
-            <div class="profile-content__popular-thumb">
-              {{#if image}}
-                <img src="{{image}}" alt="{{title}}">
-              {{else}}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <rect x="2" y="2" width="20" height="20" rx="2" ry="2"/>
-                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
-                  <polyline points="21 15 16 10 5 21"/>
-                </svg>
-              {{/if}}
-            </div>
-            <div class="profile-content__popular-info">
-              <div class="profile-content__popular-title">{{title}}</div>
-              <div class="profile-content__popular-description">{{description}}</div>
-            </div>
-          </div>
-          {{/each}}
+  <h3>Популярные публикации</h3>
+  <div class="profile-content__popular-list">
+    {{#each popularPosts}}
+    <div class="profile-content__popular-item" data-post-id="{{post_id}}">
+      <div class="profile-content__popular-rank">#{{@index_plus_one}}</div>
+      <div class="profile-content__popular-info">
+        <div class="profile-content__popular-title">{{title}}</div>
+        <div class="profile-content__popular-stats">
+          <span class="profile-content__popular-likes">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            {{likes}}
+          </span>
         </div>
       </div>
+    </div>
+    {{/each}}
+  </div>
+</div>
     </aside>
   </div>
 </div>
