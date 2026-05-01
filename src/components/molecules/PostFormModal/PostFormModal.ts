@@ -48,10 +48,10 @@ export async function openPostFormModal({
   const cancelWrap = modal.querySelector('#post-form-cancel-wrap') as HTMLElement;
   const submitWrap = modal.querySelector('#post-form-submit-wrap') as HTMLElement;
   const sportFieldContainer = modal.querySelector('#post-form-sport-container') as HTMLElement;
-  const tierSelect = modal.querySelector('#post-form-tier') as HTMLSelectElement;
+  const tierContainer = modal.querySelector('#post-form-tier-container') as HTMLElement;
   const validator = new Validator();
 
-  // Загружаем виды спорта из API и создаём чекбоксы как в регистрации
+  // Загружаем виды спорта и создаём чекбоксы
   let sportFieldApi: SportTypeFieldApi | null = null;
   const sportTypes = await loadSportTypes(api);
   if (sportFieldContainer && sportTypes.length > 0) {
@@ -62,14 +62,25 @@ export async function openPostFormModal({
       options: sportTypes,
       onChange: () => {}
     });
-    if (mode === 'edit' && initial.sport_type) {
-      sportFieldApi.setValue([Number(initial.sport_type)]);
-    }
   }
 
-  // Установить начальное значение уровня подписки
-  if (mode === 'edit' && initial.min_tier_id != null) {
-    tierSelect.value = String(initial.min_tier_id);
+  // Создаём чекбоксы для уровней подписки
+  let selectedTiers: number[] = [];
+  if (tierContainer && sportTypes.length > 0) {
+    const tierOptions = [
+      { id: 1, name: '1 уровень' },
+      { id: 2, name: '2 уровень' },
+      { id: 3, name: '3 уровень' }
+    ];
+    const _tierFieldApi = createSportTypesField(tierContainer, {
+      label: '',
+      placeholder: 'Выберите уровень доступа',
+      required: false,
+      options: tierOptions.map(t => ({ sport_type_id: t.id, name: t.name })),
+      onChange: (ids: number[]) => {
+        selectedTiers = ids;
+      }
+    });
   }
 
   const titleApi: InputAPI = await renderInput(titleHost, {
@@ -103,9 +114,7 @@ export async function openPostFormModal({
   bodyInput.addEventListener('input', () => setBodyError(''));
 
   function onKey(e: KeyboardEvent): void {
-    if (e.key === 'Escape') {
-      close();
-    }
+    if (e.key === 'Escape') close();
   }
 
   function close(): void {
@@ -157,7 +166,7 @@ export async function openPostFormModal({
         title: title.trim(),
         text_content: text_content.trim(),
         sport_type_id: selectedSports.length > 0 ? selectedSports[0] : undefined,
-        min_tier_id: tierSelect.value ? Number(tierSelect.value) : 0
+        min_tier_id: selectedTiers.length > 0 ? Math.min(...selectedTiers) : 0
       };
 
       if (mode === 'edit' && postId != null) {

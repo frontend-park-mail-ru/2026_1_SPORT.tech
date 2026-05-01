@@ -16,26 +16,15 @@
         <div id="post-form-sport-container"></div>
       </div>
 
-      <!-- Уровень подписки -->
-      <div class="post-form-modal__field">
-        <label class="post-form-modal__label" for="post-form-tier">Уровень подписки</label>
-        <select id="post-form-tier" class="post-form__tier-select">
-          <option value="0">Бесплатно (для всех)</option>
-          <option value="1">Только для 1 уровня</option>
-          <option value="2">Только для 2 уровня</option>
-          <option value="3">Только для 3 уровня</option>
-        </select>
+      <!-- Уровень доступа (через чекбоксы) -->
+      <div class="post-form-modal__field" id="post-form-tier-field">
+        <label class="post-form-modal__label">Уровень доступа</label>
+        <div id="post-form-tier-container"></div>
       </div>
 
       <div class="post-form-modal__field">
         <label class="post-form-modal__label" for="post-form-body-input">Текст публикации</label>
-        <textarea
-          id="post-form-body-input"
-          class="post-form-modal__textarea"
-          name="text_content"
-          rows="10"
-          placeholder="Введите текст публикации"
-        ></textarea>
+        <textarea id="post-form-body-input" class="post-form-modal__textarea" name="text_content" rows="10" placeholder="Введите текст публикации"></textarea>
         <span class="post-form-modal__inline-error" data-post-body-error hidden></span>
       </div>
       <p class="post-form-modal__global-error" data-post-form-global-error hidden></p>
