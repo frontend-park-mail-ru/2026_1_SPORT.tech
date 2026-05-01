@@ -151,3 +151,24 @@
     justify-content: center;
   }
 }
+
+/* Стили для select в форме поста */
+.post-form__tier-select {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.post-form__tier-select:focus {
+  outline: none;
+  border-color: #FF6B4A;
+  box-shadow: 0 0 0 3px rgba(255, 107, 74, 0.1);
+}

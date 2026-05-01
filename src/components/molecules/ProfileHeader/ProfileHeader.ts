@@ -76,7 +76,7 @@ export async function renderProfileHeader(
   if (!isOwnProfile && showDonate && actionsContainer) {
     await renderButton(actionsContainer, {
       text: 'Подписаться',
-      variant: 'secondary-blue',
+      variant: 'primary-orange',
       state: 'normal',
       size: 'medium',
       onClick: async () => {

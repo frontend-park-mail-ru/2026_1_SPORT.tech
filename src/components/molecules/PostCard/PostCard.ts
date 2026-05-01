@@ -63,36 +63,47 @@ export async function renderPostCard(
 
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
-  const element = wrapper.firstElementChild as HTMLElement;
+  const postCard = wrapper.firstElementChild as HTMLElement;
 
-  const likeBtn = element.querySelector('[data-post-like]') as HTMLButtonElement | null;
-  const likeCountEl = element.querySelector('[data-post-like-count]') as HTMLElement | null;
-  const editBtn = element.querySelector('[data-post-edit]') as HTMLButtonElement | null;
-  const deleteBtn = element.querySelector('[data-post-delete]') as HTMLButtonElement | null;
-  const shareBtn = element.querySelector('[data-post-share]') as HTMLButtonElement | null;
-  const expandBtn = element.querySelector('[data-post-expand]') as HTMLButtonElement | null;
-  const collapseBtn = element.querySelector('[data-post-collapse]') as HTMLButtonElement | null;
-  const shortBody = element.querySelector('.post-card__body--short') as HTMLElement | null;
-  const fullBody = element.querySelector('.post-card__body--full') as HTMLElement | null;
+  const likeBtn = postCard.querySelector('[data-post-like]') as HTMLButtonElement | null;
+  const likeCountEl = postCard.querySelector('[data-post-like-count]') as HTMLElement | null;
+  const editBtn = postCard.querySelector('[data-post-edit]') as HTMLButtonElement | null;
+  const deleteBtn = postCard.querySelector('[data-post-delete]') as HTMLButtonElement | null;
+  const shareBtn = postCard.querySelector('[data-post-share]') as HTMLButtonElement | null;
+  const collapseBtn = postCard.querySelector('[data-post-collapse]') as HTMLButtonElement | null;
+  const shortBody = postCard.querySelector('.post-card__body--short') as HTMLElement | null;
+  const fullBody = postCard.querySelector('.post-card__body--full') as HTMLElement | null;
 
-  if (expandBtn && shortBody && fullBody) {
-    expandBtn.addEventListener('click', () => {
+  // Клик по карточке разворачивает пост
+  postCard.addEventListener('click', (e: Event) => {
+    const target = e.target as HTMLElement;
+    // Не разворачиваем при клике на кнопки действий
+    if (target.closest('[data-post-like]') ||
+        target.closest('[data-post-edit]') ||
+        target.closest('[data-post-delete]') ||
+        target.closest('[data-post-share]') ||
+        target.closest('[data-post-collapse]')) {
+      return;
+    }
+
+    if (shortBody && fullBody) {
       shortBody.style.display = 'none';
       fullBody.style.display = 'block';
-      expandBtn.style.display = 'none';
-      if (collapseBtn) collapseBtn.style.display = 'inline-flex';
-    });
-  }
+      postCard.classList.add('post-card--expanded');
+    }
+  });
 
+  // Кнопка "Свернуть"
   if (collapseBtn && shortBody && fullBody) {
-    collapseBtn.addEventListener('click', () => {
+    collapseBtn.addEventListener('click', (e: Event) => {
+      e.stopPropagation();
       shortBody.style.display = 'block';
       fullBody.style.display = 'none';
-      collapseBtn.style.display = 'none';
-      if (expandBtn) expandBtn.style.display = 'inline-flex';
+      postCard.classList.remove('post-card--expanded');
     });
   }
 
+  // Лайк
   const setLikeUi = (nextLiked: boolean, nextCount: number): void => {
     if (!likeBtn || !likeCountEl) return;
     likeBtn.classList.toggle('post-card__action--liked', nextLiked);
@@ -103,7 +114,8 @@ export async function renderPostCard(
   };
 
   if (likeBtn && api && canView) {
-    likeBtn.addEventListener('click', async () => {
+    likeBtn.addEventListener('click', async (e: Event) => {
+      e.stopPropagation();
       if (likeBtn.disabled) return;
       const wasLiked = likeBtn.classList.contains('post-card__action--liked');
       likeBtn.disabled = true;
@@ -116,14 +128,22 @@ export async function renderPostCard(
     });
   }
 
+  // Редактирование
   if (editBtn && api && isOwner) {
-    editBtn.addEventListener('click', async () => {
-      await openPostFormModal({ api, mode: 'edit', postId, initial: { title, text_content: rawText || content || '' }, onSaved: onPostsUpdated });
+    editBtn.addEventListener('click', async (e: Event) => {
+      e.stopPropagation();
+      await openPostFormModal({
+        api, mode: 'edit', postId,
+        initial: { title, text_content: rawText || content || '' },
+        onSaved: onPostsUpdated
+      });
     });
   }
 
+  // Удаление
   if (deleteBtn && api && isOwner) {
-    deleteBtn.addEventListener('click', async () => {
+    deleteBtn.addEventListener('click', async (e: Event) => {
+      e.stopPropagation();
       deleteBtn.disabled = true;
       try { await api.deletePost(postId); onPostsUpdated?.(); }
       catch (error) { console.error('Delete error:', error); }
@@ -131,14 +151,18 @@ export async function renderPostCard(
     });
   }
 
+  // Поделиться
   if (shareBtn) {
-    shareBtn.addEventListener('click', async () => {
+    shareBtn.addEventListener('click', async (e: Event) => {
+      e.stopPropagation();
       const shareData = { title, text: rawText || title, url: window.location.href };
-      try { if (navigator.share) await navigator.share(shareData); else await navigator.clipboard.writeText(window.location.href); }
-      catch {}
+      try {
+        if (navigator.share) await navigator.share(shareData);
+        else await navigator.clipboard.writeText(window.location.href);
+      } catch {}
     });
   }
 
-  container.appendChild(element);
-  return element;
+  container.appendChild(postCard);
+  return postCard;
 }
