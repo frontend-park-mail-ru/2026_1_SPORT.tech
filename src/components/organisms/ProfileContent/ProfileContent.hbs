@@ -7,7 +7,7 @@
     </button>
     {{/each}}
   </div>
-  
+
   <!-- Основной лэйаут -->
   <div class="profile-content__layout">
     <!-- ЦЕНТРАЛЬНАЯ КОЛОНКА -->
@@ -28,15 +28,8 @@
           {{/if}}
         </div>
       </div>
-      
-      <div id="posts-container">
-        <!-- Посты вставляются через JS -->
-      </div>
-    </div>
-    
-    <!-- ПРАВАЯ КОЛОНКА -->
-    <aside class="profile-content__sidebar-right">
-      <!-- Блок поиска -->
+
+      <!-- Блок поиска  -->
       <div class="profile-content__search">
         <div class="profile-content__search-title">Поиск публикаций</div>
         <div class="profile-content__search-input-wrapper">
@@ -49,7 +42,14 @@
           <input type="text" class="profile-content__search-input" placeholder="Введите запрос...">
         </div>
       </div>
-      
+
+      <div id="posts-container">
+        <!-- Посты вставляются через JS -->
+      </div>
+    </div>
+
+    <!-- ПРАВАЯ КОЛОНКА -->
+    <aside class="profile-content__sidebar-right">
       <!-- Популярные публикации со скроллом -->
       <div class="profile-content__popular">
         <h3>Популярные публикации</h3>

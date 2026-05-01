@@ -410,7 +410,9 @@
   .profile-content__layout {
     flex-direction: column;
   }
-
+  .profile-content__sidebar-right {
+    display: none;
+  }
   .profile-content__main,
   .profile-content__main--message {
     height: auto;
@@ -422,20 +424,6 @@
     overflow: visible;
     flex: none;
     min-height: 0;
-    padding-right: 0;
-  }
-
-  .profile-content__sidebar-right {
-    width: 100%;
-  }
-
-  .profile-content__popular {
-    height: auto;
-    max-height: none;
-  }
-
-  .profile-content__popular-list {
-    overflow: visible;
     padding-right: 0;
   }
 }
