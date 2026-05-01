@@ -596,3 +596,20 @@
   0%, 100% { box-shadow: 0 0 0 0 rgba(232, 90, 43, 0); }
   50% { box-shadow: 0 0 0 4px rgba(232, 90, 43, 0.3); }
 }
+/* Выпадающее окно фильтров */
+.profile-content__filters {
+  position: relative;
+}
+
+.profile-content__filters-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  min-width: 220px;
+  margin-top: 4px;
+}

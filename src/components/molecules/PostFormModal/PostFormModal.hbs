@@ -10,17 +10,10 @@
     <form class="post-form-modal__form" novalidate>
       <div id="post-form-title-field" class="post-form-modal__field"></div>
 
-      <!-- Выбор вида спорта -->
-      <div class="post-form-modal__field">
-        <label class="post-form-modal__label" for="post-form-sport-type">Вид спорта</label>
-        <select id="post-form-sport-type" class="post-form__tier-select">
-          <option value="">Без привязки</option>
-          <option value="1">Фитнес</option>
-          <option value="2">Бодибилдинг</option>
-          <option value="3">Кроссфит</option>
-          <option value="4">Йога</option>
-          <option value="5">Плавание</option>
-        </select>
+      <!-- Вид спорта (через чекбоксы из БД) -->
+      <div class="post-form-modal__field" id="post-form-sport-field">
+        <label class="post-form-modal__label">Вид спорта</label>
+        <div id="post-form-sport-container"></div>
       </div>
 
       <!-- Уровень подписки -->

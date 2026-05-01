@@ -340,31 +340,73 @@ export async function renderProfileContent(
     if (addButtonContainer) addButtonContainer.style.display = 'none';
   }
 
-  // Фильтр по видам спорта
-  const sportFilter = document.createElement('select');
-  sportFilter.className = 'post-form__tier-select';
-  sportFilter.style.cssText = 'max-width:200px;margin-left:12px;';
-  sportFilter.innerHTML = `
-    <option value="">Все виды</option>
-    <option value="1">Фитнес</option>
-    <option value="2">Бодибилдинг</option>
-    <option value="3">Кроссфит</option>
-    <option value="4">Йога</option>
-    <option value="5">Плавание</option>
-  `;
-  const headerActions = element.querySelector('.profile-content__header-actions');
-  if (headerActions) headerActions.appendChild(sportFilter);
+  // Фильтр по видам спорта в выпадающем окне
+  if (filtersElement) {
+    filtersElement.addEventListener('click', async () => {
+      const existing = document.querySelector('.profile-content__filters-dropdown');
+      if (existing) {
+        existing.remove();
+        return;
+      }
 
-  sportFilter.addEventListener('change', async () => {
-    const selected = sportFilter.value;
-    const freshData = await loadProfilePageData(api, viewedUserId);
-    const filteredPosts = selected
-      ? freshData.posts.filter(p => (p as PostWithAuthor & { sport_type?: string }).sport_type === selected)
-      : freshData.posts;
-    await fillProfilePostsSection(postsContainer, {
-      activeTab: currentTab, posts: filteredPosts, api, canManagePosts, onPostsUpdated: onPostsUpdated ?? undefined
+      const dropdown = document.createElement('div');
+      dropdown.className = 'profile-content__filters-dropdown';
+      dropdown.innerHTML = `
+        <h4 style="margin:0 0 12px; font-size:14px; font-weight:600;">Вид спорта</h4>
+        <div id="filter-sport-container"></div>
+      `;
+      filtersElement.appendChild(dropdown);
+
+      const sportTypes = await api.getSportTypes().catch(() => ({ sport_types: [] }));
+      if (sportTypes.sport_types.length > 0) {
+        const container = dropdown.querySelector('#filter-sport-container') as HTMLElement;
+        sportTypes.sport_types.forEach((s: { sport_type_id: number; name: string }) => {
+          const label = document.createElement('label');
+          label.className = 'sport-types-field__option';
+          label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;cursor:pointer;border-radius:6px;';
+          label.innerHTML = `
+            <input type="checkbox" class="sport-types-field__checkbox" value="${s.sport_type_id}" style="accent-color:#E85A2B;">
+            <span style="font-size:14px;">${s.name}</span>
+          `;
+          label.addEventListener('mouseenter', () => { label.style.background = '#FFF5F0'; });
+          label.addEventListener('mouseleave', () => { label.style.background = ''; });
+          container.appendChild(label);
+
+          label.querySelector('input')?.addEventListener('change', async () => {
+            const selectedIds = Array.from(
+              container.querySelectorAll('input:checked')
+            ).map(cb => (cb as HTMLInputElement).value);
+
+            const freshData = await loadProfilePageData(api, viewedUserId);
+            const filteredPosts = selectedIds.length > 0
+              ? freshData.posts.filter(p =>
+                selectedIds.includes(String((p as PostWithAuthor & { sport_type?: string }).sport_type || ''))
+              )
+              : freshData.posts;
+
+            await fillProfilePostsSection(postsContainer, {
+              activeTab: currentTab,
+              posts: filteredPosts,
+              api,
+              canManagePosts,
+              onPostsUpdated: onPostsUpdated ?? undefined
+            });
+          });
+        });
+      } else {
+        container.innerHTML = '<p style="color:#999;font-size:13px;">Нет доступных видов спорта</p>';
+      }
+
+      setTimeout(() => {
+        document.addEventListener('click', function closeDropdown(e: Event) {
+          if (!dropdown.contains(e.target as Node) && e.target !== filtersElement) {
+            dropdown.remove();
+            document.removeEventListener('click', closeDropdown);
+          }
+        });
+      }, 0);
     });
-  });
+  }
 
   element.querySelectorAll('.profile-content__tab').forEach((tab: Element) => {
     tab.addEventListener('click', async () => {
