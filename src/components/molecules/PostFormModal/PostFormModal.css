@@ -207,3 +207,85 @@
 #post-form-sport-field .sport-types-field__checkbox {
   accent-color: #E85A2B;
 }
+/* Стили для чекбоксов видов спорта в форме поста */
+#post-form-sport-field .sport-types-field {
+  width: 100%;
+  position: relative;
+}
+
+#post-form-sport-field .sport-types-field__trigger {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: white;
+  padding: 10px 42px 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.2s;
+}
+
+#post-form-sport-field .sport-types-field__trigger:hover {
+  border-color: #FF6B4A;
+}
+
+#post-form-sport-field .sport-types-field__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+#post-form-sport-field .sport-types-field__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#post-form-sport-field .sport-types-field__option:hover {
+  background: #FFF5F0;
+}
+
+#post-form-sport-field .sport-types-field__checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #E85A2B;
+  cursor: pointer;
+}
+/* Стили для select уровня подписки */
+.post-form__tier-select {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  appearance: auto;
+  -webkit-appearance: auto;
+}
+
+.post-form__tier-select:focus {
+  outline: none;
+  border-color: #FF6B4A;
+  box-shadow: 0 0 0 3px rgba(255, 107, 74, 0.1);
+}
+
+.post-form__tier-select option {
+  padding: 8px;
+  font-size: 14px;
+}

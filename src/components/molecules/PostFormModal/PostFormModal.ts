@@ -6,9 +6,11 @@
 import type { ApiClient } from '../../../utils/api';
 import type { ButtonAPI } from '../../atoms/Button/Button';
 import type { InputAPI } from '../../atoms/Input/Input';
+import type { SportTypeFieldApi } from '../../../types/components.types';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { Validator } from '../../../utils/validator';
+import { createSportTypesField, loadSportTypes } from '../../organisms/AuthForm/AuthForm';
 
 export interface PostFormModalOptions {
   api: ApiClient;
@@ -45,14 +47,27 @@ export async function openPostFormModal({
   const globalErr = modal.querySelector('[data-post-form-global-error]') as HTMLElement;
   const cancelWrap = modal.querySelector('#post-form-cancel-wrap') as HTMLElement;
   const submitWrap = modal.querySelector('#post-form-submit-wrap') as HTMLElement;
-  const sportTypeSelect = modal.querySelector('#post-form-sport-type') as HTMLSelectElement;
+  const sportFieldContainer = modal.querySelector('#post-form-sport-container') as HTMLElement;
   const tierSelect = modal.querySelector('#post-form-tier') as HTMLSelectElement;
   const validator = new Validator();
 
-  // Установить начальные значения, если редактирование
-  if (mode === 'edit' && initial.sport_type) {
-    sportTypeSelect.value = initial.sport_type;
+  // Загружаем виды спорта из API и создаём чекбоксы как в регистрации
+  let sportFieldApi: SportTypeFieldApi | null = null;
+  const sportTypes = await loadSportTypes(api);
+  if (sportFieldContainer && sportTypes.length > 0) {
+    sportFieldApi = createSportTypesField(sportFieldContainer, {
+      label: '',
+      placeholder: 'Выберите вид спорта',
+      required: false,
+      options: sportTypes,
+      onChange: () => {}
+    });
+    if (mode === 'edit' && initial.sport_type) {
+      sportFieldApi.setValue([Number(initial.sport_type)]);
+    }
   }
+
+  // Установить начальное значение уровня подписки
   if (mode === 'edit' && initial.min_tier_id != null) {
     tierSelect.value = String(initial.min_tier_id);
   }
@@ -137,10 +152,11 @@ export async function openPostFormModal({
 
     saveBtn.setDisabled(true);
     try {
+      const selectedSports = sportFieldApi?.getValue() || [];
       const payload = {
         title: title.trim(),
         text_content: text_content.trim(),
-        sport_type_id: sportTypeSelect.value || undefined,
+        sport_type_id: selectedSports.length > 0 ? selectedSports[0] : undefined,
         min_tier_id: tierSelect.value ? Number(tierSelect.value) : 0
       };
 
