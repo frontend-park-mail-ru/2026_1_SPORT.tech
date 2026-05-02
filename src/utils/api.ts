@@ -98,18 +98,18 @@ export class ApiClient {
 
     if (contentType && contentType.includes('application/json')) {
       data = await response.json() as T;
-      console.log(`[API] Response data:`, data);
+      console.log('[API] Response data:', data);
     } else {
       // Если не JSON — читаем как текст для отладки
       const text = await response.text();
-      console.error(`[API] Non-JSON response:`, text.substring(0, 500));
+      console.error('[API] Non-JSON response:', text.substring(0, 500));
       throw new Error(`Сервер вернул не JSON (${response.status}): ${text.substring(0, 200)}`);
     }
 
     if (!response.ok) {
       const errorData = data as { error?: { message?: string; code?: string } };
       const errorMessage = errorData?.error?.message || `HTTP ${response.status}`;
-      console.error(`[API] Error:`, errorData);
+      console.error('[API] Error:', errorData);
       const error = new Error(errorMessage);
       (error as Error & { data: T }).data = data;
       throw error;

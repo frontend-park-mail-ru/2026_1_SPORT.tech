@@ -10,7 +10,6 @@ import type { SportTypeFieldOption, SportTypeFieldApi } from '../../../types/com
 import type { PostBlock } from '../../../types/api.types';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
-import { Validator } from '../../../utils/validator';
 import { createSportTypesField, loadSportTypes } from '../../organisms/AuthForm/AuthForm';
 
 export interface PostFormModalOptions {
@@ -66,13 +65,11 @@ export async function openPostFormModal({
   const blocks: ContentBlock[] = [];
   let blockCounter = 0;
   let selectedTiers: number[] = [];
-  let existingMinTierId: number | null = null;
 
   // ========== ЗАГРУЖАЕМ СУЩЕСТВУЮЩИЙ ПОСТ (если редактирование) ==========
   if (mode === 'edit' && postId != null) {
     try {
       const fullPost = await api.getPost(postId);
-      console.log('[Edit Post] Loaded:', fullPost);
 
       // Заголовок
       initial = { ...initial, title: fullPost.title };
@@ -102,7 +99,6 @@ export async function openPostFormModal({
       // Уровень подписки
       if (fullPost.min_tier_id != null && fullPost.min_tier_id > 0) {
         selectedTiers = [fullPost.min_tier_id];
-        existingMinTierId = fullPost.min_tier_id;
       }
     } catch (error) {
       console.error('Failed to load existing post:', error);
@@ -123,9 +119,8 @@ export async function openPostFormModal({
 
   // Спортивные дисциплины (пока не используются в API, но оставляем)
   const sportTypes = await loadSportTypes(api);
-  let sportFieldApi: SportTypeFieldApi | null = null;
   if (sportFieldContainer && sportTypes.length > 0) {
-    sportFieldApi = createSportTypesField(sportFieldContainer, {
+    createSportTypesField(sportFieldContainer, {
       label: '',
       placeholder: 'Выберите вид спорта',
       required: false,
@@ -412,8 +407,8 @@ export async function openPostFormModal({
               file_url: uploadResult.file_url,
               kind: block.file.type.startsWith('video/') ? 'video' : 'image'
             };
-          } catch (uploadError) {
-            alert(`⚠️ Загрузка медиа временно недоступна. Файл не будет добавлен.`);
+          } catch (_uploadError) {
+            alert('⚠️ Загрузка медиа временно недоступна. Файл не будет добавлен.');
             return null;
           }
         } else if (block.type === 'media' && block.existingUrl) {
@@ -449,8 +444,6 @@ export async function openPostFormModal({
       if (selectedTiers.length > 0) {
         payload.min_tier_id = Math.min(...selectedTiers);
       }
-
-      console.log('[Save Post] Payload:', payload);
 
       if (mode === 'edit' && postId != null) {
         payload.replace_blocks = true;
