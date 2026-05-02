@@ -10,6 +10,7 @@ import type { Profile, TrainerDetails } from '../../../types/api.types';
 import { renderButton } from '../../atoms/Button/Button';
 import { renderPostCard } from '../../molecules/PostCard/PostCard';
 import { openPostFormModal } from '../../molecules/PostFormModal/PostFormModal';
+import { createSportTypesField } from '../../organisms/AuthForm/AuthForm';
 
 interface ProfileContentParams {
   activeTab?: string;
@@ -340,12 +341,10 @@ export async function renderProfileContent(
     if (addButtonContainer) addButtonContainer.style.display = 'none';
   }
 
-  // Фильтр по видам спорта
-  // Заменить весь блок "Фильтр по видам спорта" (строки 280-340) на:
-
-  // Фильтр по видам спорта
+  // Фильтр по видам спорта — такой же как в создании поста
   if (filtersElement) {
     let activeDropdown: HTMLElement | null = null;
+    let _filterFieldApi: ReturnType<typeof createSportTypesField> | null = null;
 
     filtersElement.addEventListener('click', async (e: Event) => {
       e.stopPropagation();
@@ -353,49 +352,32 @@ export async function renderProfileContent(
       if (activeDropdown) {
         activeDropdown.remove();
         activeDropdown = null;
+        _filterFieldApi = null;
         return;
       }
 
       activeDropdown = document.createElement('div');
       activeDropdown.className = 'profile-content__filters-dropdown';
       activeDropdown.innerHTML = `
-      <h4 style="margin:0 0 12px; font-size:14px; font-weight:600;">Вид спорта</h4>
-      <div id="filter-sport-list"></div>
-    `;
+        <h4 style="margin:0 0 12px; font-size:14px; font-weight:600;">Вид спорта</h4>
+        <div id="filter-sport-container"></div>
+      `;
       filtersElement.appendChild(activeDropdown);
 
       const sportTypes = await api.getSportTypes().catch(() => ({ sport_types: [] }));
-      const listContainer = activeDropdown.querySelector('#filter-sport-list') as HTMLElement;
-      const checkedIds = new Set<string>();
+      const filterContainer = activeDropdown.querySelector('#filter-sport-container') as HTMLElement;
 
       if (sportTypes.sport_types.length > 0) {
-        sportTypes.sport_types.forEach((s: { sport_type_id: number; name: string }) => {
-          const id = String(s.sport_type_id);
-          const label = document.createElement('label');
-          label.className = 'sport-types-field__option';
-          label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;cursor:pointer;border-radius:6px;';
-          label.innerHTML = `
-          <input type="checkbox" class="sport-types-field__checkbox" value="${id}" style="accent-color:#E85A2B;width:16px;height:16px;">
-          <span style="font-size:14px;">${s.name}</span>
-        `;
-          label.addEventListener('mouseenter', () => { label.style.background = '#FFF5F0'; });
-          label.addEventListener('mouseleave', () => { label.style.background = ''; });
-
-          const checkbox = label.querySelector('input') as HTMLInputElement;
-
-          // Предотвращаем всплытие клика по чекбоксу
-          checkbox.addEventListener('click', (event: Event) => {
-            event.stopPropagation();
-          });
-
-          checkbox.addEventListener('change', async () => {
-            if (checkbox.checked) checkedIds.add(id);
-            else checkedIds.delete(id);
-
+        _filterFieldApi = createSportTypesField(filterContainer, {
+          label: '',
+          placeholder: 'Выберите вид спорта',
+          required: false,
+          options: sportTypes.sport_types,
+          onChange: async (selectedIds: number[]) => {
             const freshData = await loadProfilePageData(api, viewedUserId);
-            const filteredPosts = checkedIds.size > 0
+            const filteredPosts = selectedIds.length > 0
               ? freshData.posts.filter(p =>
-                checkedIds.has(String((p as PostWithAuthor & { sport_type?: string }).sport_type || ''))
+                selectedIds.includes(Number((p as PostWithAuthor & { sport_type?: string }).sport_type || '0'))
               )
               : freshData.posts;
 
@@ -406,23 +388,22 @@ export async function renderProfileContent(
               canManagePosts,
               onPostsUpdated: onPostsUpdated ?? undefined
             });
-          });
-
-          listContainer.appendChild(label);
+          }
         });
       } else {
-        listContainer.innerHTML = '<p style="color:#999;font-size:13px;">Нет видов спорта</p>';
+        filterContainer.innerHTML = '<p style="color:#999;font-size:13px;">Нет видов спорта</p>';
+      }
+    });
+
+    // Закрытие по клику вне
+    document.addEventListener('click', (e: Event) => {
+      if (activeDropdown && !activeDropdown.contains(e.target as Node) && e.target !== filtersElement) {
+        activeDropdown.remove();
+        activeDropdown = null;
+        _filterFieldApi = null;
       }
     });
   }
-
-  // Закрытие фильтра по клику вне — отдельный слушатель на document
-  document.addEventListener('click', (e: Event) => {
-    const dropdown = document.querySelector('.profile-content__filters-dropdown');
-    if (dropdown && !dropdown.contains(e.target as Node) && e.target !== filtersElement) {
-      dropdown.remove();
-    }
-  });
 
   element.querySelectorAll('.profile-content__tab').forEach((tab: Element) => {
     tab.addEventListener('click', async () => {
