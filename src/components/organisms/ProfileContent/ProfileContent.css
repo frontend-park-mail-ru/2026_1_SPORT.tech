@@ -611,7 +611,18 @@
   padding: 16px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.12);
   min-width: 220px;
+  max-width: calc(100vw - 32px);
   margin-top: 4px;
+}
+
+/* На мобилке выпадающее окно не должно выходить за экран */
+@media (max-width: 768px) {
+  .profile-content__filters-dropdown {
+    right: auto;
+    left: 0;
+    min-width: 200px;
+    max-width: calc(100vw - 24px);
+  }
 }
 /* Стили для чекбоксов в фильтре */
 #filter-sport-list {
