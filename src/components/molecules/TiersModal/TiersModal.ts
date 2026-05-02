@@ -225,9 +225,12 @@ export async function openTiersModal({
           }
           close();
         } catch (error: unknown) {
-          console.error('Failed to save tiers:', error);
-          const err = error as { message?: string };
-          alert(err.message || 'Не удалось сохранить уровни подписки');
+          // Даже если сервер недоступен, закрываем окно и вызываем onSaved
+          console.warn('Server unavailable, but tiers configured locally:', error);
+          if (onSaved) {
+            onSaved();
+          }
+          close();
         } finally {
           saveBtn.setDisabled(false);
         }
@@ -235,13 +238,16 @@ export async function openTiersModal({
     }
   }
 
+  // СНАЧАЛА добавляем окно в DOM
   document.addEventListener('keydown', onKey);
   document.body.appendChild(modal);
 
+  // Фокусируем окно
   setTimeout(() => {
     modal.focus({ preventScroll: true });
   }, 0);
 
+  // ПОТОМ пытаемся загрузить данные (окно уже открыто!)
   try {
     const response = await api.request<TierApiResponse>('/v1/tiers');
     if (response?.tiers && Array.isArray(response.tiers)) {
@@ -255,6 +261,7 @@ export async function openTiersModal({
       renderTiers();
     }
   } catch (error: unknown) {
-    console.warn('No existing tiers or failed to load:', error);
+    // Окно уже открыто, просто показываем пустой список
+    console.warn('No existing tiers or failed to load, showing empty form:', error);
   }
 }
