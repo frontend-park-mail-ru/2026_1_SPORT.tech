@@ -7,6 +7,7 @@ import type { ApiClient } from '../../../utils/api';
 import type { ButtonAPI } from '../../atoms/Button/Button';
 import type { InputAPI } from '../../atoms/Input/Input';
 import type { SportTypeFieldOption } from '../../../types/components.types';
+import type { PostBlock } from '../../../types/api.types';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { Validator } from '../../../utils/validator';
@@ -31,6 +32,7 @@ interface ContentBlock {
   type: 'text' | 'media';
   value: string;
   file: File | null;
+  existingUrl?: string; // URL уже загруженного медиа
 }
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -60,7 +62,6 @@ export async function openPostFormModal({
   const sportFieldContainer = modal.querySelector('#post-form-sport-container') as HTMLElement;
   const tierContainer = modal.querySelector('#post-form-tier-container') as HTMLElement;
   const blocksContainer = modal.querySelector('#post-form-blocks') as HTMLElement;
-  const _validator = new Validator();
 
   const blocks: ContentBlock[] = [];
   let blockCounter = 0;
@@ -96,12 +97,74 @@ export async function openPostFormModal({
     });
   }
 
+  // Загружаем существующий пост при редактировании
+  let existingPost: { title?: string; blocks?: PostBlock[]; min_tier_id?: number | null } = {};
+
+  if (mode === 'edit' && postId != null) {
+    try {
+      const fullPost = await api.getPost(postId);
+      existingPost = {
+        title: fullPost.title,
+        blocks: fullPost.blocks,
+        min_tier_id: fullPost.min_tier_id
+      };
+
+      // Заполняем блоки из существующего поста
+      if (fullPost.blocks && Array.isArray(fullPost.blocks)) {
+        fullPost.blocks.forEach((block: PostBlock) => {
+          if (block.text_content) {
+            // Текстовый блок
+            blocks.push({
+              id: `block-${++blockCounter}`,
+              type: 'text',
+              value: block.text_content,
+              file: null
+            });
+          } else if (block.file_url) {
+            // Медиа-блок
+            blocks.push({
+              id: `block-${++blockCounter}`,
+              type: 'media',
+              value: block.file_url,
+              file: null,
+              existingUrl: block.file_url
+            });
+          }
+        });
+      }
+
+      // Устанавливаем уровни подписки
+      if (fullPost.min_tier_id != null && fullPost.min_tier_id > 0) {
+        selectedTiers = [fullPost.min_tier_id];
+      }
+    } catch (error) {
+      console.error('Failed to load existing post:', error);
+      // Если не удалось загрузить — используем initial данные
+      if (initial.raw_text && !blocks.length) {
+        blocks.push({
+          id: `block-${++blockCounter}`,
+          type: 'text',
+          value: initial.raw_text,
+          file: null
+        });
+      }
+    }
+  } else if (initial.raw_text && !blocks.length) {
+    // Для create с initial данными
+    blocks.push({
+      id: `block-${++blockCounter}`,
+      type: 'text',
+      value: initial.raw_text,
+      file: null
+    });
+  }
+
   const titleApi: InputAPI = await renderInput(titleHost, {
     type: INPUT_TYPES.WITHOUTS,
     label: 'Заголовок',
     placeholder: 'Введите заголовок',
     name: 'title',
-    value: initial.title || '',
+    value: existingPost.title || initial.title || '',
     required: true,
     maxlength: 200,
     onChange: () => titleApi.setNormal()
@@ -125,6 +188,7 @@ export async function openPostFormModal({
     }
 
     block.file = file;
+    block.existingUrl = undefined; // Сбрасываем старый URL при выборе нового файла
     const url = URL.createObjectURL(file);
     block.value = url;
 
@@ -159,13 +223,56 @@ export async function openPostFormModal({
   function removeBlock(id: string): void {
     const index = blocks.findIndex(b => b.id === id);
     if (index !== -1) {
-      // Очищаем URL созданный через createObjectURL
       if (blocks[index].value && blocks[index].value.startsWith('blob:')) {
         URL.revokeObjectURL(blocks[index].value);
       }
       blocks.splice(index, 1);
     }
     renderBlocks();
+  }
+
+  function createMediaPreview(block: ContentBlock, container: HTMLElement): void {
+    const isVideo = block.file?.type?.startsWith('video/') ||
+                    (!block.file && block.existingUrl);
+
+    // Для существующих URL с бэкенда — просто показываем
+    if (block.existingUrl && !block.file) {
+      if (isVideo) {
+        container.innerHTML = `<video controls src="${block.existingUrl}" style="max-width:100%;max-height:300px;"></video>`;
+      } else {
+        container.innerHTML = `<img src="${block.existingUrl}" alt="Медиа" style="max-width:100%;max-height:300px;object-fit:contain;">`;
+      }
+      return;
+    }
+
+    // Для новых файлов
+    if (block.value && block.file) {
+      if (isVideo) {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.src = block.value;
+        video.style.cssText = 'max-width:100%;max-height:300px;';
+        container.appendChild(video);
+      } else {
+        const img = document.createElement('img');
+        img.src = block.value;
+        img.alt = 'Медиа';
+        img.style.cssText = 'max-width:100%;max-height:300px;object-fit:contain;';
+        container.appendChild(img);
+      }
+    } else {
+      // Плейсхолдер
+      container.innerHTML = `
+        <div class="post-form__block-media-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <span>Нажмите или перетащите файл</span>
+        </div>
+      `;
+    }
   }
 
   function renderBlocks(): void {
@@ -194,34 +301,7 @@ export async function openPostFormModal({
         const mediaContainer = document.createElement('div');
         mediaContainer.className = 'post-form__block-media';
 
-        if (block.value) {
-          // Показываем существующее превью
-          if (block.file?.type.startsWith('video/')) {
-            const video = document.createElement('video');
-            video.controls = true;
-            video.src = block.value;
-            video.style.cssText = 'max-width:100%;max-height:300px;';
-            mediaContainer.appendChild(video);
-          } else {
-            const img = document.createElement('img');
-            img.src = block.value;
-            img.alt = 'Медиа';
-            img.style.cssText = 'max-width:100%;max-height:300px;object-fit:contain;';
-            mediaContainer.appendChild(img);
-          }
-        } else {
-          // Плейсхолдер
-          mediaContainer.innerHTML = `
-            <div class="post-form__block-media-placeholder">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
-              </svg>
-              <span>Нажмите или перетащите файл</span>
-            </div>
-          `;
-        }
+        createMediaPreview(block, mediaContainer);
 
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
@@ -231,7 +311,6 @@ export async function openPostFormModal({
           const file = fileInput.files?.[0];
           if (file) {
             handleFileSelect(file, block, mediaContainer);
-            // Пересоздаём input после выбора файла
             const newInput = fileInput.cloneNode(true) as HTMLInputElement;
             newInput.addEventListener('change', () => {
               const newFile = newInput.files?.[0];
@@ -241,9 +320,7 @@ export async function openPostFormModal({
           }
         });
 
-        // Клик для выбора файла
         mediaContainer.addEventListener('click', (e) => {
-          // Не открываем выбор если кликнули на видео/изображение
           const target = e.target as HTMLElement;
           if (target.tagName === 'VIDEO' || target.tagName === 'IMG') return;
           fileInput.click();
@@ -262,7 +339,6 @@ export async function openPostFormModal({
         mediaContainer.addEventListener('drop', (e) => {
           e.preventDefault();
           mediaContainer.classList.remove('post-form__block-media--dragover');
-
           const file = e.dataTransfer?.files?.[0];
           if (file) {
             handleFileSelect(file, block, mediaContainer);
@@ -277,6 +353,9 @@ export async function openPostFormModal({
     });
   }
 
+  // Рендерим начальные блоки (если есть)
+  renderBlocks();
+
   modal.querySelector('[data-add-text]')?.addEventListener('click', () => addBlock('text'));
   modal.querySelector('[data-add-media]')?.addEventListener('click', () => addBlock('media'));
 
@@ -285,7 +364,6 @@ export async function openPostFormModal({
   }
 
   function close(): void {
-    // Очищаем все blob URL
     blocks.forEach(block => {
       if (block.value && block.value.startsWith('blob:')) {
         URL.revokeObjectURL(block.value);
@@ -333,11 +411,12 @@ export async function openPostFormModal({
     }
 
     saveBtn.setDisabled(true);
-    saveBtn.setText('Загрузка...');
+    saveBtn.setText('Сохранение...');
 
     try {
       const apiBlocks = await Promise.all(blocks.map(async (block) => {
         if (block.type === 'media' && block.file) {
+          // Новый файл — загружаем
           try {
             const uploadResult = await api.uploadPostMedia(block.file);
             return {
@@ -345,9 +424,18 @@ export async function openPostFormModal({
               kind: block.file.type.startsWith('video/') ? 'video' : 'image'
             };
           } catch (uploadError) {
-            console.error(`Failed to upload file for block ${block.id}:`, uploadError);
-            throw new Error(`Не удалось загрузить файл: ${(uploadError as Error).message}`);
+            alert(`Не удалось загрузить файл: ${(uploadError as Error).message}`);
+            return null;
           }
+        } else if (block.type === 'media' && block.existingUrl) {
+          // Существующий URL — оставляем как есть
+          return {
+            file_url: block.existingUrl,
+            kind: block.existingUrl.toLowerCase().includes('.mp4') ||
+                  block.existingUrl.toLowerCase().includes('.webm') ||
+                  block.existingUrl.toLowerCase().includes('.mov')
+                  ? 'video' : 'image'
+          };
         } else if (block.type === 'text' && block.value.trim()) {
           return {
             text_content: block.value.trim(),
