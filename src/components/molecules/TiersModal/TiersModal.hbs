@@ -1,16 +1,93 @@
-<div class="tiers-modal-overlay" id="tiers-modal-overlay">
-  <div class="tiers-modal-panel" id="tiers-modal-panel">
-    <div class="tiers-modal-header">
-      <h2 class="tiers-modal-title">Настройка уровней подписки</h2>
-      <button class="tiers-modal-close-btn" id="tiers-close-btn">×</button>
-    </div>
-    <div class="tiers-modal-list" id="tiers-list">
-      <p class="tiers-modal-empty">Нет созданных уровней</p>
-    </div>
-    <button type="button" class="tiers-modal-add-btn" id="tiers-add-btn">+ Добавить уровень</button>
-    <div class="tiers-modal-actions">
-      <button type="button" class="tiers-modal-cancel-btn" id="tiers-cancel-btn">Отмена</button>
-      <button type="button" class="tiers-modal-save-btn" id="tiers-save-btn">Сохранить</button>
-    </div>
+<div class="tiers-modal-backdrop" data-action="close"></div>
+
+<div class="tiers-modal-panel">
+  <div class="tiers-modal-header">
+    <h2 class="tiers-modal-title">Настройка уровней подписки</h2>
+    <button
+      class="tiers-modal-close-btn"
+      data-action="close"
+      aria-label="Закрыть"
+    >×</button>
+  </div>
+
+  <div class="tiers-list" data-container="tiers-list">
+    {{#if tiers.length}}
+      {{#each tiers}}
+        <div class="tier-card" data-tier-id="{{this.id}}">
+          <div class="tier-card-header">
+            <span class="tier-card-index">Уровень {{add @index 1}}</span>
+            <button
+              class="tier-remove-btn"
+              data-action="remove-tier"
+              data-tier-id="{{this.id}}"
+              aria-label="Удалить уровень"
+            >×</button>
+          </div>
+
+          <div class="tier-card-fields">
+            <div class="tier-field">
+              <label class="tier-field-label" for="tier-name-{{this.id}}">Название</label>
+              <input
+                id="tier-name-{{this.id}}"
+                type="text"
+                class="tier-input tier-name-input"
+                data-tier-id="{{this.id}}"
+                data-field="name"
+                value="{{this.name}}"
+                placeholder="Например: Базовый"
+              >
+            </div>
+
+            <div class="tier-field">
+              <label class="tier-field-label" for="tier-price-{{this.id}}">Цена (₽/мес)</label>
+              <input
+                id="tier-price-{{this.id}}"
+                type="number"
+                class="tier-input tier-price-input"
+                data-tier-id="{{this.id}}"
+                data-field="price"
+                value="{{#if this.price}}{{this.price}}{{/if}}"
+                placeholder="0"
+                min="0"
+              >
+            </div>
+
+            <div class="tier-field">
+              <label class="tier-field-label" for="tier-desc-{{this.id}}">Описание</label>
+              <input
+                id="tier-desc-{{this.id}}"
+                type="text"
+                class="tier-input tier-desc-input"
+                data-tier-id="{{this.id}}"
+                data-field="description"
+                value="{{this.description}}"
+                placeholder="Что получает подписчик"
+              >
+            </div>
+          </div>
+        </div>
+      {{/each}}
+    {{else}}
+      <p class="tiers-empty-message">Нет созданных уровней</p>
+    {{/if}}
+  </div>
+
+  <button
+    class="tiers-add-btn"
+    data-action="add-tier"
+    type="button"
+  >+ Добавить уровень</button>
+
+  <div class="tiers-actions">
+    <button
+      class="tiers-cancel-btn"
+      data-action="close"
+      type="button"
+    >Отмена</button>
+    <button
+      class="tiers-save-btn"
+      data-action="save"
+      type="button"
+    >Сохранить</button>
   </div>
 </div>

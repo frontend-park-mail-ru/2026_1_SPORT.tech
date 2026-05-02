@@ -1,10 +1,12 @@
-.tiers-modal-overlay {
+/* Backdrop */
+.tiers-modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 9998;
 }
 
+/* Panel */
 .tiers-modal-panel {
   position: fixed;
   top: 50%;
@@ -21,6 +23,7 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
+/* Header */
 .tiers-modal-header {
   display: flex;
   justify-content: space-between;
@@ -46,29 +49,35 @@
 }
 
 .tiers-modal-close-btn:hover {
-  color: #333;
-  background: #F5F5F5;
+  background: #f0f0f0;
 }
 
-.tiers-modal-list {
+/* Tiers list */
+.tiers-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
   margin-bottom: 16px;
 }
 
-.tiers-modal-empty {
+.tiers-empty-message {
   color: #999;
   text-align: center;
   padding: 32px 20px;
   margin: 0;
 }
 
+/* Tier card */
 .tier-card {
   border: 1px solid #E2E8F0;
   border-radius: 12px;
   padding: 20px;
   background: #F8FAFC;
+  margin-bottom: 12px;
+}
+
+.tier-card:last-child {
+  margin-bottom: 0;
 }
 
 .tier-card-header {
@@ -78,13 +87,13 @@
   margin-bottom: 16px;
 }
 
-.tier-card-number {
+.tier-card-index {
   font-size: 13px;
   font-weight: 600;
   color: #E85A2B;
 }
 
-.tier-card-remove-btn {
+.tier-remove-btn {
   border: none;
   background: none;
   color: #999;
@@ -93,8 +102,8 @@
   padding: 0 6px;
 }
 
-.tier-card-remove-btn:hover {
-  color: #E53E3E;
+.tier-remove-btn:hover {
+  color: #E85A2B;
 }
 
 .tier-card-fields {
@@ -103,18 +112,19 @@
   gap: 14px;
 }
 
-.tier-card-field {
+.tier-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 
-.tier-card-label {
+.tier-field-label {
+  display: block;
   font-size: 13px;
   color: #4A5568;
+  margin-bottom: 6px;
 }
 
-.tier-card-input {
+.tier-input {
   width: 100%;
   height: 40px;
   padding: 0 14px;
@@ -124,12 +134,14 @@
   box-sizing: border-box;
 }
 
-.tier-card-input:focus {
+.tier-input:focus {
   outline: none;
   border-color: #E85A2B;
+  box-shadow: 0 0 0 2px rgba(232, 90, 43, 0.1);
 }
 
-.tiers-modal-add-btn {
+/* Add button */
+.tiers-add-btn {
   width: 100%;
   padding: 12px;
   border: 2px dashed #CBD5E1;
@@ -140,22 +152,22 @@
   font-weight: 500;
   cursor: pointer;
   margin-bottom: 24px;
-  transition: all 0.2s;
 }
 
-.tiers-modal-add-btn:hover {
+.tiers-add-btn:hover {
   border-color: #E85A2B;
   color: #E85A2B;
-  background: #FFF5F0;
+  background: #FFF5F2;
 }
 
-.tiers-modal-actions {
+/* Actions */
+.tiers-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
 }
 
-.tiers-modal-cancel-btn {
+.tiers-cancel-btn {
   padding: 10px 24px;
   border: none;
   border-radius: 8px;
@@ -166,11 +178,11 @@
   color: #E85A2B;
 }
 
-.tiers-modal-cancel-btn:hover {
-  background: #FFF5F0;
+.tiers-cancel-btn:hover {
+  background: #FFF5F2;
 }
 
-.tiers-modal-save-btn {
+.tiers-save-btn {
   padding: 10px 24px;
   border: none;
   border-radius: 8px;
@@ -181,32 +193,11 @@
   color: white;
 }
 
-.tiers-modal-save-btn:hover {
-  background: #D04A1B;
+.tiers-save-btn:hover {
+  background: #D04A1F;
 }
 
-.tiers-modal-save-btn:disabled {
-  opacity: 0.6;
+.tiers-save-btn:disabled {
+  opacity: 0.7;
   cursor: not-allowed;
-}
-
-@media (max-width: 768px) {
-  .tiers-modal-panel {
-    padding: 24px 20px;
-    width: calc(100% - 24px);
-    max-height: calc(100dvh - 24px);
-  }
-
-  .tiers-modal-title {
-    font-size: 20px;
-  }
-
-  .tiers-modal-actions {
-    flex-direction: column-reverse;
-  }
-
-  .tiers-modal-cancel-btn,
-  .tiers-modal-save-btn {
-    width: 100%;
-  }
 }
