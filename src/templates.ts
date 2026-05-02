@@ -12,6 +12,7 @@ import DonationModalTemplate from './components/molecules/DonationModal/Donation
 import PostFormModalTemplate from './components/molecules/PostFormModal/PostFormModal.hbs';
 import SidebarTemplate from './components/organisms/Sidebar/Sidebar.hbs';
 import ProfileContentTemplate from './components/organisms/ProfileContent/ProfileContent.hbs';
+import TiersModalTemplate from './components/molecules/TiersModal/TiersModal.hbs'; // ← ДОБАВИТЬ
 import AuthPageTemplate from './pages/AuthPage/AuthPage.hbs';
 import ProfilePageTemplate from './pages/ProfilePage/ProfilePage.hbs';
 import HomePageTemplate from './pages/HomePage/HomePage.hbs';
@@ -29,6 +30,7 @@ const templates: Record<string, Handlebars.TemplateDelegate> = {
   'PostFormModal.hbs': Handlebars.compile(PostFormModalTemplate),
   'Sidebar.hbs': Handlebars.compile(SidebarTemplate),
   'ProfileContent.hbs': Handlebars.compile(ProfileContentTemplate),
+  'TiersModal.hbs': Handlebars.compile(TiersModalTemplate), // ← ДОБАВИТЬ
   'AuthPage.hbs': Handlebars.compile(AuthPageTemplate),
   'ProfilePage.hbs': Handlebars.compile(ProfilePageTemplate),
   'HomePage.hbs': Handlebars.compile(HomePageTemplate),
