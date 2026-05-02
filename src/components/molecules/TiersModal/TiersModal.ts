@@ -28,19 +28,49 @@ interface TierApiResponse {
   }>;
 }
 
+/**
+ * Экранирует HTML-спецсимволы для безопасного отображения
+ */
+function escapeTierHtml(value: string): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export async function openTiersModal({
   api,
   onSaved
 }: TiersModalOptions): Promise<void> {
-  const HandlebarsGlobal = (window as unknown as { Handlebars: { templates: Record<string, (context: Record<string, unknown>) => string> } }).Handlebars;
+  const HandlebarsGlobal = (window as unknown as {
+    Handlebars: {
+      templates: Record<string, (context: Record<string, unknown>) => string>
+    }
+  }).Handlebars;
+
   const template = HandlebarsGlobal.templates['TiersModal.hbs'];
+
+  if (!template) {
+    console.error('TiersModal template not found');
+    return;
+  }
+
   const root = document.createElement('div');
   root.innerHTML = template({}).trim();
   const modal = root.firstElementChild as HTMLElement;
 
+  if (!modal) {
+    console.error('Failed to create modal element');
+    return;
+  }
+
   const tiersList = modal.querySelector('#tiers-list') as HTMLElement;
   const cancelWrap = modal.querySelector('#tiers-cancel-wrap') as HTMLElement;
   const saveWrap = modal.querySelector('#tiers-save-wrap') as HTMLElement;
+  const addTierBtn = modal.querySelector('#add-tier-btn') as HTMLButtonElement;
+  const backdropElement = modal.querySelector('[data-tiers-close]') as HTMLElement;
 
   let tiers: TierData[] = [];
   let tierCounter = 0;
@@ -62,6 +92,8 @@ export async function openTiersModal({
   }
 
   function renderTiers(): void {
+    if (!tiersList) return;
+
     tiersList.innerHTML = '';
 
     if (tiers.length === 0) {
@@ -80,7 +112,7 @@ export async function openTiersModal({
         <div class="tier-card__fields">
           <div class="tier-card__field">
             <label class="tier-card__label">Название</label>
-            <input type="text" class="tier-card__input" data-tier-name="${tier.id}" value="${escapeHtml(tier.name)}" placeholder="Например: Базовый">
+            <input type="text" class="tier-card__input" data-tier-name="${tier.id}" value="${escapeTierHtml(tier.name)}" placeholder="Например: Базовый">
           </div>
           <div class="tier-card__field">
             <label class="tier-card__label">Цена (₽/мес)</label>
@@ -88,119 +120,141 @@ export async function openTiersModal({
           </div>
           <div class="tier-card__field">
             <label class="tier-card__label">Описание</label>
-            <input type="text" class="tier-card__input" data-tier-desc="${tier.id}" value="${escapeHtml(tier.description)}" placeholder="Что получает подписчик">
+            <input type="text" class="tier-card__input" data-tier-desc="${tier.id}" value="${escapeTierHtml(tier.description)}" placeholder="Что получает подписчик">
           </div>
         </div>
       `;
 
-      card.querySelector('[data-remove]')?.addEventListener('click', () => removeTier(tier.id));
+      const removeBtn = card.querySelector(`[data-remove="${tier.id}"]`) as HTMLButtonElement;
+      if (removeBtn) {
+        removeBtn.addEventListener('click', () => removeTier(tier.id));
+      }
 
-      card.querySelector('[data-tier-name]')?.addEventListener('input', (e) => {
-        tier.name = (e.target as HTMLInputElement).value;
-      });
+      const nameInput = card.querySelector(`[data-tier-name="${tier.id}"]`) as HTMLInputElement;
+      if (nameInput) {
+        nameInput.addEventListener('input', (e: Event) => {
+          tier.name = (e.target as HTMLInputElement).value;
+        });
+      }
 
-      card.querySelector('[data-tier-price]')?.addEventListener('input', (e) => {
-        tier.price = Number((e.target as HTMLInputElement).value) || 0;
-      });
+      const priceInput = card.querySelector(`[data-tier-price="${tier.id}"]`) as HTMLInputElement;
+      if (priceInput) {
+        priceInput.addEventListener('input', (e: Event) => {
+          tier.price = Number((e.target as HTMLInputElement).value) || 0;
+        });
+      }
 
-      card.querySelector('[data-tier-desc]')?.addEventListener('input', (e) => {
-        tier.description = (e.target as HTMLInputElement).value;
-      });
+      const descInput = card.querySelector(`[data-tier-desc="${tier.id}"]`) as HTMLInputElement;
+      if (descInput) {
+        descInput.addEventListener('input', (e: Event) => {
+          tier.description = (e.target as HTMLInputElement).value;
+        });
+      }
 
       tiersList.appendChild(card);
     });
   }
 
-  function escapeHtml(value: string): string {
-    return String(value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
   function onKey(e: KeyboardEvent): void {
-    if (e.key === 'Escape') close();
+    if (e.key === 'Escape') {
+      close();
+    }
   }
 
   function close(): void {
     document.removeEventListener('keydown', onKey);
-    modal.remove();
+    if (modal && modal.parentNode) {
+      modal.remove();
+    }
   }
 
-  // Закрытие по клику на backdrop
-  modal.querySelector('[data-tiers-close]')?.addEventListener('click', close);
+  if (backdropElement) {
+    backdropElement.addEventListener('click', close);
+  }
 
-  modal.querySelector('#add-tier-btn')?.addEventListener('click', addTier);
+  if (addTierBtn) {
+    addTierBtn.addEventListener('click', addTier);
+  }
 
-  await renderButton(cancelWrap, {
-    text: 'Отмена',
-    variant: BUTTON_VARIANTS.TEXT_ORANGE,
-    size: BUTTON_SIZES.MEDIUM,
-    type: 'button',
-    onClick: close
-  });
+  if (cancelWrap) {
+    await renderButton(cancelWrap, {
+      text: 'Отмена',
+      variant: BUTTON_VARIANTS.TEXT_ORANGE,
+      size: BUTTON_SIZES.MEDIUM,
+      type: 'button',
+      onClick: close
+    });
+  }
 
-  const saveBtn: ButtonAPI = await renderButton(saveWrap, {
-    text: 'Сохранить',
-    variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
-    size: BUTTON_SIZES.MEDIUM,
-    type: 'button'
-  });
+  if (saveWrap) {
+    const saveBtn: ButtonAPI = await renderButton(saveWrap, {
+      text: 'Сохранить',
+      variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
+      size: BUTTON_SIZES.MEDIUM,
+      type: 'button'
+    });
 
-  saveBtn.element.addEventListener('click', async () => {
-    const validTiers = tiers.filter(t => t.name.trim() && t.price > 0);
+    if (saveBtn && saveBtn.element) {
+      saveBtn.element.addEventListener('click', async (e: MouseEvent) => {
+        e.preventDefault();
 
-    if (validTiers.length === 0) {
-      alert('Добавьте хотя бы один уровень с названием и ценой');
-      return;
-    }
+        const validTiers = tiers.filter(t => t.name.trim() && t.price > 0);
 
-    saveBtn.setDisabled(true);
-    try {
-      const payload = {
-        tiers: validTiers.map(t => ({
-          name: t.name.trim(),
-          price: t.price,
-          description: t.description.trim()
-        }))
-      };
+        if (validTiers.length === 0) {
+          alert('Добавьте хотя бы один уровень с названием и ценой');
+          return;
+        }
 
-      // TODO: API запрос на сохранение уровней
-      await api.request('/v1/tiers', {
-        method: 'POST',
-        body: JSON.stringify(payload)
+        saveBtn.setDisabled(true);
+        try {
+          const payload = {
+            tiers: validTiers.map(t => ({
+              name: t.name.trim(),
+              price: t.price,
+              description: t.description.trim()
+            }))
+          };
+
+          await api.request('/v1/tiers', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+
+          if (onSaved) {
+            onSaved();
+          }
+          close();
+        } catch (error: unknown) {
+          console.error('Failed to save tiers:', error);
+          const err = error as { message?: string };
+          alert(err.message || 'Не удалось сохранить уровни подписки');
+        } finally {
+          saveBtn.setDisabled(false);
+        }
       });
-
-      onSaved?.();
-      close();
-    } catch (error: unknown) {
-      const err = error as { message?: string };
-      alert(err.message || 'Не удалось сохранить');
-    } finally {
-      saveBtn.setDisabled(false);
     }
-  });
+  }
 
   document.addEventListener('keydown', onKey);
   document.body.appendChild(modal);
-  modal.focus({ preventScroll: true });
 
-  // Загружаем существующие уровни
+  setTimeout(() => {
+    modal.focus({ preventScroll: true });
+  }, 0);
+
   try {
     const response = await api.request<TierApiResponse>('/v1/tiers');
-    if (response?.tiers) {
+    if (response?.tiers && Array.isArray(response.tiers)) {
       tiers = response.tiers.map(t => ({
         id: `tier-${t.tier_id}`,
-        name: t.name,
-        price: t.price,
+        name: t.name || '',
+        price: t.price || 0,
         description: t.description || ''
       }));
       tierCounter = tiers.length;
       renderTiers();
     }
-  } catch {
-    // Нет сохранённых уровней
+  } catch (error: unknown) {
+    console.warn('No existing tiers or failed to load:', error);
   }
 }
