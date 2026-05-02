@@ -4,8 +4,6 @@
  */
 
 import type { ApiClient } from '../../../utils/api';
-import { Validator } from '../../../utils/validator';
-import type { ValidationResult } from '../../../types/validation.types';
 
 export interface TiersModalOptions {
   api: ApiClient;
@@ -23,7 +21,6 @@ export function openTiersModal({
   api,
   onSaved
 }: TiersModalOptions): void {
-  const validator = new Validator();
   let tiers: TierData[] = [];
   let tierCounter = 0;
 
@@ -56,7 +53,7 @@ export function openTiersModal({
   addBtn.type = 'button';
   addBtn.className = 'tiers-modal-add-btn';
   addBtn.id = 'tiers-add-btn';
-  addBtn.textContent = '+ Добавить уровень';
+  addBtn.textContent = '➕ Добавить уровень';
 
   // Контейнер для кнопок действий
   const actions = document.createElement('div');
@@ -83,70 +80,6 @@ export function openTiersModal({
   panel.appendChild(addBtn);
   panel.appendChild(actions);
 
-  /**
-   * Валидирует один уровень
-   */
-  function validateSingleTier(tier: TierData): ValidationResult {
-    validator.reset();
-
-    // Валидация названия
-    if (!tier.name || tier.name.trim().length === 0) {
-      validator.addError('name', 'Название обязательно');
-    } else if (tier.name.length > 100) {
-      validator.addError('name', 'Максимум 100 символов');
-    }
-
-    // Валидация цены
-    if (!tier.price || tier.price <= 0) {
-      validator.addError('price', 'Цена должна быть больше 0');
-    } else if (tier.price > 999999) {
-      validator.addError('price', 'Максимальная цена 999 999 ₽');
-    }
-
-    // Валидация описания
-    if (tier.description && tier.description.length > 500) {
-      validator.addError('description', 'Максимум 500 символов');
-    }
-
-    return {
-      isValid: !validator.hasErrors(),
-      errors: validator.getErrors()
-    };
-  }
-
-  /**
-   * Показывает ошибки валидации в карточке
-   */
-  function showValidationErrors(card: HTMLElement, errors: Array<{ field: string; message: string }>): void {
-    // Очищаем старые ошибки
-    card.querySelectorAll('.tier-card-error').forEach(el => el.remove());
-    card.querySelectorAll('.tier-card-input--error').forEach(input => {
-      input.classList.remove('tier-card-input--error');
-    });
-
-    errors.forEach(error => {
-      const input = card.querySelector(`[data-field="${error.field}"]`) as HTMLInputElement;
-      if (input) {
-        input.classList.add('tier-card-input--error');
-
-        const errorEl = document.createElement('div');
-        errorEl.className = 'tier-card-error';
-        errorEl.textContent = error.message;
-        input.parentElement?.appendChild(errorEl);
-      }
-    });
-  }
-
-  /**
-   * Очищает ошибки валидации в карточке
-   */
-  function clearValidationErrors(card: HTMLElement): void {
-    card.querySelectorAll('.tier-card-error').forEach(el => el.remove());
-    card.querySelectorAll('.tier-card-input--error').forEach(input => {
-      input.classList.remove('tier-card-input--error');
-    });
-  }
-
   // Функция рендеринга уровней
   function renderTiers(): void {
     tiersList.innerHTML = '';
@@ -167,15 +100,15 @@ export function openTiersModal({
         <div class="tier-card-fields">
           <div class="tier-card-field">
             <label class="tier-card-label">Название</label>
-            <input type="text" class="tier-card-input" data-field="name" value="${escapeHtml(tier.name)}" placeholder="Например: Базовый" maxlength="100">
+            <input type="text" class="tier-card-input tier-name-input" data-id="${tier.id}" value="${escapeHtml(tier.name)}" placeholder="Например: Базовый">
           </div>
           <div class="tier-card-field">
             <label class="tier-card-label">Цена (₽/мес)</label>
-            <input type="number" class="tier-card-input" data-field="price" value="${tier.price || ''}" placeholder="0" min="0" max="999999">
+            <input type="number" class="tier-card-input tier-price-input" data-id="${tier.id}" value="${tier.price || ''}" placeholder="0" min="0">
           </div>
           <div class="tier-card-field">
             <label class="tier-card-label">Описание</label>
-            <input type="text" class="tier-card-input" data-field="description" value="${escapeHtml(tier.description)}" placeholder="Что получает подписчик" maxlength="500">
+            <input type="text" class="tier-card-input tier-desc-input" data-id="${tier.id}" value="${escapeHtml(tier.description)}" placeholder="Что получает подписчик">
           </div>
         </div>
       `;
@@ -190,29 +123,26 @@ export function openTiersModal({
       }
 
       // Изменение названия
-      const nameInput = card.querySelector('[data-field="name"]') as HTMLInputElement;
+      const nameInput = card.querySelector('.tier-name-input') as HTMLInputElement;
       if (nameInput) {
         nameInput.addEventListener('input', (e: Event) => {
           tier.name = (e.target as HTMLInputElement).value;
-          clearValidationErrors(card);
         });
       }
 
       // Изменение цены
-      const priceInput = card.querySelector('[data-field="price"]') as HTMLInputElement;
+      const priceInput = card.querySelector('.tier-price-input') as HTMLInputElement;
       if (priceInput) {
         priceInput.addEventListener('input', (e: Event) => {
           tier.price = Number((e.target as HTMLInputElement).value) || 0;
-          clearValidationErrors(card);
         });
       }
 
       // Изменение описания
-      const descInput = card.querySelector('[data-field="description"]') as HTMLInputElement;
+      const descInput = card.querySelector('.tier-desc-input') as HTMLInputElement;
       if (descInput) {
         descInput.addEventListener('input', (e: Event) => {
           tier.description = (e.target as HTMLInputElement).value;
-          clearValidationErrors(card);
         });
       }
 
@@ -273,27 +203,6 @@ export function openTiersModal({
 
   saveBtn.addEventListener('click', async (e: MouseEvent) => {
     e.preventDefault();
-
-    // Очищаем все ошибки
-    const cards = tiersList.querySelectorAll('.tier-card');
-    cards.forEach(card => clearValidationErrors(card as HTMLElement));
-
-    // Валидируем все уровни
-    let hasErrors = false;
-    tiers.forEach((tier, index) => {
-      const result = validateSingleTier(tier);
-      if (!result.isValid) {
-        hasErrors = true;
-        const card = tiersList.querySelectorAll('.tier-card')[index] as HTMLElement;
-        if (card) {
-          showValidationErrors(card, result.errors);
-        }
-      }
-    });
-
-    if (hasErrors) {
-      return;
-    }
 
     const validTiers = tiers.filter(t => t.name.trim() && t.price > 0);
 

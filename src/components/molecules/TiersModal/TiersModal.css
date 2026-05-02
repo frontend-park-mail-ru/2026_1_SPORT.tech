@@ -129,16 +129,6 @@
   border-color: #E85A2B;
 }
 
-.tier-card-input--error {
-  border-color: #E53E3E;
-}
-
-.tier-card-error {
-  color: #E53E3E;
-  font-size: 12px;
-  margin-top: 2px;
-}
-
 .tiers-modal-add-btn {
   width: 100%;
   padding: 12px;
@@ -205,6 +195,12 @@
     padding: 24px 20px;
     width: calc(100% - 24px);
     max-height: calc(100dvh - 24px);
+    border-radius: 16px 16px 0 0;
+    bottom: 0;
+    top: auto;
+    left: 0;
+    right: 0;
+    transform: none;
   }
 
   .tiers-modal-title {
