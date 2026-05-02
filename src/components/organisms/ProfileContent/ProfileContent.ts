@@ -293,17 +293,13 @@ function renderTiersButton(container: HTMLElement, api: ApiClient): void {
     <div class="tiers-settings">
       <h3 style="margin-bottom:16px;">Уровни подписки</h3>
       <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
-      <div id="tiers-button-container"></div>
     </div>
   `;
-
-  const btnContainer = container.querySelector('#tiers-button-container') as HTMLElement;
-  if (!btnContainer) return;
 
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'button button--primary-orange button--medium';
-  button.style.cssText = 'width: 100%; max-width: 300px; margin: 0 auto;';
+  button.style.cssText = 'width: 100%; max-width: 300px; margin: 0 auto; display: block;';
   button.textContent = 'Настроить уровни';
 
   button.addEventListener('click', () => {
@@ -317,9 +313,8 @@ function renderTiersButton(container: HTMLElement, api: ApiClient): void {
     });
   });
 
-  btnContainer.appendChild(button);
+  container.appendChild(button);
 }
-
 export async function renderProfileContent(
   container: HTMLElement,
   params: ProfileContentParams

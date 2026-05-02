@@ -8,15 +8,20 @@
       </button>
     </div>
     <div class="tiers-modal__body">
-      <div id="tiers-list" class="tiers-modal__list"></div>
+      <div id="tiers-list" class="tiers-modal__list">
+        <p class="tiers-modal__empty-text">Нет созданных уровней</p>
+      </div>
       <button type="button" class="tiers-modal__add-btn" id="add-tier-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
         Добавить уровень
       </button>
     </div>
     <div class="tiers-modal__actions">
-      <div id="tiers-cancel-wrap"></div>
-      <div id="tiers-save-wrap"></div>
+      <button type="button" class="button button--text-orange button--medium" id="tiers-cancel-btn">Отмена</button>
+      <button type="button" class="button button--primary-orange button--medium" id="tiers-save-btn">Сохранить</button>
     </div>
   </div>
-</div>  
+</div>
