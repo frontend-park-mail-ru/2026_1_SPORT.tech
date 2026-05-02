@@ -8,8 +8,7 @@ import './styles/index.css';
 import templates from './templates';
 
 // Регистрируем шаблоны глобально
-(window as Window).Handlebars = Handlebars;
-// Исправлено: убран any
+(window as unknown as { Handlebars: typeof Handlebars }).Handlebars = Handlebars;
 (Handlebars as typeof Handlebars & { templates: Record<string, Handlebars.TemplateDelegate> }).templates = templates;
 
 function renderBootScreen(container: HTMLElement, message = 'Загружаем интерфейс'): void {
@@ -151,7 +150,6 @@ function createRouter(api: ApiClient): Router {
       return;
     }
     try {
-    // Всегда загружаем свежие данные
       const data = await loadProfilePageData(api, userId, currentUser);
 
       const { renderProfilePage } = await import('./pages/ProfilePage/ProfilePage');
@@ -171,6 +169,7 @@ function createRouter(api: ApiClient): Router {
       app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${err.message}</p></div>`;
     }
   }
+
   async function handleRouting(): Promise<void> {
     const currentUser = await getCurrentUser();
     const isAuthenticated = !!currentUser;
@@ -216,7 +215,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const apiClient = new ApiClient(API_BASE_URL);
   const router = createRouter(apiClient);
-  (window as Window).router = router;
+  (window as unknown as { router: Router }).router = router;
   renderBootScreen(app);
   await router.handleRouting();
   window.addEventListener('popstate', () => {

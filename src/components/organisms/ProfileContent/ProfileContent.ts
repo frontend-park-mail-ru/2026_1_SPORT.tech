@@ -6,16 +6,15 @@
 import { loadProfilePageData } from '../../../utils/profilePageData';
 import type { ApiClient } from '../../../utils/api';
 import type { PostWithAuthor } from '../../../types/post.types';
-import type { Profile, TrainerDetails, PostListItem } from '../../../types/api.types';
 import { renderButton } from '../../atoms/Button/Button';
 import { renderPostCard } from '../../molecules/PostCard/PostCard';
 import { openPostFormModal } from '../../molecules/PostFormModal/PostFormModal';
 import { openTiersModal } from '../../molecules/TiersModal/TiersModal';
-
+import type { Profile, TrainerDetails, PostListItem, PostAttachment } from '../../../types/api.types';
 interface ProfileContentParams {
   activeTab?: string;
   posts?: PostWithAuthor[];
-  popularPosts?: Array<{ description?: string; [key: string]: unknown }>;
+  popularPosts?: PostWithAuthor[];
   canAddPost?: boolean;
   api: ApiClient;
   canManagePosts?: boolean;
@@ -217,7 +216,7 @@ interface LikedPost {
   can_view: boolean;
   created_at: string;
   min_tier_id: number | null;
-  attachments: unknown[];
+  attachments: PostAttachment[];
   isOwner: boolean;
 }
 
@@ -292,8 +291,8 @@ function formatPostContent(textContent: string): string {
 function renderTiersButton(container: HTMLElement, api: ApiClient): void {
   container.innerHTML = `
     <div class="tiers-settings">
-      <h3>Уровни подписки</h3>
-      <p>Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
+      <h3 style="margin-bottom:16px;">Уровни подписки</h3>
+      <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
       <div id="tiers-button-container"></div>
     </div>
   `;
@@ -301,24 +300,24 @@ function renderTiersButton(container: HTMLElement, api: ApiClient): void {
   const btnContainer = container.querySelector('#tiers-button-container') as HTMLElement;
   if (!btnContainer) return;
 
-  renderButton(btnContainer, {
-    text: 'Настроить уровни',
-    variant: 'primary-orange',
-    size: 'medium',
-    fullWidth: true,
-    onClick: () => {
-      openTiersModal({
-        api,
-        onSaved: () => {
-          // Уровни сохранены
-        }
-      }).catch((error: unknown) => {
-        console.error('Failed to open tiers modal:', error);
-      });
-    }
-  }).catch((error: unknown) => {
-    console.error('Failed to render tiers button:', error);
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'button button--primary-orange button--medium';
+  button.style.cssText = 'width: 100%; max-width: 300px; margin: 0 auto;';
+  button.textContent = 'Настроить уровни';
+
+  button.addEventListener('click', () => {
+    openTiersModal({
+      api,
+      onSaved: () => {
+        // Уровни сохранены
+      }
+    }).catch((error: unknown) => {
+      console.error('Failed to open tiers modal:', error);
+    });
   });
+
+  btnContainer.appendChild(button);
 }
 
 export async function renderProfileContent(
@@ -368,7 +367,7 @@ export async function renderProfileContent(
 
   const popularWithDescriptions = popularPosts.map(post => ({
     ...post,
-    description: (post as Record<string, unknown>).description || 'Практические советы и рекомендации'
+    description: 'Практические советы и рекомендации'
   }));
 
   const html = template({
@@ -408,7 +407,6 @@ export async function renderProfileContent(
     }
   }
 
-  // Фильтр по видам спорта
   const activeFilters = new Set<string>();
   let activeDropdown: HTMLElement | null = null;
 
@@ -506,7 +504,6 @@ export async function renderProfileContent(
     });
   }
 
-  // Обработчики переключения вкладок
   element.querySelectorAll('.profile-content__tab').forEach((tab: Element) => {
     tab.addEventListener('click', async () => {
       const htmlTab = tab as HTMLElement;
@@ -579,7 +576,6 @@ export async function renderProfileContent(
     });
   });
 
-  // Кнопка добавления публикации
   if (canAddPost && currentTab === 'publications' && isTrainer) {
     const btnContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
     if (btnContainer) {
@@ -600,7 +596,6 @@ export async function renderProfileContent(
     }
   }
 
-  // Первая загрузка
   if (currentTab === 'about') {
     toggleSidebarVisibility(false);
     if (postsContainer) postsContainer.style.display = 'block';

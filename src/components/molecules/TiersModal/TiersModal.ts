@@ -70,7 +70,7 @@ export async function openTiersModal({
   const cancelWrap = modal.querySelector('#tiers-cancel-wrap') as HTMLElement;
   const saveWrap = modal.querySelector('#tiers-save-wrap') as HTMLElement;
   const addTierBtn = modal.querySelector('#add-tier-btn') as HTMLButtonElement;
-  const backdropElement = modal.querySelector('[data-tiers-close]') as HTMLElement;
+  const closeButtons = modal.querySelectorAll('[data-tiers-close]');
 
   let tiers: TierData[] = [];
   let tierCounter = 0;
@@ -168,74 +168,13 @@ export async function openTiersModal({
     }
   }
 
-  if (backdropElement) {
-    backdropElement.addEventListener('click', close);
-  }
+  // Закрытие по клику на backdrop и кнопку закрытия
+  closeButtons.forEach(btn => {
+    btn.addEventListener('click', close);
+  });
 
   if (addTierBtn) {
     addTierBtn.addEventListener('click', addTier);
-  }
-
-  if (cancelWrap) {
-    await renderButton(cancelWrap, {
-      text: 'Отмена',
-      variant: BUTTON_VARIANTS.TEXT_ORANGE,
-      size: BUTTON_SIZES.MEDIUM,
-      type: 'button',
-      onClick: close
-    });
-  }
-
-  if (saveWrap) {
-    const saveBtn: ButtonAPI = await renderButton(saveWrap, {
-      text: 'Сохранить',
-      variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
-      size: BUTTON_SIZES.MEDIUM,
-      type: 'button'
-    });
-
-    if (saveBtn && saveBtn.element) {
-      saveBtn.element.addEventListener('click', async (e: MouseEvent) => {
-        e.preventDefault();
-
-        const validTiers = tiers.filter(t => t.name.trim() && t.price > 0);
-
-        if (validTiers.length === 0) {
-          alert('Добавьте хотя бы один уровень с названием и ценой');
-          return;
-        }
-
-        saveBtn.setDisabled(true);
-        try {
-          const payload = {
-            tiers: validTiers.map(t => ({
-              name: t.name.trim(),
-              price: t.price,
-              description: t.description.trim()
-            }))
-          };
-
-          await api.request('/v1/tiers', {
-            method: 'POST',
-            body: JSON.stringify(payload)
-          });
-
-          if (onSaved) {
-            onSaved();
-          }
-          close();
-        } catch (error: unknown) {
-          // Даже если сервер недоступен, закрываем окно и вызываем onSaved
-          console.warn('Server unavailable, but tiers configured locally:', error);
-          if (onSaved) {
-            onSaved();
-          }
-          close();
-        } finally {
-          saveBtn.setDisabled(false);
-        }
-      });
-    }
   }
 
   // СНАЧАЛА добавляем окно в DOM
@@ -246,6 +185,76 @@ export async function openTiersModal({
   setTimeout(() => {
     modal.focus({ preventScroll: true });
   }, 0);
+
+  // Рендерим кнопки после добавления в DOM
+  if (cancelWrap) {
+    try {
+      await renderButton(cancelWrap, {
+        text: 'Отмена',
+        variant: BUTTON_VARIANTS.TEXT_ORANGE,
+        size: BUTTON_SIZES.MEDIUM,
+        type: 'button',
+        onClick: close
+      });
+    } catch (error: unknown) {
+      console.error('Failed to render cancel button:', error);
+    }
+  }
+
+  if (saveWrap) {
+    try {
+      const saveBtn: ButtonAPI = await renderButton(saveWrap, {
+        text: 'Сохранить',
+        variant: BUTTON_VARIANTS.PRIMARY_ORANGE,
+        size: BUTTON_SIZES.MEDIUM,
+        type: 'button'
+      });
+
+      if (saveBtn && saveBtn.element) {
+        saveBtn.element.addEventListener('click', async (e: MouseEvent) => {
+          e.preventDefault();
+
+          const validTiers = tiers.filter(t => t.name.trim() && t.price > 0);
+
+          if (validTiers.length === 0) {
+            alert('Добавьте хотя бы один уровень с названием и ценой');
+            return;
+          }
+
+          saveBtn.setDisabled(true);
+          try {
+            const payload = {
+              tiers: validTiers.map(t => ({
+                name: t.name.trim(),
+                price: t.price,
+                description: t.description.trim()
+              }))
+            };
+
+            await api.request('/v1/tiers', {
+              method: 'POST',
+              body: JSON.stringify(payload)
+            });
+
+            if (onSaved) {
+              onSaved();
+            }
+            close();
+          } catch (error: unknown) {
+            console.error('Failed to save tiers:', error);
+            if (onSaved) {
+              onSaved();
+            }
+            close();
+          } finally {
+            saveBtn.setDisabled(false);
+          }
+        });
+      }
+    } catch (error: unknown) {
+      console.error('Failed to render save button:', error);
+    }
+  }
 
   // ПОТОМ пытаемся загрузить данные (окно уже открыто!)
   try {
@@ -261,7 +270,7 @@ export async function openTiersModal({
       renderTiers();
     }
   } catch (error: unknown) {
+    console.error('Failed to load tiers:', error);
     // Окно уже открыто, просто показываем пустой список
-    console.warn('No existing tiers or failed to load, showing empty form:', error);
   }
 }

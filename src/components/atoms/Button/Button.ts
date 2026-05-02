@@ -66,8 +66,13 @@ export async function renderButton(
     onLeave = null
   } = config;
 
-  // Исправлено: используем глобальный Handlebars
-  const template = (window as any).Handlebars.compile(ButtonTemplate);
+  const HandlebarsGlobal = (window as unknown as {
+    Handlebars: {
+      compile: (source: string) => (context: Record<string, unknown>) => string
+    }
+  }).Handlebars;
+
+  const template = HandlebarsGlobal.compile(ButtonTemplate);
 
   const html = template({
     text,
@@ -108,17 +113,34 @@ export async function renderButton(
   return {
     element: button,
     setState: (newState: ButtonState): void => {
-      button.dataset.state = newState;
+      Object.values(BUTTON_STATES).forEach(s => {
+        button.classList.remove(`button--${s}`);
+      });
+      button.classList.add(`button--${newState}`);
     },
     setDisabled: (isDisabled: boolean): void => {
       button.disabled = isDisabled;
-      button.dataset.state = isDisabled ? BUTTON_STATES.DISABLED : BUTTON_STATES.NORMAL;
+      if (isDisabled) {
+        button.classList.add(`button--${BUTTON_STATES.DISABLED}`);
+      } else {
+        button.classList.remove(`button--${BUTTON_STATES.DISABLED}`);
+      }
     },
     getState: (): ButtonState => {
-      return (button.dataset.state as ButtonState) || BUTTON_STATES.NORMAL;
+      for (const s of Object.values(BUTTON_STATES)) {
+        if (button.classList.contains(`button--${s}`)) {
+          return s;
+        }
+      }
+      return BUTTON_STATES.NORMAL;
     },
     setText: (newText: string): void => {
-      button.textContent = newText;
+      const textSpan = button.querySelector('.button__text');
+      if (textSpan) {
+        textSpan.textContent = newText;
+      } else {
+        button.textContent = newText;
+      }
     }
   };
 }

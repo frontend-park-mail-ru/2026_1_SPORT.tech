@@ -37,7 +37,7 @@ interface ProfilePageParams {
     role: string;
   }>;
   posts?: PostWithAuthor[];
-  popularPosts?: any[];
+  popularPosts?: PostWithAuthor[];
   activeTab?: string;
   onLogout?: (() => Promise<void>) | null;
 }
@@ -72,7 +72,13 @@ export async function renderProfilePage(
     onLogout = null
   } = params;
 
-  const template = (window as any).Handlebars.templates['ProfilePage.hbs'];
+  const HandlebarsGlobal = (window as unknown as {
+    Handlebars: {
+      templates: Record<string, (context: Record<string, unknown>) => string>
+    }
+  }).Handlebars;
+
+  const template = HandlebarsGlobal.templates['ProfilePage.hbs'];
   const html = template({});
 
   const wrapper = document.createElement('div');
@@ -101,7 +107,6 @@ export async function renderProfilePage(
     const postsContainer = contentContainer.querySelector('#posts-container') as HTMLElement;
     if (!postsContainer) return;
 
-    // Определяем активную вкладку
     const activeTabElement = contentContainer.querySelector('.profile-content__tab--active') as HTMLElement;
     const currentTab = activeTabElement?.dataset?.tab || 'publications';
 

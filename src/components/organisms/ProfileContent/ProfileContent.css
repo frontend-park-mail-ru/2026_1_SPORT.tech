@@ -675,3 +675,32 @@
 .profile-content__search[style*="display: none"] {
   display: none !important;
 }
+
+/* Стили для блока подписок */
+.tiers-settings {
+  padding: 20px;
+  text-align: center;
+}
+
+.tiers-settings h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1A2B3C;
+  margin-bottom: 16px;
+}
+
+.tiers-settings p {
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+#tiers-button-container {
+  display: flex;
+  justify-content: center;
+}
+
+#tiers-button-container .button {
+  width: 100%;
+  max-width: 300px;
+}
