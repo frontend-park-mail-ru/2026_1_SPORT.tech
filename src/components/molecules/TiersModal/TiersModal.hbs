@@ -15,7 +15,7 @@
       {{#each tiers}}
         <div class="tier-card" data-tier-id="{{this.id}}">
           <div class="tier-card-header">
-            <span class="tier-card-index">Уровень {{add @index 1}}</span>
+            <span class="tier-card-index">Уровень {{this.index}}</span>
             <button
               class="tier-remove-btn"
               data-action="remove-tier"
@@ -46,7 +46,7 @@
                 class="tier-input tier-price-input"
                 data-tier-id="{{this.id}}"
                 data-field="price"
-                value="{{#if this.price}}{{this.price}}{{/if}}"
+                value="{{this.price}}"
                 placeholder="0"
                 min="0"
               >

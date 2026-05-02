@@ -17,6 +17,7 @@ interface TierData {
   name: string;
   price: number;
   description: string;
+  index?: number; // Добавляем опциональное поле для индекса
 }
 
 export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
@@ -30,8 +31,16 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
   const container = document.createElement('div');
   container.className = 'tiers-modal-container';
 
+  // Функция обновления индексов
+  function updateIndices(): void {
+    tiers.forEach((tier, index) => {
+      tier.index = index + 1;
+    });
+  }
+
   // Функция рендеринга
   function render(): void {
+    updateIndices(); // Обновляем индексы перед рендерингом
     const html = template({ tiers });
     container.innerHTML = html;
     bindEvents();
