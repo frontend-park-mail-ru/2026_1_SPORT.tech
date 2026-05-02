@@ -289,31 +289,31 @@ function formatPostContent(textContent: string): string {
  * Создаёт кнопку "Настроить уровни" с обработчиком открытия модального окна
  */
 function renderTiersButton(container: HTMLElement, api: ApiClient): void {
-  container.innerHTML = `
-    <div class="tiers-settings">
-      <h3 style="margin-bottom:16px;">Уровни подписки</h3>
-      <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
-    </div>
+  container.innerHTML = '';
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'tiers-settings';
+  wrapper.innerHTML = `
+    <h3 style="margin-bottom:16px;">Уровни подписки</h3>
+    <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
   `;
+
+  container.appendChild(wrapper);
 
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'button button--primary-orange button--medium';
-  button.style.cssText = 'width: 100%; max-width: 300px; margin: 0 auto; display: block;';
+  button.style.cssText = 'width:100%;max-width:300px;margin:0 auto;display:block;';
   button.textContent = 'Настроить уровни';
 
   button.addEventListener('click', () => {
     openTiersModal({
       api,
-      onSaved: () => {
-        // Уровни сохранены
-      }
-    }).catch((error: unknown) => {
-      console.error('Failed to open tiers modal:', error);
+      onSaved: () => {}
     });
   });
 
-  container.appendChild(button);
+  wrapper.appendChild(button);
 }
 export async function renderProfileContent(
   container: HTMLElement,
