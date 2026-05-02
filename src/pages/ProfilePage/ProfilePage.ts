@@ -104,6 +104,7 @@ export async function renderProfilePage(
    */
   async function reloadPosts(): Promise<void> {
     const data: ProfilePageData = await loadProfilePageData(api, viewedUserId);
+    
     const postsContainer = contentContainer.querySelector('#posts-container') as HTMLElement;
     if (!postsContainer) return;
 
