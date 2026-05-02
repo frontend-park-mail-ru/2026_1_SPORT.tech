@@ -49,6 +49,7 @@ export class ApiClient {
     return this.csrfToken;
   }
 
+
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     const method = options.method || 'GET';
@@ -70,23 +71,46 @@ export class ApiClient {
       }
     }
 
+    console.log(`[API] ${method} ${url}`, {
+      headers,
+      body: options.body instanceof FormData
+        ? '[FormData]'
+        : typeof options.body === 'string'
+          ? JSON.parse(options.body)
+          : undefined
+    });
+
     const response = await fetch(url, {
       ...options,
       credentials: 'include',
       headers
     });
 
+    console.log(`[API] Response ${response.status} from ${method} ${url}`);
+
     if (response.status === 204) {
       return null as T;
     }
 
-    const data = await response.json() as T;
+    // Пытаемся прочитать как JSON
+    let data: T;
+    const contentType = response.headers.get('content-type');
+
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json() as T;
+      console.log(`[API] Response data:`, data);
+    } else {
+      // Если не JSON — читаем как текст для отладки
+      const text = await response.text();
+      console.error(`[API] Non-JSON response:`, text.substring(0, 500));
+      throw new Error(`Сервер вернул не JSON (${response.status}): ${text.substring(0, 200)}`);
+    }
 
     if (!response.ok) {
-      const errorData = data as { error?: { message?: string } };
-      const error = new Error(
-        errorData?.error?.message || `HTTP ${response.status}`
-      );
+      const errorData = data as { error?: { message?: string; code?: string } };
+      const errorMessage = errorData?.error?.message || `HTTP ${response.status}`;
+      console.error(`[API] Error:`, errorData);
+      const error = new Error(errorMessage);
       (error as Error & { data: T }).data = data;
       throw error;
     }
