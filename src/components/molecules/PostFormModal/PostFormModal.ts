@@ -6,7 +6,7 @@
 import type { ApiClient } from '../../../utils/api';
 import type { ButtonAPI } from '../../atoms/Button/Button';
 import type { InputAPI } from '../../atoms/Input/Input';
-import type { SportTypeFieldApi } from '../../../types/components.types';
+import type { SportTypeFieldOption } from '../../../types/components.types';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { Validator } from '../../../utils/validator';
@@ -62,10 +62,10 @@ export async function openPostFormModal({
   let blockCounter = 0;
 
   // Загружаем виды спорта и создаём чекбоксы
-  let sportFieldApi: SportTypeFieldApi | null = null;
+  // sportFieldApi будет использоваться позже при интеграции sport_type_id
   const sportTypes = await loadSportTypes(api);
   if (sportFieldContainer && sportTypes.length > 0) {
-    sportFieldApi = createSportTypesField(sportFieldContainer, {
+    createSportTypesField(sportFieldContainer, {
       label: '',
       placeholder: 'Выберите вид спорта',
       required: false,
@@ -77,7 +77,7 @@ export async function openPostFormModal({
   // Создаём чекбоксы для уровней подписки
   let selectedTiers: number[] = [];
   if (tierContainer) {
-    const tierOptions = [
+    const tierOptions: SportTypeFieldOption[] = [
       { sport_type_id: 1, name: '1 уровень' },
       { sport_type_id: 2, name: '2 уровень' },
       { sport_type_id: 3, name: '3 уровень' }
@@ -240,24 +240,44 @@ export async function openPostFormModal({
 
     saveBtn.setDisabled(true);
     try {
-      const selectedSports = sportFieldApi?.getValue() || [];
-      const contentBlocks = blocks.map(b => ({
-        type: b.type,
-        content: b.value,
-        kind: b.file?.type.startsWith('video/') ? 'video' : 'image'
+      // Загружаем медиа-файлы на сервер
+      const apiBlocks = await Promise.all(blocks.map(async (block) => {
+        if (block.type === 'media' && block.file) {
+          try {
+            const uploadResult = await api.uploadPostMedia(block.file);
+            return {
+              file_url: uploadResult.file_url,
+              kind: block.file.type.startsWith('video/') ? 'video' : 'image'
+            };
+          } catch (uploadError) {
+            console.error(`Failed to upload file for block ${block.id}:`, uploadError);
+            throw new Error('Не удалось загрузить один или несколько файлов');
+          }
+        } else if (block.type === 'text' && block.value.trim()) {
+          return {
+            text_content: block.value
+          };
+        }
+        return null;
       }));
 
-      const payload = {
+      // Фильтруем null значения (пустые блоки)
+      const validBlocks = apiBlocks.filter(block => block !== null);
+
+      const payload: Record<string, unknown> = {
         title: title.trim(),
-        content_blocks: contentBlocks,
-        sport_type_id: selectedSports.length > 0 ? selectedSports[0] : undefined,
-        min_tier_id: selectedTiers.length > 0 ? Math.min(...selectedTiers) : 0
+        blocks: validBlocks
       };
 
+      if (selectedTiers.length > 0) {
+        payload.min_tier_id = Math.min(...selectedTiers);
+      }
+
       if (mode === 'edit' && postId != null) {
+        payload.replace_blocks = true;
         await api.updatePost(postId, payload);
       } else {
-        await api.createPost(payload);
+        await api.createPost(payload as { title: string; blocks: Array<{ text_content?: string; file_url?: string; kind?: string }>; min_tier_id?: number });
       }
 
       onSaved?.();

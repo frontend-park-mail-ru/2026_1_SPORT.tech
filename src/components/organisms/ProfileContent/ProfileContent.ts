@@ -10,7 +10,7 @@ import { renderButton } from '../../atoms/Button/Button';
 import { renderPostCard } from '../../molecules/PostCard/PostCard';
 import { openPostFormModal } from '../../molecules/PostFormModal/PostFormModal';
 import { openTiersModal } from '../../molecules/TiersModal/TiersModal';
-import type { Profile, TrainerDetails, PostListItem, PostAttachment } from '../../../types/api.types';
+import type { Profile, TrainerDetails, PostListItem, PostBlock } from '../../../types/api.types';
 
 interface ProfileContentParams {
   activeTab?: string;
@@ -32,10 +32,60 @@ interface FillPostsParams {
   onPostsUpdated?: (() => Promise<void>) | null;
 }
 
+// Вспомогательные типы для обратной совместимости с PostCard
+interface PostAttachmentCompat {
+  post_attachment_id: number;
+  kind: string;
+  file_url: string;
+}
+
+interface LikedPost {
+  post_id: number;
+  title: string;
+  content: string;
+  raw_text: string;
+  authorName: string;
+  authorRole: string;
+  authorAvatar: string | null;
+  likes: number;
+  liked: boolean;
+  comments: number;
+  can_view: boolean;
+  created_at: string;
+  min_tier_id: number | null;
+  attachments: PostAttachmentCompat[];
+  isOwner: boolean;
+}
+
 function setPostsContainerMessageState(container: HTMLElement, isMessageState: boolean): void {
   if (!container) return;
   container.classList.toggle('profile-content__posts-container--message', isMessageState);
   container.closest('.profile-content__main')?.classList.toggle('profile-content__main--message', isMessageState);
+}
+
+/**
+ * Извлекает текстовый контент из массива блоков
+ */
+function extractTextFromBlocks(blocks: PostBlock[] | undefined): string {
+  if (!blocks || !Array.isArray(blocks)) return '';
+  return blocks
+    .filter(block => block.text_content)
+    .map(block => block.text_content)
+    .join('\n');
+}
+
+/**
+ * Извлекает вложения из массива блоков для обратной совместимости с PostCard
+ */
+function extractAttachmentsFromBlocks(blocks: PostBlock[] | undefined): PostAttachmentCompat[] {
+  if (!blocks || !Array.isArray(blocks)) return [];
+  return blocks
+    .filter(block => block.file_url)
+    .map(block => ({
+      post_attachment_id: block.post_block_id,
+      kind: block.kind || 'image',
+      file_url: block.file_url
+    }));
 }
 
 export async function fillProfilePostsSection(
@@ -96,6 +146,17 @@ function escapeHtml(value: string | null | undefined): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function formatPostContent(textContent: string): string {
+  if (!textContent) return '';
+  return String(textContent)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/\n/g, '<br>');
 }
 
 async function showTrainerAbout(
@@ -203,24 +264,10 @@ function showClientAbout(container: HTMLElement, profile: Profile): void {
   `;
 }
 
-interface LikedPost {
-  post_id: number;
-  title: string;
-  content: string;
-  raw_text: string;
-  authorName: string;
-  authorRole: string;
-  authorAvatar: string | null;
-  likes: number;
-  liked: boolean;
-  comments: number;
-  can_view: boolean;
-  created_at: string;
-  min_tier_id: number | null;
-  attachments: PostAttachment[];
-  isOwner: boolean;
-}
-
+/**
+ * Загружает понравившиеся посты пользователя
+ * Адаптировано под новую структуру API с блоками
+ */
 async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost[]> {
   try {
     const postsData = await api.getUserPosts(userId);
@@ -246,21 +293,27 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
           updated_at: ''
         }));
 
+        // Извлекаем текстовый контент из блоков
+        const textContent = extractTextFromBlocks(fullPost?.blocks);
+
+        // Извлекаем вложения из блоков
+        const attachments = extractAttachmentsFromBlocks(fullPost?.blocks);
+
         fullPosts.push({
           post_id: post.post_id,
           title: post.title,
-          content: formatPostContent(fullPost?.text_content || ''),
-          raw_text: fullPost?.text_content || '',
+          content: formatPostContent(textContent),
+          raw_text: textContent,
           authorName: `${authorProfile.first_name || ''} ${authorProfile.last_name || ''}`.trim() || 'Автор',
           authorRole: authorProfile.is_trainer ? 'Тренер' : 'Клиент',
           authorAvatar: authorProfile.avatar_url || null,
           likes: post.likes_count || 0,
           liked: true,
-          comments: 0,
+          comments: post.comments_count || 0,
           can_view: post.can_view,
           created_at: post.created_at,
           min_tier_id: post.min_tier_id ?? null,
-          attachments: fullPost?.attachments || [],
+          attachments: attachments,
           isOwner: false
         });
       } catch {
@@ -273,17 +326,6 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
     console.error('Failed to load liked posts:', error);
     return [];
   }
-}
-
-function formatPostContent(textContent: string): string {
-  if (!textContent) return '';
-  return String(textContent)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .replace(/\n/g, '<br>');
 }
 
 /**

@@ -5,6 +5,7 @@ import type {
   Profile,
   Post,
   PostListItem,
+  PostBlockInput,
   PostLikeResponse,
   TrainerListItem,
   TrainerDetails,
@@ -53,10 +54,14 @@ export class ApiClient {
     const method = options.method || 'GET';
     const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...options.headers as Record<string, string>
-    };
+    const headers: Record<string, string> = {};
+
+    // Не устанавливаем Content-Type для FormData
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    Object.assign(headers, options.headers as Record<string, string>);
 
     if (isMutating) {
       await this.ensureCsrfToken();
@@ -162,8 +167,49 @@ export class ApiClient {
     });
   }
 
-  async getTrainers(): Promise<{ trainers: TrainerListItem[] }> {
-    return this.request<{ trainers: TrainerListItem[] }>('/v1/trainers');
+  async getTrainers(params?: {
+    query?: string;
+    sport_type_ids?: number[];
+    limit?: number;
+    offset?: number;
+    min_experience_years?: number;
+    max_experience_years?: number;
+    only_with_rank?: boolean;
+  }): Promise<{ trainers: TrainerListItem[] }> {
+    const searchParams = new URLSearchParams();
+
+    if (params) {
+      if (params.query) searchParams.set('query', params.query);
+      if (params.sport_type_ids?.length) {
+        params.sport_type_ids.forEach(id => searchParams.append('sport_type_ids', String(id)));
+      }
+      if (params.limit !== undefined) searchParams.set('limit', String(params.limit));
+      if (params.offset !== undefined) searchParams.set('offset', String(params.offset));
+      if (params.min_experience_years !== undefined) searchParams.set('min_experience_years', String(params.min_experience_years));
+      if (params.max_experience_years !== undefined) searchParams.set('max_experience_years', String(params.max_experience_years));
+      if (params.only_with_rank !== undefined) searchParams.set('only_with_rank', String(params.only_with_rank));
+    }
+
+    const query = searchParams.toString();
+    return this.request<{ trainers: TrainerListItem[] }>(
+      `/v1/trainers${query ? `?${query}` : ''}`
+    );
+  }
+
+  async searchTrainers(params: {
+    query?: string;
+    sport_type_ids?: number[];
+    limit?: number;
+    offset?: number;
+    min_experience_years?: number;
+    max_experience_years?: number;
+    only_with_rank?: boolean;
+  }): Promise<{ trainers: TrainerListItem[] }> {
+    await this.ensureCsrfToken();
+    return this.request<{ trainers: TrainerListItem[] }>('/v1/trainers:search', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    });
   }
 
   async getUserPosts(userId: number): Promise<{ posts: PostListItem[]; user_id: number }> {
@@ -178,16 +224,10 @@ export class ApiClient {
   }
 
   async createPost(payload: {
-  title: string;
-  text_content?: string;
-  content_blocks?: Array<{
-    type: string;
-    content: string;
-    kind?: string;
-  }>;
-  sport_type_id?: number;
-  min_tier_id?: number;
-}): Promise<Post> {
+    title: string;
+    blocks: PostBlockInput[];
+    min_tier_id?: number;
+  }): Promise<Post> {
     await this.ensureCsrfToken();
     return this.request<Post>('/v1/posts', {
       method: 'POST',
@@ -196,21 +236,42 @@ export class ApiClient {
   }
 
   async updatePost(postId: number, payload: {
-  title?: string;
-  text_content?: string;
-  content_blocks?: Array<{
-    type: string;
-    content: string;
-    kind?: string;
-  }>;
-  sport_type_id?: number;
-  min_tier_id?: number;
-}): Promise<Post> {
+    title?: string;
+    blocks?: PostBlockInput[];
+    min_tier_id?: number;
+    clear_min_tier_id?: boolean;
+    replace_blocks?: boolean;
+  }): Promise<Post> {
     await this.ensureCsrfToken();
     return this.request<Post>(`/v1/posts/${postId}`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
     });
+  }
+
+  async uploadPostMedia(file: File): Promise<{ file_url: string; content_type: string; kind: string; size_bytes: number }> {
+    await this.ensureCsrfToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: Record<string, string> = {};
+    if (this.csrfToken) {
+      headers['X-CSRF-Token'] = this.csrfToken;
+    }
+
+    const response = await fetch(`${this.baseURL}/v1/posts/media`, {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({} as { error?: { message?: string } }));
+      throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
+    }
+
+    return response.json();
   }
 
   async deletePost(postId: number): Promise<void> {
@@ -229,6 +290,23 @@ export class ApiClient {
     await this.ensureCsrfToken();
     return this.request<PostLikeResponse>(`/v1/posts/${postId}/likes`, {
       method: 'DELETE'
+    });
+  }
+
+  async searchPosts(params: {
+    query?: string;
+    trainer_ids?: number[];
+    min_tier_id?: number;
+    max_tier_id?: number;
+    block_kinds?: string[];
+    only_available?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ posts: PostListItem[] }> {
+    await this.ensureCsrfToken();
+    return this.request<{ posts: PostListItem[] }>('/v1/posts:search', {
+      method: 'POST',
+      body: JSON.stringify(params)
     });
   }
 
@@ -278,9 +356,7 @@ export class ApiClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({} as { error?: { message?: string } }));
-      throw new Error(
-        errorData?.error?.message || `HTTP ${response.status}`
-      );
+      throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
     }
 
     return response.json();

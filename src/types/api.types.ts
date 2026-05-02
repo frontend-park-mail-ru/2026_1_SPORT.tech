@@ -22,23 +22,34 @@ export interface CSRFTokenResponse {
   csrf_token: string;
 }
 
-export interface PostAttachment {
-  post_attachment_id: number;
-  kind: string;
+// НОВОЕ: Блок контента поста (как в ответе API)
+export interface PostBlock {
+  post_block_id: number;
+  text_content: string;
   file_url: string;
+  kind: string;
+  position: number;
+}
+
+// НОВОЕ: Блок для создания/обновления поста
+export interface PostBlockInput {
+  text_content?: string;
+  file_url?: string;
+  kind?: string;
 }
 
 export interface Post {
   post_id: number;
   title: string;
-  text_content: string;
   trainer_id: number;
   created_at: string;
   updated_at: string;
   min_tier_id: number | null;
   is_liked: boolean;
   likes_count: number;
-  attachments?: PostAttachment[];
+  comments_count: number;
+  blocks: PostBlock[];
+  can_view: boolean;
 }
 
 export interface PostListItem {
@@ -49,6 +60,7 @@ export interface PostListItem {
   min_tier_id: number | null;
   is_liked: boolean;
   likes_count: number;
+  comments_count: number;
   can_view: boolean;
 }
 
@@ -101,12 +113,4 @@ export interface UpdateProfilePayload {
   last_name?: string;
   bio?: string;
   trainer_details?: TrainerDetails;
-}
-
-export interface PostContentBlock {
-  type: 'text' | 'attachment';
-  content: string;      // текст или URL аттача
-  attachment_id?: number;
-  file_url?: string;
-  kind?: 'image' | 'video';
 }

@@ -1,7 +1,8 @@
-import { mapPostEngagement } from './postEngagement';
+// src/utils/profilePageData.ts
+
 import type { ApiClient } from './api';
-import type { Profile, Post, PostListItem, AuthResponse, User } from '../types/api.types';
-import type { PostWithAuthor, ProfilePageData, PostEngagement } from '../types/post.types';
+import type { Profile, Post, PostListItem, AuthResponse, User, PostBlock } from '../types/api.types';
+import type { PostWithAuthor, ProfilePageData } from '../types/post.types';
 
 export function getUserRoleLabel(isTrainer: boolean): string {
   return isTrainer ? 'Тренер' : 'Клиент';
@@ -27,6 +28,25 @@ export function formatPostContent(textContent: string): string {
     return 'Нет доступа к содержимому поста';
   }
   return escapeHtml(textContent).replace(/\n/g, '<br>');
+}
+
+function extractTextFromBlocks(blocks: PostBlock[] | undefined): string {
+  if (!blocks || !Array.isArray(blocks)) return '';
+  return blocks
+    .filter(block => block.text_content)
+    .map(block => block.text_content)
+    .join('\n');
+}
+
+function extractAttachmentsFromBlocks(blocks: PostBlock[] | undefined): Array<{ post_attachment_id: number; kind: string; file_url: string }> {
+  if (!blocks || !Array.isArray(blocks)) return [];
+  return blocks
+    .filter(block => block.file_url)
+    .map(block => ({
+      post_attachment_id: block.post_block_id,
+      kind: block.kind || 'image',
+      file_url: block.file_url
+    }));
 }
 
 interface MapProfileDataResult {
@@ -107,9 +127,9 @@ export async function loadProfilePageData(
         // отдельный пост может быть недоступен
       }
     }
-    const textContent: string = fullPost?.text_content || '';
-    // Строка 109 - изменить вызов mapPostEngagement
-    const engagement: PostEngagement = mapPostEngagement(fullPost as unknown as Record<string, unknown>);
+
+    const textContent = extractTextFromBlocks(fullPost?.blocks);
+    const attachments = extractAttachmentsFromBlocks(fullPost?.blocks);
 
     return {
       post_id: post.post_id,
@@ -119,13 +139,13 @@ export async function loadProfilePageData(
       authorName,
       authorRole,
       authorAvatar,
-      likes: engagement.likes,
-      liked: engagement.liked,
-      comments: engagement.comments,
+      likes: post.likes_count,
+      liked: post.is_liked,
+      comments: post.comments_count ?? 0,
       can_view: post.can_view,
       created_at: post.created_at,
       min_tier_id: post.min_tier_id ?? null,
-      attachments: fullPost?.attachments || []
+      attachments: attachments
     };
   }));
 

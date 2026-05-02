@@ -88,32 +88,32 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
       const action = target.dataset.action || target.closest('[data-action]')?.getAttribute('data-action');
 
       switch (action) {
-        case 'close':
-          e.preventDefault();
-          close();
-          break;
+      case 'close':
+        e.preventDefault();
+        close();
+        break;
 
-        case 'add-tier':
-          e.preventDefault();
-          tierCounter++;
-          tiers.push({
-            id: `tier-${Date.now()}-${tierCounter}`,
-            name: '',
-            price: 0,
-            description: ''
-          });
+      case 'add-tier':
+        e.preventDefault();
+        tierCounter++;
+        tiers.push({
+          id: `tier-${Date.now()}-${tierCounter}`,
+          name: '',
+          price: 0,
+          description: ''
+        });
+        render();
+        break;
+
+      case 'remove-tier': {
+        e.preventDefault();
+        const tierId = target.dataset.tierId || target.closest('[data-tier-id]')?.getAttribute('data-tier-id');
+        if (tierId) {
+          tiers = tiers.filter(t => t.id !== tierId);
           render();
-          break;
-
-        case 'remove-tier': {
-          e.preventDefault();
-          const tierId = target.dataset.tierId || target.closest('[data-tier-id]')?.getAttribute('data-tier-id');
-          if (tierId) {
-            tiers = tiers.filter(t => t.id !== tierId);
-            render();
-          }
-          break;
         }
+        break;
+      }
       }
     });
 

@@ -1,4 +1,4 @@
-import type { PostAttachment } from './api.types';
+// src/types/post.types.ts
 
 export interface PostWithAuthor {
   post_id: number;
@@ -14,8 +14,17 @@ export interface PostWithAuthor {
   can_view: boolean;
   created_at: string;
   min_tier_id: number | null;
-  attachments: PostAttachment[];
+  attachments: PostAttachmentCompat[];
   isOwner?: boolean;
+}
+
+/**
+ * Совместимый тип для вложений, извлекаемых из PostBlock
+ */
+export interface PostAttachmentCompat {
+  post_attachment_id: number;
+  kind: string;
+  file_url: string;
 }
 
 export interface ProfilePageData {
