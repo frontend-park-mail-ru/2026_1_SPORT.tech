@@ -4,6 +4,8 @@
  */
 
 import type { ApiClient } from '../../../utils/api';
+import { Validator } from '../../../utils/validator';
+import type { ValidationResult } from '../../../types/validation.types';
 
 export interface TiersModalOptions {
   api: ApiClient;
@@ -21,50 +23,56 @@ export function openTiersModal({
   api,
   onSaved
 }: TiersModalOptions): void {
+  const validator = new Validator();
   let tiers: TierData[] = [];
   let tierCounter = 0;
 
-  // Создаём backdrop
-  const backdrop = document.createElement('div');
-  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;';
+  // Создаём overlay (backdrop)
+  const overlay = document.createElement('div');
+  overlay.className = 'tiers-modal-overlay';
+  overlay.id = 'tiers-modal-overlay';
 
   // Создаём панель модального окна
   const panel = document.createElement('div');
-  panel.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:white;border-radius:16px;padding:32px;width:90%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+  panel.className = 'tiers-modal-panel';
+  panel.id = 'tiers-modal-panel';
 
   // Заголовок
   const header = document.createElement('div');
-  header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;';
+  header.className = 'tiers-modal-header';
   header.innerHTML = `
-    <h2 style="margin:0;font-size:22px;font-weight:700;color:#1A2B3C;">Настройка уровней подписки</h2>
-    <button id="tiers-close-btn" style="border:none;background:transparent;color:#999;font-size:28px;cursor:pointer;padding:4px 8px;border-radius:6px;">×</button>
+    <h2 class="tiers-modal-title">Настройка уровней подписки</h2>
+    <button class="tiers-modal-close-btn" id="tiers-close-btn">×</button>
   `;
 
   // Список уровней
   const tiersList = document.createElement('div');
+  tiersList.className = 'tiers-modal-list';
   tiersList.id = 'tiers-list';
-  tiersList.style.cssText = 'display:flex;flex-direction:column;gap:16px;margin-bottom:16px;';
-  tiersList.innerHTML = '<p style="color:#999;text-align:center;padding:32px 20px;margin:0;">Нет созданных уровней</p>';
+  tiersList.innerHTML = '<p class="tiers-modal-empty">Нет созданных уровней</p>';
 
-  // Кнопка добавить
+  // Кнопка добавить уровень
   const addBtn = document.createElement('button');
   addBtn.type = 'button';
-  addBtn.style.cssText = 'width:100%;padding:12px;border:2px dashed #CBD5E1;border-radius:10px;background:#F8FAFC;color:#64748B;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:24px;';
-  addBtn.innerHTML = '➕ Добавить уровень';
+  addBtn.className = 'tiers-modal-add-btn';
+  addBtn.id = 'tiers-add-btn';
+  addBtn.textContent = '+ Добавить уровень';
 
-  // Кнопки действий
+  // Контейнер для кнопок действий
   const actions = document.createElement('div');
-  actions.style.cssText = 'display:flex;justify-content:flex-end;gap:12px;';
+  actions.className = 'tiers-modal-actions';
 
   const cancelBtn = document.createElement('button');
   cancelBtn.type = 'button';
+  cancelBtn.className = 'tiers-modal-cancel-btn';
+  cancelBtn.id = 'tiers-cancel-btn';
   cancelBtn.textContent = 'Отмена';
-  cancelBtn.style.cssText = 'padding:10px 24px;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;background:transparent;color:#E85A2B;';
 
   const saveBtn = document.createElement('button');
   saveBtn.type = 'button';
+  saveBtn.className = 'tiers-modal-save-btn';
+  saveBtn.id = 'tiers-save-btn';
   saveBtn.textContent = 'Сохранить';
-  saveBtn.style.cssText = 'padding:10px 24px;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;background:#E85A2B;color:white;';
 
   actions.appendChild(cancelBtn);
   actions.appendChild(saveBtn);
@@ -75,78 +83,176 @@ export function openTiersModal({
   panel.appendChild(addBtn);
   panel.appendChild(actions);
 
+  /**
+   * Валидирует один уровень
+   */
+  function validateSingleTier(tier: TierData): ValidationResult {
+    validator.reset();
+
+    // Валидация названия
+    if (!tier.name || tier.name.trim().length === 0) {
+      validator.addError('name', 'Название обязательно');
+    } else if (tier.name.length > 100) {
+      validator.addError('name', 'Максимум 100 символов');
+    }
+
+    // Валидация цены
+    if (!tier.price || tier.price <= 0) {
+      validator.addError('price', 'Цена должна быть больше 0');
+    } else if (tier.price > 999999) {
+      validator.addError('price', 'Максимальная цена 999 999 ₽');
+    }
+
+    // Валидация описания
+    if (tier.description && tier.description.length > 500) {
+      validator.addError('description', 'Максимум 500 символов');
+    }
+
+    return {
+      isValid: !validator.hasErrors(),
+      errors: validator.getErrors()
+    };
+  }
+
+  /**
+   * Показывает ошибки валидации в карточке
+   */
+  function showValidationErrors(card: HTMLElement, errors: Array<{ field: string; message: string }>): void {
+    // Очищаем старые ошибки
+    card.querySelectorAll('.tier-card-error').forEach(el => el.remove());
+    card.querySelectorAll('.tier-card-input--error').forEach(input => {
+      input.classList.remove('tier-card-input--error');
+    });
+
+    errors.forEach(error => {
+      const input = card.querySelector(`[data-field="${error.field}"]`) as HTMLInputElement;
+      if (input) {
+        input.classList.add('tier-card-input--error');
+
+        const errorEl = document.createElement('div');
+        errorEl.className = 'tier-card-error';
+        errorEl.textContent = error.message;
+        input.parentElement?.appendChild(errorEl);
+      }
+    });
+  }
+
+  /**
+   * Очищает ошибки валидации в карточке
+   */
+  function clearValidationErrors(card: HTMLElement): void {
+    card.querySelectorAll('.tier-card-error').forEach(el => el.remove());
+    card.querySelectorAll('.tier-card-input--error').forEach(input => {
+      input.classList.remove('tier-card-input--error');
+    });
+  }
+
   // Функция рендеринга уровней
   function renderTiers(): void {
     tiersList.innerHTML = '';
 
     if (tiers.length === 0) {
-      tiersList.innerHTML = '<p style="color:#999;text-align:center;padding:32px 20px;margin:0;">Нет созданных уровней</p>';
+      tiersList.innerHTML = '<p class="tiers-modal-empty">Нет созданных уровней</p>';
       return;
     }
 
     tiers.forEach((tier, index) => {
       const card = document.createElement('div');
-      card.style.cssText = 'border:1px solid #E2E8F0;border-radius:12px;padding:20px;background:#F8FAFC;margin-bottom:12px;';
+      card.className = 'tier-card';
       card.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <span style="font-size:13px;font-weight:600;color:#E85A2B;">Уровень ${index + 1}</span>
-          <button class="tier-remove-btn" data-id="${tier.id}" style="border:none;background:none;color:#999;font-size:22px;cursor:pointer;padding:0 6px;">×</button>
+        <div class="tier-card-header">
+          <span class="tier-card-number">Уровень ${index + 1}</span>
+          <button class="tier-card-remove-btn" data-id="${tier.id}">×</button>
         </div>
-        <div style="display:flex;flex-direction:column;gap:14px;">
-          <div>
-            <label style="display:block;font-size:13px;color:#4A5568;margin-bottom:6px;">Название</label>
-            <input type="text" class="tier-name-input" data-id="${tier.id}" value="${tier.name}" placeholder="Например: Базовый" style="width:100%;height:40px;padding:0 14px;border:1px solid #E2E8F0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+        <div class="tier-card-fields">
+          <div class="tier-card-field">
+            <label class="tier-card-label">Название</label>
+            <input type="text" class="tier-card-input" data-field="name" value="${escapeHtml(tier.name)}" placeholder="Например: Базовый" maxlength="100">
           </div>
-          <div>
-            <label style="display:block;font-size:13px;color:#4A5568;margin-bottom:6px;">Цена (₽/мес)</label>
-            <input type="number" class="tier-price-input" data-id="${tier.id}" value="${tier.price || ''}" placeholder="0" min="0" style="width:100%;height:40px;padding:0 14px;border:1px solid #E2E8F0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+          <div class="tier-card-field">
+            <label class="tier-card-label">Цена (₽/мес)</label>
+            <input type="number" class="tier-card-input" data-field="price" value="${tier.price || ''}" placeholder="0" min="0" max="999999">
           </div>
-          <div>
-            <label style="display:block;font-size:13px;color:#4A5568;margin-bottom:6px;">Описание</label>
-            <input type="text" class="tier-desc-input" data-id="${tier.id}" value="${tier.description}" placeholder="Что получает подписчик" style="width:100%;height:40px;padding:0 14px;border:1px solid #E2E8F0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+          <div class="tier-card-field">
+            <label class="tier-card-label">Описание</label>
+            <input type="text" class="tier-card-input" data-field="description" value="${escapeHtml(tier.description)}" placeholder="Что получает подписчик" maxlength="500">
           </div>
         </div>
       `;
 
       // Удаление уровня
-      card.querySelector('.tier-remove-btn')?.addEventListener('click', () => {
-        tiers = tiers.filter(t => t.id !== tier.id);
-        renderTiers();
-      });
+      const removeBtn = card.querySelector('.tier-card-remove-btn') as HTMLButtonElement;
+      if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+          tiers = tiers.filter(t => t.id !== tier.id);
+          renderTiers();
+        });
+      }
 
       // Изменение названия
-      card.querySelector('.tier-name-input')?.addEventListener('input', (e: Event) => {
-        tier.name = (e.target as HTMLInputElement).value;
-      });
+      const nameInput = card.querySelector('[data-field="name"]') as HTMLInputElement;
+      if (nameInput) {
+        nameInput.addEventListener('input', (e: Event) => {
+          tier.name = (e.target as HTMLInputElement).value;
+          clearValidationErrors(card);
+        });
+      }
 
       // Изменение цены
-      card.querySelector('.tier-price-input')?.addEventListener('input', (e: Event) => {
-        tier.price = Number((e.target as HTMLInputElement).value) || 0;
-      });
+      const priceInput = card.querySelector('[data-field="price"]') as HTMLInputElement;
+      if (priceInput) {
+        priceInput.addEventListener('input', (e: Event) => {
+          tier.price = Number((e.target as HTMLInputElement).value) || 0;
+          clearValidationErrors(card);
+        });
+      }
 
       // Изменение описания
-      card.querySelector('.tier-desc-input')?.addEventListener('input', (e: Event) => {
-        tier.description = (e.target as HTMLInputElement).value;
-      });
+      const descInput = card.querySelector('[data-field="description"]') as HTMLInputElement;
+      if (descInput) {
+        descInput.addEventListener('input', (e: Event) => {
+          tier.description = (e.target as HTMLInputElement).value;
+          clearValidationErrors(card);
+        });
+      }
 
       tiersList.appendChild(card);
     });
   }
 
-  // Закрытие
+  function escapeHtml(value: string): string {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // Закрытие модального окна
   function close(): void {
     document.removeEventListener('keydown', onKey);
-    backdrop.remove();
-    panel.remove();
+    if (overlay && overlay.parentNode) {
+      overlay.remove();
+    }
+    if (panel && panel.parentNode) {
+      panel.remove();
+    }
   }
 
   function onKey(e: KeyboardEvent): void {
-    if (e.key === 'Escape') close();
+    if (e.key === 'Escape') {
+      close();
+    }
   }
 
   // Обработчики событий
-  backdrop.addEventListener('click', close);
-  header.querySelector('#tiers-close-btn')?.addEventListener('click', close);
+  overlay.addEventListener('click', close);
+
+  const closeBtn = header.querySelector('#tiers-close-btn') as HTMLButtonElement;
+  if (closeBtn) {
+    closeBtn.addEventListener('click', close);
+  }
 
   cancelBtn.addEventListener('click', (e: MouseEvent) => {
     e.preventDefault();
@@ -167,6 +273,27 @@ export function openTiersModal({
 
   saveBtn.addEventListener('click', async (e: MouseEvent) => {
     e.preventDefault();
+
+    // Очищаем все ошибки
+    const cards = tiersList.querySelectorAll('.tier-card');
+    cards.forEach(card => clearValidationErrors(card as HTMLElement));
+
+    // Валидируем все уровни
+    let hasErrors = false;
+    tiers.forEach((tier, index) => {
+      const result = validateSingleTier(tier);
+      if (!result.isValid) {
+        hasErrors = true;
+        const card = tiersList.querySelectorAll('.tier-card')[index] as HTMLElement;
+        if (card) {
+          showValidationErrors(card, result.errors);
+        }
+      }
+    });
+
+    if (hasErrors) {
+      return;
+    }
 
     const validTiers = tiers.filter(t => t.name.trim() && t.price > 0);
 
@@ -190,18 +317,22 @@ export function openTiersModal({
         })
       });
 
-      if (onSaved) onSaved();
+      if (onSaved) {
+        onSaved();
+      }
       close();
     } catch (error: unknown) {
-      console.error('Failed to save:', error);
-      if (onSaved) onSaved();
+      console.error('Failed to save tiers:', error);
+      if (onSaved) {
+        onSaved();
+      }
       close();
     }
   });
 
   // Добавляем в DOM
   document.addEventListener('keydown', onKey);
-  document.body.appendChild(backdrop);
+  document.body.appendChild(overlay);
   document.body.appendChild(panel);
 
   // Загружаем существующие уровни
