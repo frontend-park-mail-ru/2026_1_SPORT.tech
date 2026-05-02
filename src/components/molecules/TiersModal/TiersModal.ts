@@ -17,7 +17,7 @@ interface TierData {
   name: string;
   price: number;
   description: string;
-  index?: number; // Добавляем опциональное поле для индекса
+  index?: number;
 }
 
 export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
@@ -31,6 +31,40 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
   const container = document.createElement('div');
   container.className = 'tiers-modal-container';
 
+  // Функция для показа ошибки
+  function showError(message: string): void {
+    const existingError = container.querySelector('.tiers-error-message');
+    if (existingError) {
+      existingError.remove();
+    }
+
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'tiers-error-message';
+    errorDiv.style.cssText = `
+      background: #FEE2E2;
+      color: #991B1B;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 16px;
+      text-align: center;
+      animation: fadeIn 0.3s ease;
+    `;
+    errorDiv.textContent = message;
+
+    const tiersList = container.querySelector('[data-container="tiers-list"]');
+    if (tiersList) {
+      tiersList.parentNode?.insertBefore(errorDiv, tiersList);
+    }
+
+    // Автоматически убираем через 3 секунды
+    setTimeout(() => {
+      errorDiv.style.opacity = '0';
+      errorDiv.style.transition = 'opacity 0.3s ease';
+      setTimeout(() => errorDiv.remove(), 300);
+    }, 3000);
+  }
+
   // Функция обновления индексов
   function updateIndices(): void {
     tiers.forEach((tier, index) => {
@@ -40,7 +74,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
 
   // Функция рендеринга
   function render(): void {
-    updateIndices(); // Обновляем индексы перед рендерингом
+    updateIndices();
     const html = template({ tiers });
     container.innerHTML = html;
     bindEvents();
@@ -118,7 +152,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
     const validTiers = tiers.filter(t => t.name.trim() && t.price > 0);
 
     if (validTiers.length === 0) {
-      alert('Добавьте хотя бы один уровень с названием и ценой');
+      showError('Добавьте хотя бы один уровень с названием и ценой');
       return;
     }
 
@@ -141,8 +175,9 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
       close();
     } catch (error: unknown) {
       console.error('Failed to save:', error);
-      if (onSaved) onSaved();
-      close();
+      showError('Не удалось сохранить уровни подписки');
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Сохранить';
     }
   }
 
@@ -184,6 +219,6 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
       }
     })
     .catch(() => {
-      // Не удалось загрузить — оставляем пустой список
+      showError('Не удалось загрузить существующие уровни');
     });
 }

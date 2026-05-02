@@ -11,6 +11,7 @@ import { renderPostCard } from '../../molecules/PostCard/PostCard';
 import { openPostFormModal } from '../../molecules/PostFormModal/PostFormModal';
 import { openTiersModal } from '../../molecules/TiersModal/TiersModal';
 import type { Profile, TrainerDetails, PostListItem, PostAttachment } from '../../../types/api.types';
+
 interface ProfileContentParams {
   activeTab?: string;
   posts?: PostWithAuthor[];
@@ -286,9 +287,9 @@ function formatPostContent(textContent: string): string {
 }
 
 /**
- * Создаёт кнопку "Настроить уровни" с обработчиком открытия модального окна
+ * Создаёт секцию подписок: для тренера — кнопка "Настроить уровни", для клиента — заглушка
  */
-function renderTiersButton(container: HTMLElement, api: ApiClient): void {
+function renderTiersSection(container: HTMLElement, api: ApiClient, isTrainer: boolean): void {
   container.innerHTML = '';
 
   const wrapper = document.createElement('div');
@@ -300,21 +301,29 @@ function renderTiersButton(container: HTMLElement, api: ApiClient): void {
 
   container.appendChild(wrapper);
 
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'button button--primary-orange button--medium';
-  button.style.cssText = 'width:100%;max-width:300px;margin:0 auto;display:block;';
-  button.textContent = 'Настроить уровни';
+  if (isTrainer) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button button--primary-orange button--medium';
+    button.style.cssText = 'width:100%;max-width:300px;margin:0 auto;display:block;';
+    button.textContent = 'Настроить уровни';
 
-  button.addEventListener('click', () => {
-    openTiersModal({
-      api,
-      onSaved: () => {}
+    button.addEventListener('click', () => {
+      openTiersModal({
+        api,
+        onSaved: () => {}
+      });
     });
-  });
 
-  wrapper.appendChild(button);
+    wrapper.appendChild(button);
+  } else {
+    const message = document.createElement('p');
+    message.style.cssText = 'color:#999;text-align:center;padding:20px;';
+    message.textContent = 'У вас нет доступа к настройке уровней подписки';
+    wrapper.appendChild(message);
+  }
 }
+
 export async function renderProfileContent(
   container: HTMLElement,
   params: ProfileContentParams
@@ -374,9 +383,9 @@ export async function renderProfileContent(
     canAddPost: canAddPost && currentTab === 'publications'
   });
 
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = html.trim();
-  const element = wrapper.firstElementChild as HTMLElement;
+  const wrapperHtml = document.createElement('div');
+  wrapperHtml.innerHTML = html.trim();
+  const element = wrapperHtml.firstElementChild as HTMLElement;
   const sectionTitleEl = element.querySelector('.profile-content__section-title') as HTMLElement;
   const filtersElement = element.querySelector('.profile-content__filters') as HTMLElement | null;
   const addButtonContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
@@ -537,7 +546,7 @@ export async function renderProfileContent(
 
         if (subsContainer) {
           subsContainer.style.display = 'block';
-          renderTiersButton(subsContainer, api);
+          renderTiersSection(subsContainer, api, isTrainer);
         }
       } else if (tabId === 'publications' && !isTrainer) {
         if (filtersElement) filtersElement.style.display = 'none';
@@ -604,7 +613,7 @@ export async function renderProfileContent(
     toggleSidebarVisibility(false);
     if (subsContainer) {
       subsContainer.style.display = 'block';
-      renderTiersButton(subsContainer, api);
+      renderTiersSection(subsContainer, api, isTrainer);
     }
   } else if (currentTab === 'publications' && !isTrainer) {
     if (postsContainer) postsContainer.style.display = 'block';
