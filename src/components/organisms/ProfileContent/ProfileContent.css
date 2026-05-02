@@ -653,3 +653,25 @@
   accent-color: #E85A2B;
   cursor: pointer;
 }
+/* Стили для блока подписок */
+.tiers-settings {
+  padding: 20px;
+  text-align: center;
+}
+
+.tiers-settings h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1A2B3C;
+}
+
+.tiers-settings .button--full-width {
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+/* Скрытие поиска по умолчанию */
+.profile-content__search[style*="display: none"] {
+  display: none !important;
+}

@@ -6,7 +6,7 @@
 import { loadProfilePageData } from '../../../utils/profilePageData';
 import type { ApiClient } from '../../../utils/api';
 import type { PostWithAuthor } from '../../../types/post.types';
-import type { Profile, TrainerDetails } from '../../../types/api.types';
+import type { Profile, TrainerDetails, PostListItem } from '../../../types/api.types';
 import { renderButton } from '../../atoms/Button/Button';
 import { renderPostCard } from '../../molecules/PostCard/PostCard';
 import { openPostFormModal } from '../../molecules/PostFormModal/PostFormModal';
@@ -67,12 +67,16 @@ export async function fillProfilePostsSection(
 
   setPostsContainerMessageState(postsContainer, false);
   postsContainer.innerHTML = '';
-  await Promise.all(posts.map(post => renderPostCard(postsContainer, {
-    ...post,
-    api,
-    isOwner: canManagePosts,
-    onPostsUpdated: onPostsUpdated ?? undefined
-  })));
+
+  // Render posts sequentially to avoid race conditions
+  for (const post of posts) {
+    await renderPostCard(postsContainer, {
+      ...post,
+      api,
+      isOwner: canManagePosts,
+      onPostsUpdated: onPostsUpdated ?? undefined
+    });
+  }
 }
 
 function getYearsWord(years: number): string {
@@ -103,7 +107,7 @@ async function showTrainerAbout(
   try {
     const [profile, sportTypesResponse] = await Promise.all([
       api.getProfile(userId),
-      api.getSportTypes?.().catch(() => ({ sport_types: [] })) ?? { sport_types: [] }
+      api.getSportTypes().catch(() => ({ sport_types: [] }))
     ]);
     const trainerDetails: TrainerDetails | undefined = profile.trainer_details;
 
@@ -186,7 +190,7 @@ function showClientAbout(container: HTMLElement, profile: Profile): void {
     <div class="trainer-about">
       <div class="trainer-about__section">
         <h3 class="trainer-about__section-title">Имя пользователя</h3>
-        <p class="trainer-about__section-text">${profile.username || 'Не указано'}</p>
+        <p class="trainer-about__section-text">${escapeHtml(profile.username || 'Не указано')}</p>
       </div>
       <div class="trainer-about__section">
         <h3 class="trainer-about__section-title">Полное имя</h3>
@@ -194,7 +198,7 @@ function showClientAbout(container: HTMLElement, profile: Profile): void {
       </div>
       <div class="trainer-about__section">
         <h3 class="trainer-about__section-title">О себе</h3>
-        <p class="trainer-about__section-text">${profile.bio || 'Не указано'}</p>
+        <p class="trainer-about__section-text">${escapeHtml(profile.bio || 'Не указано')}</p>
       </div>
     </div>
   `;
@@ -221,16 +225,34 @@ interface LikedPost {
 async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost[]> {
   try {
     const postsData = await api.getUserPosts(userId);
-    const postList = Array.isArray(postsData?.posts) ? postsData.posts : [];
+    const postList: PostListItem[] = Array.isArray(postsData?.posts) ? postsData.posts : [];
 
-    const likedPosts = postList.filter(post => post.is_liked);
+    // Filter posts that are liked by current user
+    const likedPosts: PostListItem[] = postList.filter((post: PostListItem) => post.is_liked);
 
-    const fullPosts = await Promise.all(likedPosts.map(async (post): Promise<LikedPost | null> => {
+    const fullPosts: LikedPost[] = [];
+
+    for (const post of likedPosts) {
       try {
         const fullPost = await api.getPost(post.post_id);
-        const authorProfile = await api.getProfile(post.trainer_id).catch(() => ({} as Profile));
+        const authorProfile = await api.getProfile(post.trainer_id).catch((): Profile => {
+          return {
+            user_id: post.trainer_id,
+            username: '',
+            email: '',
+            first_name: '',
+            last_name: '',
+            avatar_url: null,
+            bio: null,
+            is_trainer: true,
+            is_admin: false,
+            is_me: false,
+            created_at: '',
+            updated_at: ''
+          };
+        });
 
-        return {
+        fullPosts.push({
           post_id: post.post_id,
           title: post.title,
           content: formatPostContent(fullPost?.text_content || ''),
@@ -246,13 +268,14 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
           min_tier_id: post.min_tier_id ?? null,
           attachments: fullPost?.attachments || [],
           isOwner: false
-        };
+        });
       } catch {
-        return null;
+        // Skip posts that fail to load
+        continue;
       }
-    }));
+    }
 
-    return fullPosts.filter((p): p is LikedPost => p !== null);
+    return fullPosts;
   } catch (error: unknown) {
     console.error('Failed to load liked posts:', error);
     return [];
@@ -286,7 +309,9 @@ export async function renderProfileContent(
     isTrainer = true
   } = params;
 
-  const template = (window as any).Handlebars.templates['ProfileContent.hbs'];
+  // Используем глобальный Handlebars
+  const HandlebarsGlobal = (window as unknown as { Handlebars: { templates: Record<string, (context: Record<string, unknown>) => string> } }).Handlebars;
+  const template = HandlebarsGlobal.templates['ProfileContent.hbs'];
 
   const tabs = isTrainer
     ? [
@@ -336,10 +361,20 @@ export async function renderProfileContent(
   const addButtonContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
   const postsContainer = element.querySelector('#posts-container') as HTMLElement;
   const subsContainer = element.querySelector('#subscriptions-container') as HTMLElement | null;
+  const searchBlock = element.querySelector('.profile-content__search') as HTMLElement | null;
 
   if (!isTrainer) {
     if (filtersElement) filtersElement.style.display = 'none';
     if (addButtonContainer) addButtonContainer.style.display = 'none';
+  }
+
+  /**
+   * Показывает/скрывает блок поиска в зависимости от вкладки
+   */
+  function toggleSearchVisibility(show: boolean): void {
+    if (searchBlock) {
+      searchBlock.style.display = show ? 'block' : 'none';
+    }
   }
 
   // Фильтр по видам спорта — с сохранением состояния
@@ -455,6 +490,9 @@ export async function renderProfileContent(
       if (postsContainer) postsContainer.style.display = 'none';
       if (subsContainer) subsContainer.style.display = 'none';
 
+      // Скрываем поиск по умолчанию
+      toggleSearchVisibility(false);
+
       if (tabId === 'about') {
         if (filtersElement) filtersElement.style.display = 'none';
         if (addButtonContainer) addButtonContainer.style.display = 'none';
@@ -479,7 +517,7 @@ export async function renderProfileContent(
             <div class="tiers-settings">
               <h3 style="margin-bottom:16px;">Уровни подписки</h3>
               <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
-              <button type="button" class="button button--primary-orange" id="open-tiers-settings">
+              <button type="button" class="button button--primary-orange button--full-width" id="open-tiers-settings">
                 Настроить уровни
               </button>
             </div>
@@ -500,15 +538,18 @@ export async function renderProfileContent(
         sectionTitleEl.textContent = 'Понравившиеся';
 
         if (postsContainer) postsContainer.style.display = 'block';
-        const freshPosts = await loadProfilePageData(api, viewedUserId);
+        toggleSearchVisibility(true);
+
+        const likedPosts = await loadLikedPosts(api, viewedUserId);
         await fillProfilePostsSection(postsContainer, {
           activeTab: tabId,
-          posts: freshPosts.posts,
+          posts: likedPosts as PostWithAuthor[],
           api,
-          canManagePosts,
+          canManagePosts: false,
           onPostsUpdated: onPostsUpdated ?? undefined
         });
       } else {
+        // main или publications для тренера
         if (filtersElement) {
           filtersElement.style.display = (tabId === 'main' || tabId === 'publications') ? 'flex' : 'none';
         }
@@ -518,11 +559,13 @@ export async function renderProfileContent(
         sectionTitleEl.textContent = sectionTitles[tabId] || 'Публикации';
 
         if (postsContainer) postsContainer.style.display = 'block';
+        toggleSearchVisibility(true);
         await applyFilters();
       }
     });
   });
 
+  // Рендерим кнопку добавления публикации
   if (canAddPost && currentTab === 'publications' && isTrainer) {
     const btnContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
     if (btnContainer) {
@@ -531,6 +574,7 @@ export async function renderProfileContent(
         variant: 'primary-orange',
         state: 'normal',
         size: 'medium',
+        fullWidth: false,
         onClick: async () => {
           await openPostFormModal({
             api,
@@ -545,6 +589,7 @@ export async function renderProfileContent(
   // Показываем нужный контейнер при первой загрузке
   if (currentTab === 'about') {
     if (postsContainer) postsContainer.style.display = 'block';
+    toggleSearchVisibility(false);
     if (isTrainer) {
       await showTrainerAbout(postsContainer, api, viewedUserId);
     } else {
@@ -553,8 +598,10 @@ export async function renderProfileContent(
     }
   } else if (currentTab === 'subscriptions') {
     if (subsContainer) subsContainer.style.display = 'block';
+    toggleSearchVisibility(false);
   } else if (currentTab === 'publications' && !isTrainer) {
     if (postsContainer) postsContainer.style.display = 'block';
+    toggleSearchVisibility(true);
     const likedPosts = await loadLikedPosts(api, viewedUserId);
     await fillProfilePostsSection(postsContainer, {
       activeTab: currentTab,
@@ -565,6 +612,7 @@ export async function renderProfileContent(
     });
   } else {
     if (postsContainer) postsContainer.style.display = 'block';
+    toggleSearchVisibility(true);
     await applyFilters();
   }
 

@@ -32,7 +32,8 @@ export async function openTiersModal({
   api,
   onSaved
 }: TiersModalOptions): Promise<void> {
-  const template = (window as any).Handlebars.templates['TiersModal.hbs'];
+  const HandlebarsGlobal = (window as unknown as { Handlebars: { templates: Record<string, (context: Record<string, unknown>) => string> } }).Handlebars;
+  const template = HandlebarsGlobal.templates['TiersModal.hbs'];
   const root = document.createElement('div');
   root.innerHTML = template({}).trim();
   const modal = root.firstElementChild as HTMLElement;
@@ -79,7 +80,7 @@ export async function openTiersModal({
         <div class="tier-card__fields">
           <div class="tier-card__field">
             <label class="tier-card__label">Название</label>
-            <input type="text" class="tier-card__input" data-tier-name="${tier.id}" value="${tier.name}" placeholder="Например: Базовый">
+            <input type="text" class="tier-card__input" data-tier-name="${tier.id}" value="${escapeHtml(tier.name)}" placeholder="Например: Базовый">
           </div>
           <div class="tier-card__field">
             <label class="tier-card__label">Цена (₽/мес)</label>
@@ -87,7 +88,7 @@ export async function openTiersModal({
           </div>
           <div class="tier-card__field">
             <label class="tier-card__label">Описание</label>
-            <input type="text" class="tier-card__input" data-tier-desc="${tier.id}" value="${tier.description}" placeholder="Что получает подписчик">
+            <input type="text" class="tier-card__input" data-tier-desc="${tier.id}" value="${escapeHtml(tier.description)}" placeholder="Что получает подписчик">
           </div>
         </div>
       `;
@@ -110,6 +111,15 @@ export async function openTiersModal({
     });
   }
 
+  function escapeHtml(value: string): string {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function onKey(e: KeyboardEvent): void {
     if (e.key === 'Escape') close();
   }
@@ -118,6 +128,9 @@ export async function openTiersModal({
     document.removeEventListener('keydown', onKey);
     modal.remove();
   }
+
+  // Закрытие по клику на backdrop
+  modal.querySelector('[data-tiers-close]')?.addEventListener('click', close);
 
   modal.querySelector('#add-tier-btn')?.addEventListener('click', addTier);
 
