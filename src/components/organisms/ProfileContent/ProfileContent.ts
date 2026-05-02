@@ -68,7 +68,6 @@ export async function fillProfilePostsSection(
   setPostsContainerMessageState(postsContainer, false);
   postsContainer.innerHTML = '';
 
-  // Render posts sequentially to avoid race conditions
   for (const post of posts) {
     await renderPostCard(postsContainer, {
       ...post,
@@ -226,31 +225,26 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
   try {
     const postsData = await api.getUserPosts(userId);
     const postList: PostListItem[] = Array.isArray(postsData?.posts) ? postsData.posts : [];
-
-    // Filter posts that are liked by current user
     const likedPosts: PostListItem[] = postList.filter((post: PostListItem) => post.is_liked);
-
     const fullPosts: LikedPost[] = [];
 
     for (const post of likedPosts) {
       try {
         const fullPost = await api.getPost(post.post_id);
-        const authorProfile = await api.getProfile(post.trainer_id).catch((): Profile => {
-          return {
-            user_id: post.trainer_id,
-            username: '',
-            email: '',
-            first_name: '',
-            last_name: '',
-            avatar_url: null,
-            bio: null,
-            is_trainer: true,
-            is_admin: false,
-            is_me: false,
-            created_at: '',
-            updated_at: ''
-          };
-        });
+        const authorProfile = await api.getProfile(post.trainer_id).catch((): Profile => ({
+          user_id: post.trainer_id,
+          username: '',
+          email: '',
+          first_name: '',
+          last_name: '',
+          avatar_url: null,
+          bio: null,
+          is_trainer: true,
+          is_admin: false,
+          is_me: false,
+          created_at: '',
+          updated_at: ''
+        }));
 
         fullPosts.push({
           post_id: post.post_id,
@@ -270,7 +264,6 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
           isOwner: false
         });
       } catch {
-        // Skip posts that fail to load
         continue;
       }
     }
@@ -293,6 +286,41 @@ function formatPostContent(textContent: string): string {
     .replace(/\n/g, '<br>');
 }
 
+/**
+ * Создаёт кнопку "Настроить уровни" с обработчиком открытия модального окна
+ */
+function renderTiersButton(container: HTMLElement, api: ApiClient): void {
+  container.innerHTML = `
+    <div class="tiers-settings">
+      <h3>Уровни подписки</h3>
+      <p>Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
+      <div id="tiers-button-container"></div>
+    </div>
+  `;
+
+  const btnContainer = container.querySelector('#tiers-button-container') as HTMLElement;
+  if (!btnContainer) return;
+
+  renderButton(btnContainer, {
+    text: 'Настроить уровни',
+    variant: 'primary-orange',
+    size: 'medium',
+    fullWidth: true,
+    onClick: () => {
+      openTiersModal({
+        api,
+        onSaved: () => {
+          // Уровни сохранены
+        }
+      }).catch((error: unknown) => {
+        console.error('Failed to open tiers modal:', error);
+      });
+    }
+  }).catch((error: unknown) => {
+    console.error('Failed to render tiers button:', error);
+  });
+}
+
 export async function renderProfileContent(
   container: HTMLElement,
   params: ProfileContentParams
@@ -309,7 +337,6 @@ export async function renderProfileContent(
     isTrainer = true
   } = params;
 
-  // Используем глобальный Handlebars
   const HandlebarsGlobal = (window as unknown as { Handlebars: { templates: Record<string, (context: Record<string, unknown>) => string> } }).Handlebars;
   const template = HandlebarsGlobal.templates['ProfileContent.hbs'];
 
@@ -362,22 +389,26 @@ export async function renderProfileContent(
   const postsContainer = element.querySelector('#posts-container') as HTMLElement;
   const subsContainer = element.querySelector('#subscriptions-container') as HTMLElement | null;
   const searchBlock = element.querySelector('.profile-content__search') as HTMLElement | null;
+  const sidebarRight = element.querySelector('.profile-content__sidebar-right') as HTMLElement | null;
 
   if (!isTrainer) {
     if (filtersElement) filtersElement.style.display = 'none';
     if (addButtonContainer) addButtonContainer.style.display = 'none';
   }
 
-  /**
-   * Показывает/скрывает блок поиска в зависимости от вкладки
-   */
   function toggleSearchVisibility(show: boolean): void {
     if (searchBlock) {
       searchBlock.style.display = show ? 'block' : 'none';
     }
   }
 
-  // Фильтр по видам спорта — с сохранением состояния
+  function toggleSidebarVisibility(show: boolean): void {
+    if (sidebarRight) {
+      sidebarRight.style.display = show ? 'flex' : 'none';
+    }
+  }
+
+  // Фильтр по видам спорта
   const activeFilters = new Set<string>();
   let activeDropdown: HTMLElement | null = null;
 
@@ -450,7 +481,6 @@ export async function renderProfileContent(
           checkbox.addEventListener('change', async () => {
             if (checkbox.checked) activeFilters.add(id);
             else activeFilters.delete(id);
-
             updateFilterLabel();
             await applyFilters();
           });
@@ -476,6 +506,7 @@ export async function renderProfileContent(
     });
   }
 
+  // Обработчики переключения вкладок
   element.querySelectorAll('.profile-content__tab').forEach((tab: Element) => {
     tab.addEventListener('click', async () => {
       const htmlTab = tab as HTMLElement;
@@ -486,14 +517,14 @@ export async function renderProfileContent(
       });
       htmlTab.classList.add('profile-content__tab--active');
 
-      // Скрываем все контенеры
       if (postsContainer) postsContainer.style.display = 'none';
       if (subsContainer) subsContainer.style.display = 'none';
 
-      // Скрываем поиск по умолчанию
       toggleSearchVisibility(false);
+      toggleSidebarVisibility(true);
 
       if (tabId === 'about') {
+        toggleSidebarVisibility(false);
         if (filtersElement) filtersElement.style.display = 'none';
         if (addButtonContainer) addButtonContainer.style.display = 'none';
         sectionTitleEl.textContent = isTrainer ? 'О тренере' : 'О себе';
@@ -507,30 +538,14 @@ export async function renderProfileContent(
           showClientAbout(postsContainer, profile);
         }
       } else if (tabId === 'subscriptions') {
+        toggleSidebarVisibility(false);
         if (filtersElement) filtersElement.style.display = 'none';
         if (addButtonContainer) addButtonContainer.style.display = 'none';
         sectionTitleEl.textContent = 'Подписки';
 
         if (subsContainer) {
           subsContainer.style.display = 'block';
-          subsContainer.innerHTML = `
-            <div class="tiers-settings">
-              <h3 style="margin-bottom:16px;">Уровни подписки</h3>
-              <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
-              <button type="button" class="button button--primary-orange button--full-width" id="open-tiers-settings">
-                Настроить уровни
-              </button>
-            </div>
-          `;
-
-          subsContainer.querySelector('#open-tiers-settings')?.addEventListener('click', () => {
-            openTiersModal({
-              api,
-              onSaved: () => {
-                // Можно обновить отображение
-              }
-            });
-          });
+          renderTiersButton(subsContainer, api);
         }
       } else if (tabId === 'publications' && !isTrainer) {
         if (filtersElement) filtersElement.style.display = 'none';
@@ -549,7 +564,6 @@ export async function renderProfileContent(
           onPostsUpdated: onPostsUpdated ?? undefined
         });
       } else {
-        // main или publications для тренера
         if (filtersElement) {
           filtersElement.style.display = (tabId === 'main' || tabId === 'publications') ? 'flex' : 'none';
         }
@@ -565,7 +579,7 @@ export async function renderProfileContent(
     });
   });
 
-  // Рендерим кнопку добавления публикации
+  // Кнопка добавления публикации
   if (canAddPost && currentTab === 'publications' && isTrainer) {
     const btnContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
     if (btnContainer) {
@@ -586,10 +600,10 @@ export async function renderProfileContent(
     }
   }
 
-  // Показываем нужный контейнер при первой загрузке
+  // Первая загрузка
   if (currentTab === 'about') {
+    toggleSidebarVisibility(false);
     if (postsContainer) postsContainer.style.display = 'block';
-    toggleSearchVisibility(false);
     if (isTrainer) {
       await showTrainerAbout(postsContainer, api, viewedUserId);
     } else {
@@ -597,8 +611,11 @@ export async function renderProfileContent(
       showClientAbout(postsContainer, profile);
     }
   } else if (currentTab === 'subscriptions') {
-    if (subsContainer) subsContainer.style.display = 'block';
-    toggleSearchVisibility(false);
+    toggleSidebarVisibility(false);
+    if (subsContainer) {
+      subsContainer.style.display = 'block';
+      renderTiersButton(subsContainer, api);
+    }
   } else if (currentTab === 'publications' && !isTrainer) {
     if (postsContainer) postsContainer.style.display = 'block';
     toggleSearchVisibility(true);
