@@ -249,30 +249,44 @@ export class ApiClient {
     });
   }
 
+
   async uploadPostMedia(file: File): Promise<{ file_url: string; content_type: string; kind: string; size_bytes: number }> {
     await this.ensureCsrfToken();
+
+    // Создаём чистую FormData только с файлом
     const formData = new FormData();
     formData.append('file', file);
 
+    // Заголовки: НЕ устанавливаем Content-Type!
     const headers: Record<string, string> = {};
     if (this.csrfToken) {
       headers['X-CSRF-Token'] = this.csrfToken;
     }
+    // Важно: Accept тоже можно указать
+    headers['Accept'] = 'application/json';
 
     const response = await fetch(`${this.baseURL}/v1/posts/media`, {
       method: 'POST',
       credentials: 'include',
       headers,
       body: formData
+      // Не указываем mode, cache и т.д.
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({} as { error?: { message?: string } }));
-      throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData?.error?.message || errorData?.message || errorMessage;
+      } catch {
+        // Если не JSON — используем статус
+      }
+      throw new Error(errorMessage);
     }
 
     return response.json();
   }
+
 
   async deletePost(postId: number): Promise<void> {
     await this.ensureCsrfToken();

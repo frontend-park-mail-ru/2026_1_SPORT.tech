@@ -33,6 +33,11 @@ interface ContentBlock {
   file: File | null;
 }
 
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+
 export async function openPostFormModal({
   api,
   mode,
@@ -57,11 +62,10 @@ export async function openPostFormModal({
   const blocksContainer = modal.querySelector('#post-form-blocks') as HTMLElement;
   const _validator = new Validator();
 
-  // Блоки контента
   const blocks: ContentBlock[] = [];
   let blockCounter = 0;
 
-  // Загружаем виды спорта и создаём чекбоксы
+  // Спортивные дисциплины
   const sportTypes = await loadSportTypes(api);
   if (sportFieldContainer && sportTypes.length > 0) {
     createSportTypesField(sportFieldContainer, {
@@ -73,7 +77,7 @@ export async function openPostFormModal({
     });
   }
 
-  // Создаём чекбоксы для уровней подписки
+  // Уровни подписки
   let selectedTiers: number[] = [];
   if (tierContainer) {
     const tierOptions: SportTypeFieldOption[] = [
@@ -103,7 +107,44 @@ export async function openPostFormModal({
     onChange: () => titleApi.setNormal()
   });
 
-  // Добавление блоков
+  function validateFile(file: File): string | null {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return 'Неподдерживаемый формат файла. Разрешены: JPEG, PNG, GIF, WebP, MP4, WebM, MOV';
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      return `Файл слишком большой. Максимальный размер: ${MAX_FILE_SIZE / 1024 / 1024}MB`;
+    }
+    return null;
+  }
+
+  function handleFileSelect(file: File, block: ContentBlock, mediaContainer: HTMLElement): void {
+    const error = validateFile(file);
+    if (error) {
+      alert(error);
+      return;
+    }
+
+    block.file = file;
+    const url = URL.createObjectURL(file);
+    block.value = url;
+
+    // Очищаем контейнер и показываем превью
+    mediaContainer.innerHTML = '';
+    if (file.type.startsWith('video/')) {
+      const video = document.createElement('video');
+      video.controls = true;
+      video.src = url;
+      video.style.cssText = 'max-width:100%;max-height:300px;';
+      mediaContainer.appendChild(video);
+    } else {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = 'Медиа';
+      img.style.cssText = 'max-width:100%;max-height:300px;object-fit:contain;';
+      mediaContainer.appendChild(img);
+    }
+  }
+
   function addBlock(type: 'text' | 'media'): void {
     const block: ContentBlock = {
       id: `block-${++blockCounter}`,
@@ -117,7 +158,13 @@ export async function openPostFormModal({
 
   function removeBlock(id: string): void {
     const index = blocks.findIndex(b => b.id === id);
-    if (index !== -1) blocks.splice(index, 1);
+    if (index !== -1) {
+      // Очищаем URL созданный через createObjectURL
+      if (blocks[index].value && blocks[index].value.startsWith('blob:')) {
+        URL.revokeObjectURL(blocks[index].value);
+      }
+      blocks.splice(index, 1);
+    }
     renderBlocks();
   }
 
@@ -128,9 +175,13 @@ export async function openPostFormModal({
     blocks.forEach(block => {
       const blockEl = document.createElement('div');
       blockEl.className = 'post-form__block';
-      blockEl.innerHTML = `
-        <button type="button" class="post-form__remove-block" data-remove="${block.id}">×</button>
-      `;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'post-form__remove-block';
+      removeBtn.textContent = '×';
+      removeBtn.addEventListener('click', () => removeBlock(block.id));
+      blockEl.appendChild(removeBtn);
 
       if (block.type === 'text') {
         const textarea = document.createElement('textarea');
@@ -144,47 +195,85 @@ export async function openPostFormModal({
         mediaContainer.className = 'post-form__block-media';
 
         if (block.value) {
+          // Показываем существующее превью
           if (block.file?.type.startsWith('video/')) {
-            mediaContainer.innerHTML = `<video controls src="${block.value}" style="max-width:100%;max-height:300px;"></video>`;
+            const video = document.createElement('video');
+            video.controls = true;
+            video.src = block.value;
+            video.style.cssText = 'max-width:100%;max-height:300px;';
+            mediaContainer.appendChild(video);
           } else {
-            mediaContainer.innerHTML = `<img src="${block.value}" alt="Медиа" style="max-width:100%;max-height:300px;object-fit:contain;">`;
+            const img = document.createElement('img');
+            img.src = block.value;
+            img.alt = 'Медиа';
+            img.style.cssText = 'max-width:100%;max-height:300px;object-fit:contain;';
+            mediaContainer.appendChild(img);
           }
         } else {
+          // Плейсхолдер
           mediaContainer.innerHTML = `
             <div class="post-form__block-media-placeholder">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span>Нажмите для загрузки медиа</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <span>Нажмите или перетащите файл</span>
             </div>
           `;
         }
 
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
-        fileInput.accept = 'image/*,video/*';
+        fileInput.accept = ALLOWED_TYPES.join(',');
         fileInput.style.display = 'none';
         fileInput.addEventListener('change', () => {
           const file = fileInput.files?.[0];
           if (file) {
-            block.file = file;
-            const url = URL.createObjectURL(file);
-            block.value = url;
-            mediaContainer.innerHTML = '';
-            if (file.type.startsWith('video/')) {
-              mediaContainer.innerHTML = `<video controls src="${url}" style="max-width:100%;max-height:300px;"></video>`;
-            } else {
-              mediaContainer.innerHTML = `<img src="${url}" alt="Медиа" style="max-width:100%;max-height:300px;object-fit:contain;">`;
-            }
-            mediaContainer.appendChild(fileInput);
+            handleFileSelect(file, block, mediaContainer);
+            // Пересоздаём input после выбора файла
+            const newInput = fileInput.cloneNode(true) as HTMLInputElement;
+            newInput.addEventListener('change', () => {
+              const newFile = newInput.files?.[0];
+              if (newFile) handleFileSelect(newFile, block, mediaContainer);
+            });
+            mediaContainer.appendChild(newInput);
           }
         });
 
-        mediaContainer.addEventListener('click', () => fileInput.click());
+        // Клик для выбора файла
+        mediaContainer.addEventListener('click', (e) => {
+          // Не открываем выбор если кликнули на видео/изображение
+          const target = e.target as HTMLElement;
+          if (target.tagName === 'VIDEO' || target.tagName === 'IMG') return;
+          fileInput.click();
+        });
+
+        // Drag and drop
+        mediaContainer.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          mediaContainer.classList.add('post-form__block-media--dragover');
+        });
+
+        mediaContainer.addEventListener('dragleave', () => {
+          mediaContainer.classList.remove('post-form__block-media--dragover');
+        });
+
+        mediaContainer.addEventListener('drop', (e) => {
+          e.preventDefault();
+          mediaContainer.classList.remove('post-form__block-media--dragover');
+
+          const file = e.dataTransfer?.files?.[0];
+          if (file) {
+            handleFileSelect(file, block, mediaContainer);
+          }
+        });
+
         mediaContainer.appendChild(fileInput);
         blockEl.appendChild(mediaContainer);
       }
 
       blocksContainer.appendChild(blockEl);
-      blockEl.querySelector('[data-remove]')?.addEventListener('click', () => removeBlock(block.id));
     });
   }
 
@@ -196,6 +285,12 @@ export async function openPostFormModal({
   }
 
   function close(): void {
+    // Очищаем все blob URL
+    blocks.forEach(block => {
+      if (block.value && block.value.startsWith('blob:')) {
+        URL.revokeObjectURL(block.value);
+      }
+    });
     document.removeEventListener('keydown', onKey);
     modal.remove();
   }
@@ -238,41 +333,35 @@ export async function openPostFormModal({
     }
 
     saveBtn.setDisabled(true);
+    saveBtn.setText('Загрузка...');
+
     try {
-      // Загружаем медиа-файлы на сервер
       const apiBlocks = await Promise.all(blocks.map(async (block) => {
         if (block.type === 'media' && block.file) {
           try {
             const uploadResult = await api.uploadPostMedia(block.file);
-            // Для медиа-блоков передаём ТОЛЬКО file_url и kind
             return {
               file_url: uploadResult.file_url,
               kind: block.file.type.startsWith('video/') ? 'video' : 'image'
             };
           } catch (uploadError) {
             console.error(`Failed to upload file for block ${block.id}:`, uploadError);
-            throw new Error('Не удалось загрузить один или несколько файлов');
+            throw new Error(`Не удалось загрузить файл: ${(uploadError as Error).message}`);
           }
         } else if (block.type === 'text' && block.value.trim()) {
-          // Для текстовых блоков передаём ТОЛЬКО text_content (без kind!)
           return {
-            text_content: block.value
+            text_content: block.value.trim()
           };
         }
         return null;
       }));
 
-      // Фильтруем null значения (пустые блоки)
       const validBlocks = apiBlocks.filter(block => block !== null);
 
       if (validBlocks.length === 0) {
-        globalErr.textContent = 'Добавьте хотя бы один непустой блок контента';
-        globalErr.hidden = false;
-        saveBtn.setDisabled(false);
-        return;
+        throw new Error('Добавьте хотя бы один непустой блок контента');
       }
 
-      // Формируем payload
       const payload: {
         title: string;
         blocks: Array<{ text_content?: string; file_url?: string; kind?: string }>;
@@ -283,7 +372,6 @@ export async function openPostFormModal({
         blocks: validBlocks as Array<{ text_content?: string; file_url?: string; kind?: string }>
       };
 
-      // Добавляем min_tier_id только если выбраны уровни
       if (selectedTiers.length > 0) {
         payload.min_tier_id = Math.min(...selectedTiers);
       }
@@ -303,6 +391,7 @@ export async function openPostFormModal({
       globalErr.hidden = false;
     } finally {
       saveBtn.setDisabled(false);
+      saveBtn.setText(mode === 'edit' ? 'Сохранить' : 'Опубликовать');
     }
   });
 
