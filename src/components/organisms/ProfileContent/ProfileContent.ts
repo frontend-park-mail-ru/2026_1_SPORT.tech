@@ -340,9 +340,37 @@ export async function renderProfileContent(
     if (addButtonContainer) addButtonContainer.style.display = 'none';
   }
 
-  // Фильтр по видам спорта — простые чекбоксы
+  // Фильтр по видам спорта — с сохранением состояния
+  const activeFilters = new Set<string>();
+  let activeDropdown: HTMLElement | null = null;
+
+  const updateFilterLabel = (): void => {
+    if (!filtersElement) return;
+    const filterSpan = filtersElement.querySelector('span');
+    if (filterSpan) {
+      filterSpan.textContent = activeFilters.size > 0 ? `Фильтры (${activeFilters.size})` : 'Фильтры';
+    }
+  };
+
+  const applyFilters = async (): Promise<void> => {
+    const freshData = await loadProfilePageData(api, viewedUserId);
+    const filteredPosts = activeFilters.size > 0
+      ? freshData.posts.filter(p =>
+        activeFilters.has(String((p as PostWithAuthor & { sport_type?: string }).sport_type || ''))
+      )
+      : freshData.posts;
+
+    await fillProfilePostsSection(postsContainer, {
+      activeTab: currentTab,
+      posts: filteredPosts,
+      api,
+      canManagePosts,
+      onPostsUpdated: onPostsUpdated ?? undefined
+    });
+  };
+
   if (filtersElement) {
-    let activeDropdown: HTMLElement | null = null;
+    updateFilterLabel();
 
     filtersElement.addEventListener('click', async (e: Event) => {
       e.stopPropagation();
@@ -363,7 +391,6 @@ export async function renderProfileContent(
 
       const sportTypes = await api.getSportTypes().catch(() => ({ sport_types: [] }));
       const listContainer = activeDropdown.querySelector('#filter-sport-list') as HTMLElement;
-      const checkedIds = new Set<string>();
 
       if (sportTypes.sport_types.length > 0) {
         sportTypes.sport_types.forEach((s: { sport_type_id: number; name: string }) => {
@@ -376,34 +403,27 @@ export async function renderProfileContent(
           const checkbox = document.createElement('input');
           checkbox.type = 'checkbox';
           checkbox.value = id;
-          checkbox.style.cssText = 'accent-color:#E85A2B;width:16px;height:16px;';
+          checkbox.checked = activeFilters.has(id);
+          checkbox.style.cssText = 'accent-color:#E85A2B;width:16px;height:16px;flex-shrink:0;';
 
           checkbox.addEventListener('click', (event: Event) => {
             event.stopPropagation();
           });
 
           checkbox.addEventListener('change', async () => {
-            if (checkbox.checked) checkedIds.add(id);
-            else checkedIds.delete(id);
+            if (checkbox.checked) activeFilters.add(id);
+            else activeFilters.delete(id);
 
-            const freshData = await loadProfilePageData(api, viewedUserId);
-            const filteredPosts = checkedIds.size > 0
-              ? freshData.posts.filter(p =>
-                checkedIds.has(String((p as PostWithAuthor & { sport_type?: string }).sport_type || ''))
-              )
-              : freshData.posts;
-
-            await fillProfilePostsSection(postsContainer, {
-              activeTab: currentTab,
-              posts: filteredPosts,
-              api,
-              canManagePosts,
-              onPostsUpdated: onPostsUpdated ?? undefined
-            });
+            updateFilterLabel();
+            await applyFilters();
           });
 
+          const textSpan = document.createElement('span');
+          textSpan.textContent = s.name;
+          textSpan.style.cssText = 'font-size:14px;user-select:none;';
+
           label.appendChild(checkbox);
-          label.appendChild(document.createTextNode(s.name));
+          label.appendChild(textSpan);
           listContainer.appendChild(label);
         });
       } else {
@@ -461,14 +481,7 @@ export async function renderProfileContent(
           addButtonContainer.style.display = (canAddPost && tabId === 'publications') ? 'block' : 'none';
         }
         sectionTitleEl.textContent = sectionTitles[tabId] || 'Публикации';
-        const freshPosts = await loadProfilePageData(api, viewedUserId);
-        await fillProfilePostsSection(postsContainer, {
-          activeTab: tabId,
-          posts: freshPosts.posts,
-          api,
-          canManagePosts,
-          onPostsUpdated: onPostsUpdated ?? undefined
-        });
+        await applyFilters();
       }
     });
   });
@@ -509,14 +522,7 @@ export async function renderProfileContent(
       onPostsUpdated: onPostsUpdated ?? undefined
     });
   } else {
-    const freshPosts = await loadProfilePageData(api, viewedUserId);
-    await fillProfilePostsSection(postsContainer, {
-      activeTab: currentTab,
-      posts: freshPosts.posts,
-      api,
-      canManagePosts,
-      onPostsUpdated: onPostsUpdated ?? undefined
-    });
+    await applyFilters();
   }
 
   container.appendChild(element);
