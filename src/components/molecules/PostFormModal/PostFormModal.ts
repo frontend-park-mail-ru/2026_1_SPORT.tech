@@ -350,7 +350,8 @@ export async function openPostFormModal({
           }
         } else if (block.type === 'text' && block.value.trim()) {
           return {
-            text_content: block.value.trim()
+            text_content: block.value.trim(),
+            kind: 'text'
           };
         }
         return null;
