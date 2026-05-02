@@ -25,31 +25,30 @@
 
   <h3 class="post-card__title">{{title}}</h3>
 
-  <!-- Короткая версия (только первый текстовый блок) -->
+  <!-- Короткая версия -->
   <div class="post-card__body post-card__body--short">
     <div class="post-card__content">
-      {{#each contentBlocks}}
-        {{#if (eq type "text")}}
-          <div class="post-card__text-block">{{{content}}}</div>
-        {{/if}}
-      {{/each}}
+      <div class="post-card__text-block">{{{content}}}</div>
     </div>
   </div>
 
-  <!-- Полная версия (все блоки) -->
+  <!-- Полная версия -->
   <div class="post-card__body post-card__body--full" style="display:none;">
     <div class="post-card__content">
       {{#each contentBlocks}}
-        {{#if (eq type "text")}}
+        {{#if content}}
           <div class="post-card__text-block">{{{content}}}</div>
         {{/if}}
-        {{#if (eq type "attachment")}}
+        {{#if file_url}}
           <div class="post-card__media-block">
-            {{#if (eq kind "image")}}
+            {{#if (lookup this 'kind')}}
+              {{#if (eq kind "video")}}
+                <video controls src="{{file_url}}"></video>
+              {{else}}
+                <img src="{{file_url}}" alt="" loading="lazy">
+              {{/if}}
+            {{else}}
               <img src="{{file_url}}" alt="" loading="lazy">
-            {{/if}}
-            {{#if (eq kind "video")}}
-              <video controls src="{{file_url}}"></video>
             {{/if}}
           </div>
         {{/if}}

@@ -21,9 +21,16 @@ export interface PostCardData {
   isOwner?: boolean;
   api: ApiClient;
   onPostsUpdated?: (() => Promise<void>) | null;
-  attachments?: Array<{ file_url: string; kind: string }>;
+  attachments?: Array<{ file_url: string; kind: string; post_attachment_id?: number }>;
   min_tier_id?: number | null;
   sport_type?: string;
+}
+
+interface ContentBlock {
+  type: 'text' | 'attachment';
+  content?: string;
+  file_url?: string;
+  kind?: string;
 }
 
 export async function renderPostCard(
@@ -50,15 +57,63 @@ export async function renderPostCard(
     sport_type: sportType = ''
   } = post;
 
+  // Собираем contentBlocks из raw_text и attachments
+  const contentBlocks: ContentBlock[] = [];
+
+  // Разбиваем raw_text на абзацы и создаём текстовые блоки
+  if (rawText && rawText.trim()) {
+    const paragraphs = rawText.split('\n').filter(p => p.trim());
+    paragraphs.forEach(paragraph => {
+      contentBlocks.push({
+        type: 'text',
+        content: paragraph
+      });
+    });
+  }
+
+  // Добавляем медиа-блоки
+  attachments.forEach(att => {
+    contentBlocks.push({
+      type: 'attachment',
+      file_url: att.file_url,
+      kind: att.kind || 'image'
+    });
+  });
+
+  // Если нет ни текста, ни вложений — показываем content как текст
+  if (contentBlocks.length === 0 && content) {
+    contentBlocks.push({
+      type: 'text',
+      content: content
+    });
+  }
+
   const template = (window as any).Handlebars.templates['PostCard.hbs'];
   const initials = authorName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-  const shortContent = content.length > 200 ? content.substring(0, 200) + '...' : content;
+
+  // Для краткого превью берём только первый текстовый блок (обрезанный)
+  const firstTextBlock = contentBlocks.find(b => b.type === 'text');
+  const shortTextContent = firstTextBlock?.content
+    ? (firstTextBlock.content.length > 200 ? firstTextBlock.content.substring(0, 200) + '...' : firstTextBlock.content)
+    : (content.length > 200 ? content.substring(0, 200) + '...' : content);
 
   const html = template({
-    post_id: postId, title, content: shortContent, fullContent: content,
-    authorName, authorRole, authorAvatar, authorInitials: initials,
-    likes, liked, comments, can_view: canView, isOwner,
-    attachments, minTierId, sportType
+    post_id: postId,
+    title,
+    content: shortTextContent,
+    fullContent: content,
+    authorName,
+    authorRole,
+    authorAvatar,
+    authorInitials: initials,
+    likes,
+    liked,
+    comments,
+    can_view: canView,
+    isOwner,
+    contentBlocks,  // ← Главное: передаём массив блоков
+    minTierId,
+    sportType
   });
 
   const wrapper = document.createElement('div');
@@ -77,7 +132,6 @@ export async function renderPostCard(
   // Клик по карточке разворачивает пост
   postCard.addEventListener('click', (e: Event) => {
     const target = e.target as HTMLElement;
-    // Не разворачиваем при клике на кнопки действий
     if (target.closest('[data-post-like]') ||
         target.closest('[data-post-edit]') ||
         target.closest('[data-post-delete]') ||
@@ -134,7 +188,7 @@ export async function renderPostCard(
       e.stopPropagation();
       await openPostFormModal({
         api, mode: 'edit', postId,
-        initial: { title, text_content: rawText || content || '' },
+        initial: { title, raw_text: rawText || content || '' },
         onSaved: onPostsUpdated
       });
     });
