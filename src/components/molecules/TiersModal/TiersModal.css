@@ -195,12 +195,6 @@
     padding: 24px 20px;
     width: calc(100% - 24px);
     max-height: calc(100dvh - 24px);
-    border-radius: 16px 16px 0 0;
-    bottom: 0;
-    top: auto;
-    left: 0;
-    right: 0;
-    transform: none;
   }
 
   .tiers-modal-title {
