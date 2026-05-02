@@ -62,7 +62,6 @@ export async function openPostFormModal({
   let blockCounter = 0;
 
   // Загружаем виды спорта и создаём чекбоксы
-  // sportFieldApi будет использоваться позже при интеграции sport_type_id
   const sportTypes = await loadSportTypes(api);
   if (sportFieldContainer && sportTypes.length > 0) {
     createSportTypesField(sportFieldContainer, {
@@ -245,6 +244,7 @@ export async function openPostFormModal({
         if (block.type === 'media' && block.file) {
           try {
             const uploadResult = await api.uploadPostMedia(block.file);
+            // Для медиа-блоков передаём ТОЛЬКО file_url и kind
             return {
               file_url: uploadResult.file_url,
               kind: block.file.type.startsWith('video/') ? 'video' : 'image'
@@ -254,6 +254,7 @@ export async function openPostFormModal({
             throw new Error('Не удалось загрузить один или несколько файлов');
           }
         } else if (block.type === 'text' && block.value.trim()) {
+          // Для текстовых блоков передаём ТОЛЬКО text_content (без kind!)
           return {
             text_content: block.value
           };
@@ -264,11 +265,25 @@ export async function openPostFormModal({
       // Фильтруем null значения (пустые блоки)
       const validBlocks = apiBlocks.filter(block => block !== null);
 
-      const payload: Record<string, unknown> = {
+      if (validBlocks.length === 0) {
+        globalErr.textContent = 'Добавьте хотя бы один непустой блок контента';
+        globalErr.hidden = false;
+        saveBtn.setDisabled(false);
+        return;
+      }
+
+      // Формируем payload
+      const payload: {
+        title: string;
+        blocks: Array<{ text_content?: string; file_url?: string; kind?: string }>;
+        min_tier_id?: number;
+        replace_blocks?: boolean;
+      } = {
         title: title.trim(),
-        blocks: validBlocks
+        blocks: validBlocks as Array<{ text_content?: string; file_url?: string; kind?: string }>
       };
 
+      // Добавляем min_tier_id только если выбраны уровни
       if (selectedTiers.length > 0) {
         payload.min_tier_id = Math.min(...selectedTiers);
       }
@@ -277,7 +292,7 @@ export async function openPostFormModal({
         payload.replace_blocks = true;
         await api.updatePost(postId, payload);
       } else {
-        await api.createPost(payload as { title: string; blocks: Array<{ text_content?: string; file_url?: string; kind?: string }>; min_tier_id?: number });
+        await api.createPost(payload);
       }
 
       onSaved?.();
