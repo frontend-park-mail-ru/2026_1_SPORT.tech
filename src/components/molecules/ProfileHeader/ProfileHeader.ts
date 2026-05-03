@@ -2,6 +2,7 @@
 
 import type { ApiClient } from '../../../utils/api';
 import { renderButton } from '../../atoms/Button/Button';
+import type { ButtonAPI } from '../../atoms/Button/Button';
 import { openProfileEditModal } from '../ProfileEditModal/ProfileEditModal';
 
 export interface ProfileHeaderConfig {
@@ -14,7 +15,7 @@ export interface ProfileHeaderConfig {
   onEdit?: (() => void) | null;
   showDonate?: boolean;
   onDonate?: (() => void) | null;
-  onSubscribed?: (() => Promise<void>) | null; // ← нужен для обновления данных после подписки/отписки
+  onSubscribed?: (() => Promise<void>) | null;
 }
 
 export async function renderProfileHeader(
@@ -38,7 +39,7 @@ export async function renderProfileHeader(
   const donateContainer = element.querySelector(`#profile-donate-${id}`) as HTMLElement | null;
   const actionsContainer = element.querySelector(`#profile-actions-${id}`) as HTMLElement | null;
 
-  // ========== ПОЖЕРТВОВАТЬ ==========
+  // Пожертвовать
   if (!isOwnProfile && showDonate && donateContainer && onDonate) {
     await renderButton(donateContainer, {
       text: 'Пожертвовать',
@@ -49,36 +50,36 @@ export async function renderProfileHeader(
     });
   }
 
-  // ========== ПОДПИСКА / ИЗМЕНЕНИЕ ==========
+  // Подписка / изменение подписки
   if (!isOwnProfile && showDonate && actionsContainer) {
-    // Определяем начальный текст кнопки
-    let initialButtonText = 'Подписаться';
-    try {
-      const subs = await api.getMySubscriptions();
-      const hasSubscription = subs.subscriptions.some(s => s.trainer_id === viewedUserId);
-      initialButtonText = hasSubscription ? 'Изменить подписку' : 'Подписаться';
-    } catch {
-      // оставляем по умолчанию
-    }
+    let subscriptionButton: ButtonAPI | null = null;
 
-    // Общая функция‑обработчик, которая всегда загружает свежие данные перед открытием модалки
+    // Функция обновления текста кнопки на основе актуальных подписок
+    const updateButtonText = async () => {
+      if (!subscriptionButton) return;
+      try {
+        const subs = await api.getMySubscriptions();
+        const hasSubscription = subs.subscriptions.some(s => s.trainer_id === viewedUserId);
+        const newText = hasSubscription ? 'Изменить подписку' : 'Подписаться';
+        subscriptionButton.setText(newText);
+      } catch {
+        // игнорируем
+      }
+    };
+
     const handleSubscriptionClick = async () => {
       if (!viewedUserId) return;
 
       const currentUser = await api.getCurrentUser();
       const isClient = currentUser?.user && !currentUser.user.is_trainer;
-      if (!isClient) {
-        alert('Подписка доступна только для клиентов');
-        return;
-      }
+      if (!isClient) return;
 
-      // Загружаем актуальную информацию о подписке на этого тренера
       let existingSubscription = null;
       try {
         const subs = await api.getMySubscriptions();
         existingSubscription = subs.subscriptions.find(s => s.trainer_id === viewedUserId) || null;
-      } catch (e) {
-        console.warn('Не удалось загрузить подписки', e);
+      } catch {
+        // игнорируем
       }
 
       const { openSubscriptionModal } = await import('../SubscriptionModal/SubscriptionModal');
@@ -87,23 +88,26 @@ export async function renderProfileHeader(
         trainerId: viewedUserId,
         existingSubscription,
         onSubscribed: async () => {
-          // После успешной подписки/отписки/смены обновляем данные страницы
+          // Обновляем текст кнопки
+          await updateButtonText();
+          // Также вызываем внешний onSubscribed, если передан (обновляет посты и другие данные)
           if (onSubscribed) await onSubscribed();
-          // Также можно обновить текст кнопки, перерисовав её (не обязательно, так как страница перезагрузит шапку)
         }
       });
     };
 
-    await renderButton(actionsContainer, {
-      text: initialButtonText,
+    // Создаём кнопку и сохраняем API
+    subscriptionButton = await renderButton(actionsContainer, {
+      text: 'Подписаться', // временный текст, сразу обновим
       variant: 'primary-orange',
       state: 'normal',
       size: 'medium',
       onClick: handleSubscriptionClick
     });
+    await updateButtonText(); // установим правильный текст после создания
   }
 
-  // ========== РЕДАКТИРОВАТЬ ПРОФИЛЬ (только свой) ==========
+  // Редактировать профиль
   if (isOwnProfile && actionsContainer) {
     await renderButton(actionsContainer, {
       text: 'Редактировать',
@@ -117,8 +121,8 @@ export async function renderProfileHeader(
           try {
             const fullProfile = await api.getProfile(userData.user_id);
             userData = { ...userData, ...fullProfile };
-          } catch (error) {
-            console.error('Failed to load full profile:', error);
+          } catch {
+            // игнорируем
           }
         }
         openProfileEditModal({
@@ -130,7 +134,7 @@ export async function renderProfileHeader(
     });
   }
 
-  // ========== ОСТАЛЬНЫЕ КНОПКИ (статистика, подписки, смена аватара) ==========
+  // Остальные кнопки (статистика, подписки, смена аватара)
   const statBtn = element.querySelector(`#stat-btn-${id}`) as HTMLElement | null;
   if (statBtn) statBtn.addEventListener('click', () => {
     statBtn.classList.add('button--active');
@@ -152,8 +156,8 @@ export async function renderProfileHeader(
       try {
         const fullProfile = await api.getProfile(userData.user_id);
         userData = { ...userData, ...fullProfile };
-      } catch (error) {
-        console.error('Failed to load full profile:', error);
+      } catch {
+        // игнорируем
       }
     }
     const { openProfileEditModal } = await import('../ProfileEditModal/ProfileEditModal');
