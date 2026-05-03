@@ -50,20 +50,22 @@ export async function renderProfileHeader(
     });
   }
 
-  // Функция рендера кнопки подписки (перерисовывается после каждого действия)
-  const renderSubscriptionButton = async () => {
-    if (!actionsContainer) return;
-    // Очищаем контейнер перед перерисовкой
-    actionsContainer.innerHTML = '';
+  // Подписка / изменение подписки
+  if (!isOwnProfile && showDonate && actionsContainer) {
+    let subscriptionButton: ButtonAPI | null = null;
 
-    let buttonText = 'Подписаться';
-    try {
-      const subs = await api.getMySubscriptions();
-      const hasSubscription = subs.subscriptions.some(s => s.trainer_id === viewedUserId);
-      buttonText = hasSubscription ? 'Изменить подписку' : 'Подписаться';
-    } catch {
-      // игнорируем
-    }
+    // Функция обновления текста кнопки на основе актуальных подписок
+    const updateButtonText = async () => {
+      if (!subscriptionButton) return;
+      try {
+        const subs = await api.getMySubscriptions();
+        const hasSubscription = subs.subscriptions.some(s => s.trainer_id === viewedUserId);
+        const newText = hasSubscription ? 'Изменить подписку' : 'Подписаться';
+        subscriptionButton.setText(newText);
+      } catch {
+        // игнорируем – оставляем текущий текст
+      }
+    };
 
     const handleSubscriptionClick = async () => {
       if (!viewedUserId) return;
@@ -86,25 +88,24 @@ export async function renderProfileHeader(
         trainerId: viewedUserId,
         existingSubscription,
         onSubscribed: async () => {
-          // Перерисовываем кнопку после успешного изменения подписки
-          await renderSubscriptionButton();
+          // Обновляем текст кнопки после любого действия (подписка, отписка, смена)
+          await updateButtonText();
+          // Вызываем внешний колбэк для обновления остальной части страницы
           if (onSubscribed) await onSubscribed();
         }
       });
     };
 
-    await renderButton(actionsContainer, {
-      text: buttonText,
+    // Создаём кнопку и сохраняем её API
+    subscriptionButton = await renderButton(actionsContainer, {
+      text: 'Подписаться', // временный текст
       variant: 'primary-orange',
       state: 'normal',
       size: 'medium',
       onClick: handleSubscriptionClick
     });
-  };
-
-  // Подписка / изменение подписки
-  if (!isOwnProfile && showDonate && actionsContainer) {
-    await renderSubscriptionButton();
+    // Устанавливаем правильный текст после создания
+    await updateButtonText();
   }
 
   // Редактировать профиль
@@ -134,7 +135,7 @@ export async function renderProfileHeader(
     });
   }
 
-  // Остальные кнопки (статистика, подписки, смена аватара)
+  // Остальные кнопки (статистика, подписки, смена аватара) – без изменений
   const statBtn = element.querySelector(`#stat-btn-${id}`) as HTMLElement | null;
   if (statBtn) statBtn.addEventListener('click', () => {
     statBtn.classList.add('button--active');
