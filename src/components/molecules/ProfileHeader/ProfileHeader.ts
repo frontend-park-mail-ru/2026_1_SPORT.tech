@@ -1,3 +1,5 @@
+// src/components/molecules/ProfileHeader/ProfileHeader.ts
+
 import type { ApiClient } from '../../../utils/api';
 import { renderButton } from '../../atoms/Button/Button';
 import { openProfileEditModal } from '../ProfileEditModal/ProfileEditModal';
@@ -8,7 +10,7 @@ export interface ProfileHeaderConfig {
   avatar?: string | null;
   isOwnProfile?: boolean;
   api: ApiClient;
-  viewedUserId?: number;
+  viewedUserId?: number;         // ← обязательно
   onEdit?: (() => void) | null;
   showDonate?: boolean;
   onDonate?: (() => void) | null;
@@ -34,23 +36,26 @@ export async function renderProfileHeader(
   const donateContainer = element.querySelector(`#profile-donate-${id}`) as HTMLElement | null;
   const actionsContainer = element.querySelector(`#profile-actions-${id}`) as HTMLElement | null;
 
+  // Кнопка "Пожертвовать" (без изменений)
   if (!isOwnProfile && showDonate && donateContainer && onDonate) {
     await renderButton(donateContainer, {
       text: 'Пожертвовать', variant: 'primary-orange', state: 'normal', size: 'medium', onClick: onDonate
     });
   }
 
+  // Кнопка "Подписаться" – теперь открывает модальное окно
   if (!isOwnProfile && showDonate && actionsContainer) {
     await renderButton(actionsContainer, {
       text: 'Подписаться', variant: 'primary-orange', state: 'normal', size: 'medium',
       onClick: async () => {
-        if (!viewedUserId) return;
+        if (!viewedUserId) return;   // если id тренера не передан – выходим
         const { openSubscriptionModal } = await import('../SubscriptionModal/SubscriptionModal');
         openSubscriptionModal({ api, trainerId: viewedUserId });
       }
     });
   }
 
+  // Кнопка "Редактировать" (только в своём профиле)
   if (isOwnProfile && actionsContainer) {
     await renderButton(actionsContainer, {
       text: 'Редактировать', variant: 'primary-orange', state: 'normal', size: 'medium',
@@ -71,6 +76,7 @@ export async function renderProfileHeader(
     });
   }
 
+  // Остальные кнопки (статистика, подписки, смена аватара) – без изменений
   const statBtn = element.querySelector(`#stat-btn-${id}`) as HTMLElement | null;
   if (statBtn) statBtn.addEventListener('click', () => {
     statBtn.classList.add('button--active');

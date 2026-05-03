@@ -1,7 +1,4 @@
-/**
- * @fileoverview Модальное окно подписки на тренера
- * @module components/molecules/SubscriptionModal
- */
+// src/components/molecules/SubscriptionModal/SubscriptionModal.ts
 
 import type { ApiClient } from '../../../utils/api';
 import type { Tier } from '../../../types/api.types';
@@ -13,11 +10,10 @@ export interface SubscriptionModalOptions {
 }
 
 export function openSubscriptionModal({ api, trainerId, onSubscribed }: SubscriptionModalOptions): void {
-  // Используем публичный эндпоинт для получения уровней тренера
-  api.request<Tier[]>(`/v1/trainers/${trainerId}/tiers`)
+  // Используем api.getTrainerTiers – он уже возвращает { tiers: Tier[] }
+  api.getTrainerTiers(trainerId)
     .then(response => {
-      // Ответ может быть обёрнут в { tiers: [...] } или сразу массив
-      const tiers = Array.isArray(response) ? response : (response as unknown as { tiers: Tier[] })?.tiers || [];
+      const tiers: Tier[] = response?.tiers || [];
       showModal(tiers);
     })
     .catch(() => {
@@ -43,21 +39,15 @@ export function openSubscriptionModal({ api, trainerId, onSubscribed }: Subscrip
         </div>
       </div>
     `;
-
     document.body.appendChild(modal);
 
-    // Закрытие по клику на backdrop или кнопку
     modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => modal.remove()));
 
-    // Обработчик кнопок "Выбрать"
     modal.querySelectorAll('[data-subscribe]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const tierId = Number((e.currentTarget as HTMLElement).dataset.subscribe);
         try {
-          await api.request(`/v1/trainers/${trainerId}/subscribe`, {
-            method: 'POST',
-            body: JSON.stringify({ tier_id: tierId })
-          });
+          await api.subscribeToTrainer(trainerId, tierId);
           alert('Подписка оформлена!');
           modal.remove();
           onSubscribed?.();
