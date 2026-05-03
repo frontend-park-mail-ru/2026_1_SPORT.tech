@@ -21,25 +21,20 @@ function getInitials(name: string = ''): string {
 
 function getExperienceYears(careerSinceDate: string | null | undefined): number | null {
   if (!careerSinceDate) return null;
-
   const date = new Date(careerSinceDate);
   if (Number.isNaN(date.getTime())) return null;
-
   const today = new Date();
   let years = today.getFullYear() - date.getFullYear();
   const monthDiff = today.getMonth() - date.getMonth();
-
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
     years--;
   }
-
   return years < 0 ? 0 : years;
 }
 
 function getYearsWord(years: number): string {
   const lastDigit = years % 10;
   const lastTwoDigits = years % 100;
-
   if (lastTwoDigits >= 11 && lastTwoDigits <= 19) return 'лет';
   if (lastDigit === 1) return 'год';
   if (lastDigit >= 2 && lastDigit <= 4) return 'года';
@@ -63,11 +58,7 @@ function renderTrainerCard(trainer: TrainerListItem, sportNamesById: Map<number,
 
   const experienceMarkup = experienceYears === null
     ? ''
-    : `
-      <span class="trainer-card__meta-item">
-        Стаж: ${experienceYears} ${getYearsWord(experienceYears)}
-      </span>
-    `;
+    : `<span class="trainer-card__meta-item">Стаж: ${experienceYears} ${getYearsWord(experienceYears)}</span>`;
 
   return `
     <button class="trainer-card" type="button" data-trainer-id="${trainer.user_id}">
@@ -77,7 +68,6 @@ function renderTrainerCard(trainer: TrainerListItem, sportNamesById: Map<number,
     ? `<img src="${escapeHtml(trainer.avatar_url)}" alt="${escapeHtml(fullName)}">`
     : `<span>${initials}</span>`}
         </div>
-
         <div class="trainer-card__identity">
           <div class="trainer-card__top">
             <h3 class="trainer-card__name">${escapeHtml(fullName)}</h3>
@@ -86,18 +76,19 @@ function renderTrainerCard(trainer: TrainerListItem, sportNamesById: Map<number,
           <p class="trainer-card__username">@${escapeHtml(trainer.username || 'trainer')}</p>
         </div>
       </div>
-
       <p class="trainer-card__bio">${escapeHtml(bio)}</p>
+      <div class="trainer-card__meta">${experienceMarkup}</div>
+      <div class="trainer-card__sports">${sportsMarkup}</div>
+    </button>`;
+}
 
-      <div class="trainer-card__meta">
-        ${experienceMarkup}
-      </div>
-
-      <div class="trainer-card__sports">
-        ${sportsMarkup}
-      </div>
-    </button>
-  `;
+// Функция debounce
+function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
+  let timer: ReturnType<typeof setTimeout>;
+  return ((...args: any[]) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  }) as T;
 }
 
 export async function renderHomePage(
@@ -105,14 +96,10 @@ export async function renderHomePage(
   container: HTMLElement,
   params: HomePageParams = {}
 ): Promise<HTMLElement> {
-  const {
-    currentUser = null,
-    onLogout = null
-  } = params;
+  const { currentUser = null, onLogout = null } = params;
 
   const template = (window as any).Handlebars.templates['HomePage.hbs'];
   const html = template({});
-
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const page = wrapper.firstElementChild as HTMLElement;
@@ -123,14 +110,17 @@ export async function renderHomePage(
   const sidebarContainer = page.querySelector('#sidebar-container') as HTMLElement;
   const grid = page.querySelector('#trainers-grid') as HTMLElement;
   const emptyState = page.querySelector('#trainers-empty') as HTMLElement;
+  const searchInput = page.querySelector('.home-page__search-input') as HTMLInputElement;
+  const filtersBtn = page.querySelector('#filters-btn') as HTMLElement;
+  const filtersDropdown = page.querySelector('#filters-dropdown') as HTMLElement;
+  const sportCheckboxesContainer = page.querySelector('#sport-checkboxes') as HTMLElement;
 
+  // Загружаем профиль пользователя (для сайдбара)
   let currentUserProfile = null;
   if (currentUser?.user?.user_id) {
     try {
       currentUserProfile = await api.getProfile(currentUser.user.user_id);
-    } catch {
-      currentUserProfile = null;
-    }
+    } catch { currentUserProfile = null; }
   }
 
   const sidebarUser = currentUser?.user ? {
@@ -148,36 +138,94 @@ export async function renderHomePage(
     onLogout
   });
 
-  const [trainersResponse, sportTypesResponse] = await Promise.all([
-    api.getTrainers().catch(() => ({ trainers: [] })),
-    api.getSportTypes().catch(() => ({ sport_types: [] }))
-  ]);
+  // Загружаем виды спорта для фильтров
+  const sportTypesResponse = await api.getSportTypes().catch(() => ({ sport_types: [] as SportType[] }));
+  const sportTypes = sportTypesResponse.sport_types || [];
 
-  const trainers = Array.isArray(trainersResponse?.trainers)
-    ? trainersResponse.trainers.filter((trainer: TrainerListItem) => trainer.is_trainer)
-    : [];
-
-  const sportNamesById = new Map<number, string>(
-    (Array.isArray(sportTypesResponse?.sport_types) ? sportTypesResponse.sport_types : [])
-      .map((sportType: SportType) => [Number(sportType.sport_type_id), sportType.name])
-  );
-
-  if (trainers.length === 0) {
-    grid.innerHTML = '';
-    emptyState.hidden = false;
-    return page;
-  }
-
-  emptyState.hidden = true;
-  grid.innerHTML = trainers.map((trainer: TrainerListItem) => renderTrainerCard(trainer, sportNamesById)).join('');
-
-  grid.querySelectorAll('.trainer-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const trainerId = Number((card as HTMLElement).dataset.trainerId);
-      if (!Number.isFinite(trainerId)) return;
-      window.router.navigateTo(`/profile/${trainerId}`);
-    });
+  // Строим чекбоксы видов спорта
+  sportTypes.forEach(sport => {
+    const label = document.createElement('label');
+    label.className = 'home-page__filter-option';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = String(sport.sport_type_id);
+    const span = document.createElement('span');
+    span.textContent = sport.name;
+    label.appendChild(checkbox);
+    label.appendChild(span);
+    sportCheckboxesContainer.appendChild(label);
   });
+
+  // Состояние фильтров
+  const getSelectedSportIds = (): number[] => Array.from(sportCheckboxesContainer.querySelectorAll('input:checked')).map(cb => Number((cb as HTMLInputElement).value));
+
+  // Функция загрузки тренеров с сервера
+  const loadTrainers = async (query: string, sportTypeIds: number[]) => {
+    try {
+      const response = await api.getTrainers({
+        query: query || undefined,
+        sport_type_ids: sportTypeIds.length > 0 ? sportTypeIds : undefined,
+        limit: 50
+      });
+      const trainers = Array.isArray(response?.trainers)
+        ? response.trainers.filter(t => t.is_trainer)
+        : [];
+
+      if (trainers.length === 0) {
+        grid.innerHTML = '';
+        emptyState.hidden = false;
+        return;
+      }
+
+      // Возобновляем карту видов спорта (нужно для отображения названий)
+      const sportNamesById = new Map<number, string>(
+        sportTypes.map(s => [s.sport_type_id, s.name])
+      );
+
+      grid.innerHTML = trainers.map(t => renderTrainerCard(t, sportNamesById)).join('');
+      emptyState.hidden = true;
+
+      // Вешаем обработчики клика для перехода в профиль
+      grid.querySelectorAll('.trainer-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const trainerId = Number((card as HTMLElement).dataset.trainerId);
+          if (!Number.isFinite(trainerId)) return;
+          window.router.navigateTo(`/profile/${trainerId}`);
+        });
+      });
+    } catch (error) {
+      console.error('Failed to load trainers:', error);
+    }
+  };
+
+  // Обработчик изменений: перезапрос с сервера
+  const handleFilterChange = debounce(() => {
+    const query = searchInput.value.trim();
+    const sportIds = getSelectedSportIds();
+    loadTrainers(query, sportIds);
+  }, 300);
+
+  // Обработчики событий
+  searchInput.addEventListener('input', handleFilterChange);
+
+  // При клике на кнопку «Фильтры» показываем/скрываем выпадашку
+  filtersBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    filtersDropdown.hidden = !filtersDropdown.hidden;
+  });
+
+  // Скрываем фильтр при клике вне
+  document.addEventListener('click', (e) => {
+    if (!filtersDropdown.hidden && !filtersDropdown.contains(e.target as Node) && e.target !== filtersBtn) {
+      filtersDropdown.hidden = true;
+    }
+  });
+
+  // При изменении чекбоксов
+  sportCheckboxesContainer.addEventListener('change', handleFilterChange);
+
+  // Первичная загрузка
+  loadTrainers('', []);
 
   return page;
 }

@@ -26,6 +26,8 @@ export interface PostCardData {
   contentBlocks?: ContentBlockForPost[];
   min_tier_id?: number | null;
   sport_type?: string;
+  tierName?: string;       // NEW
+  tierPrice?: number;      // NEW
 }
 
 interface ContentBlock {
@@ -57,14 +59,14 @@ export async function renderPostCard(
     attachments = [],
     contentBlocks: existingContentBlocks,
     min_tier_id: minTierId = null,
-    sport_type: sportType = ''
+    sport_type: sportType = '',
+    tierName = '',          // NEW
+    tierPrice = 0           // NEW
   } = post;
 
   // Формируем contentBlocks с правильным порядком
   let contentBlocks: ContentBlock[] = [];
-
   if (existingContentBlocks && existingContentBlocks.length > 0) {
-    // Используем готовый массив с правильным порядком из API
     contentBlocks = existingContentBlocks.map(block => ({
       type: block.type,
       content: block.content,
@@ -72,7 +74,6 @@ export async function renderPostCard(
       kind: block.kind
     }));
   } else {
-    // Запасной вариант (для старых данных)
     if (rawText && rawText.trim()) {
       const paragraphs = rawText.split('\n').filter(p => p.trim());
       paragraphs.forEach(paragraph => {
@@ -90,7 +91,6 @@ export async function renderPostCard(
   const template = (window as any).Handlebars.templates['PostCard.hbs'];
   const initials = authorName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
-  // Для краткого превью берём только первый текстовый блок (обрезанный)
   const firstTextBlock = contentBlocks.find(b => b.type === 'text');
   const shortTextContent = firstTextBlock?.content
     ? (firstTextBlock.content.length > 200 ? firstTextBlock.content.substring(0, 200) + '...' : firstTextBlock.content)
@@ -112,7 +112,9 @@ export async function renderPostCard(
     isOwner,
     contentBlocks,
     minTierId,
-    sportType
+    sportType,
+    tierName,       // NEW
+    tierPrice       // NEW
   });
 
   const wrapper = document.createElement('div');
@@ -128,7 +130,6 @@ export async function renderPostCard(
   const shortBody = postCard.querySelector('.post-card__body--short') as HTMLElement | null;
   const fullBody = postCard.querySelector('.post-card__body--full') as HTMLElement | null;
 
-  // Клик по карточке разворачивает пост
   postCard.addEventListener('click', (e: Event) => {
     const target = e.target as HTMLElement;
     if (target.closest('[data-post-like]') ||
@@ -138,7 +139,6 @@ export async function renderPostCard(
         target.closest('[data-post-collapse]')) {
       return;
     }
-
     if (shortBody && fullBody) {
       shortBody.style.display = 'none';
       fullBody.style.display = 'block';
@@ -146,7 +146,6 @@ export async function renderPostCard(
     }
   });
 
-  // Кнопка "Свернуть"
   if (collapseBtn && shortBody && fullBody) {
     collapseBtn.addEventListener('click', (e: Event) => {
       e.stopPropagation();
@@ -156,7 +155,6 @@ export async function renderPostCard(
     });
   }
 
-  // Лайк
   const setLikeUi = (nextLiked: boolean, nextCount: number): void => {
     if (!likeBtn || !likeCountEl) return;
     likeBtn.classList.toggle('post-card__action--liked', nextLiked);
@@ -181,7 +179,6 @@ export async function renderPostCard(
     });
   }
 
-  // Редактирование
   if (editBtn && api && isOwner) {
     editBtn.addEventListener('click', async (e: Event) => {
       e.stopPropagation();
@@ -193,7 +190,6 @@ export async function renderPostCard(
     });
   }
 
-  // Удаление
   if (deleteBtn && api && isOwner) {
     deleteBtn.addEventListener('click', async (e: Event) => {
       e.stopPropagation();
@@ -204,7 +200,6 @@ export async function renderPostCard(
     });
   }
 
-  // Поделиться
   if (shareBtn) {
     shareBtn.addEventListener('click', async (e: Event) => {
       e.stopPropagation();

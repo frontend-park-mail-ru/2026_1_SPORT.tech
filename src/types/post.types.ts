@@ -23,6 +23,8 @@ export interface PostWithAuthor {
   min_tier_id: number | null;
   sport_type_id?: number | null;
   sport_type?: string;
+  tier_name?: string;      // NEW: название уровня
+  tier_price?: number;      // NEW: цена уровня (0 = бесплатно)
   contentBlocks?: ContentBlockForPost[];
   attachments?: PostAttachmentCompat[];
   isOwner?: boolean;
