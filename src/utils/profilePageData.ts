@@ -161,6 +161,7 @@ export async function loadProfilePageData(
       can_view: post.can_view,
       created_at: post.created_at,
       min_tier_id: post.min_tier_id ?? null,
+      sport_type_id: post.sport_type_id ?? null,
       sport_type: sportTypeName,
       contentBlocks: contentBlocks,
       attachments: []

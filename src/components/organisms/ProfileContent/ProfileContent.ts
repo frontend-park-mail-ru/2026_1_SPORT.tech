@@ -459,12 +459,12 @@ export async function renderProfileContent(
     // Фильтрация по видам спорта (используем sport_type_id)
     if (activeFilters.size > 0) {
       filteredPosts = filteredPosts.filter(p => {
-        const sportId = (p as any).sport_type_id; // используем добавленное поле
+        const sportId = p.sport_type_id;
         return sportId != null && activeFilters.has(String(sportId));
       });
     }
 
-    // Фильтрация по поисковому запросу
+    // Фильтрация по поисковому запросу (заголовок, текст, название спорта)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filteredPosts = filteredPosts.filter(p => {
@@ -636,7 +636,7 @@ export async function renderProfileContent(
 
         if (postsContainer) postsContainer.style.display = 'block';
         toggleSearchVisibility(true);
-        // При необходимости обновить allPosts (если переключились на другую вкладку)
+        // Загружаем свежие данные при переходе на вкладку с постами
         if (tabId === 'main' || tabId === 'publications') {
           await reloadAllPosts();
         } else {
@@ -689,9 +689,12 @@ export async function renderProfileContent(
   } else {
     if (postsContainer) postsContainer.style.display = 'block';
     toggleSearchVisibility(true);
+    // Загружаем посты при первом открытии
     if (currentTab === 'publications' && !isTrainer) {
       const likedPosts = await loadLikedPosts(api, viewedUserId);
       allPosts = likedPosts as PostWithAuthor[];
+    } else {
+      await reloadAllPosts();
     }
     refreshVisiblePosts();
   }

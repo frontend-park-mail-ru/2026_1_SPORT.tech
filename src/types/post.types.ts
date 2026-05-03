@@ -21,6 +21,7 @@ export interface PostWithAuthor {
   can_view: boolean;
   created_at: string;
   min_tier_id: number | null;
+  sport_type_id?: number | null;
   sport_type?: string;
   contentBlocks?: ContentBlockForPost[];
   attachments?: PostAttachmentCompat[];
