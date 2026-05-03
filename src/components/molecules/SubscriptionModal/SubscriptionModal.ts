@@ -37,9 +37,9 @@ export async function openSubscriptionModal({
         </h2>
         <div class="subscription-modal__list">
           ${tiers.map(tier => {
-            const price = (typeof tier.price === 'number' && !isNaN(tier.price)) ? tier.price : 0;
-            const isCurrent = currentSubscription?.tier_id === tier.tier_id;
-            return `
+    const price = (typeof tier.price === 'number' && !isNaN(tier.price)) ? tier.price : 0;
+    const isCurrent = currentSubscription?.tier_id === tier.tier_id;
+    return `
               <div class="subscription-modal__tier ${isCurrent ? 'subscription-modal__tier--current' : ''}">
                 <h3>${escapeHtml(tier.name)} (${price} ₽/мес)</h3>
                 <p>${escapeHtml(tier.description || 'Описание отсутствует')}</p>
@@ -52,7 +52,7 @@ export async function openSubscriptionModal({
                 </button>
               </div>
             `;
-          }).join('')}
+  }).join('')}
         </div>
         ${currentSubscription ? `
           <div class="subscription-modal__unsubscribe">

@@ -54,15 +54,17 @@ export async function renderProfileHeader(
   if (!isOwnProfile && showDonate && actionsContainer) {
     let subscriptionButton: ButtonAPI | null = null;
 
-    // Функция обновления текста кнопки
+    // Функция обновления текста кнопки с учётом active === true
     const updateButtonText = async () => {
       if (!subscriptionButton) return;
       try {
         const subs = await api.getMySubscriptions();
-        const hasSubscription = subs.subscriptions.some(s => s.trainer_id === viewedUserId);
-        subscriptionButton.setText(hasSubscription ? 'Изменить подписку' : 'Подписаться');
+        const hasActiveSubscription = subs.subscriptions.some(
+          s => s.trainer_id === viewedUserId && s.active === true
+        );
+        subscriptionButton.setText(hasActiveSubscription ? 'Изменить подписку' : 'Подписаться');
       } catch {
-        // оставляем текущий текст
+        // игнорируем
       }
     };
 
@@ -73,11 +75,13 @@ export async function renderProfileHeader(
       const isClient = currentUser?.user && !currentUser.user.is_trainer;
       if (!isClient) return;
 
-      // Свежая подписка перед открытием
+      // Свежая активная подписка перед открытием
       let existingSubscription = null;
       try {
         const subs = await api.getMySubscriptions();
-        existingSubscription = subs.subscriptions.find(s => s.trainer_id === viewedUserId) || null;
+        existingSubscription = subs.subscriptions.find(
+          s => s.trainer_id === viewedUserId && s.active === true
+        ) || null;
       } catch {}
 
       const { openSubscriptionModal } = await import('../SubscriptionModal/SubscriptionModal');
@@ -86,9 +90,8 @@ export async function renderProfileHeader(
         trainerId: viewedUserId,
         existingSubscription,
         onSubscribed: async () => {
-          // Обновить текст кнопки
+          // Обновить текст кнопки и остальную часть страницы
           await updateButtonText();
-          // Обновить остальную часть страницы (посты и т.д.)
           if (onSubscribed) await onSubscribed();
         }
       });
@@ -102,7 +105,6 @@ export async function renderProfileHeader(
       size: 'medium',
       onClick: handleClick
     });
-    // Устанавливаем правильный текст после создания
     await updateButtonText();
   }
 
