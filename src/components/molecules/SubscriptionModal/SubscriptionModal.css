@@ -72,3 +72,26 @@
   background: #C8E6C9;
   color: #2E7D32;
 }
+/* Добавить в конец файла SubscriptionModal.css */
+.subscription-modal__unsubscribe {
+  margin-top: 20px;
+  text-align: center;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 16px;
+}
+
+.subscription-modal__unsubscribe .button--text-orange {
+  background: none;
+  border: none;
+  color: #E85A2B;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 16px;
+  transition: all 0.2s;
+}
+
+.subscription-modal__unsubscribe .button--text-orange:hover {
+  text-decoration: underline;
+  background: #FFF5F0;
+  border-radius: 8px;
+}

@@ -14,7 +14,7 @@ export interface ProfileHeaderConfig {
   onEdit?: (() => void) | null;
   showDonate?: boolean;
   onDonate?: (() => void) | null;
-  onSubscribed?: (() => Promise<void>) | null; // добавили
+  onSubscribed?: (() => Promise<void>) | null; // ← нужен для обновления данных после подписки/отписки
 }
 
 export async function renderProfileHeader(
@@ -38,59 +38,78 @@ export async function renderProfileHeader(
   const donateContainer = element.querySelector(`#profile-donate-${id}`) as HTMLElement | null;
   const actionsContainer = element.querySelector(`#profile-actions-${id}`) as HTMLElement | null;
 
-  // Кнопка "Пожертвовать"
+  // ========== ПОЖЕРТВОВАТЬ ==========
   if (!isOwnProfile && showDonate && donateContainer && onDonate) {
     await renderButton(donateContainer, {
-      text: 'Пожертвовать', variant: 'primary-orange', state: 'normal', size: 'medium', onClick: onDonate
+      text: 'Пожертвовать',
+      variant: 'primary-orange',
+      state: 'normal',
+      size: 'medium',
+      onClick: onDonate
     });
   }
 
-  // Кнопка "Подписаться" – теперь с проверкой роли и существующей подписки
+  // ========== ПОДПИСКА / ИЗМЕНЕНИЕ ==========
   if (!isOwnProfile && showDonate && actionsContainer) {
-    // Получаем текущего пользователя и его подписки
-    const currentUser = await api.getCurrentUser();
-    const isClient = currentUser?.user && !currentUser.user.is_trainer;
-    let existingSubscription = null;
+    // Определяем начальный текст кнопки
+    let initialButtonText = 'Подписаться';
+    try {
+      const subs = await api.getMySubscriptions();
+      const hasSubscription = subs.subscriptions.some(s => s.trainer_id === viewedUserId);
+      initialButtonText = hasSubscription ? 'Изменить подписку' : 'Подписаться';
+    } catch {
+      // оставляем по умолчанию
+    }
 
-    if (isClient && viewedUserId) {
+    // Общая функция‑обработчик, которая всегда загружает свежие данные перед открытием модалки
+    const handleSubscriptionClick = async () => {
+      if (!viewedUserId) return;
+
+      const currentUser = await api.getCurrentUser();
+      const isClient = currentUser?.user && !currentUser.user.is_trainer;
+      if (!isClient) {
+        alert('Подписка доступна только для клиентов');
+        return;
+      }
+
+      // Загружаем актуальную информацию о подписке на этого тренера
+      let existingSubscription = null;
       try {
         const subs = await api.getMySubscriptions();
         existingSubscription = subs.subscriptions.find(s => s.trainer_id === viewedUserId) || null;
       } catch (e) {
         console.warn('Не удалось загрузить подписки', e);
       }
-    }
 
-    const buttonText = existingSubscription ? 'Изменить подписку' : 'Подписаться';
+      const { openSubscriptionModal } = await import('../SubscriptionModal/SubscriptionModal');
+      await openSubscriptionModal({
+        api,
+        trainerId: viewedUserId,
+        existingSubscription,
+        onSubscribed: async () => {
+          // После успешной подписки/отписки/смены обновляем данные страницы
+          if (onSubscribed) await onSubscribed();
+          // Также можно обновить текст кнопки, перерисовав её (не обязательно, так как страница перезагрузит шапку)
+        }
+      });
+    };
 
     await renderButton(actionsContainer, {
-      text: buttonText,
+      text: initialButtonText,
       variant: 'primary-orange',
       state: 'normal',
       size: 'medium',
-      onClick: async () => {
-        if (!viewedUserId) return;
-        if (!isClient) {
-          alert('Подписка доступна только для клиентов');
-          return;
-        }
-        const { openSubscriptionModal } = await import('../SubscriptionModal/SubscriptionModal');
-        await openSubscriptionModal({
-          api,
-          trainerId: viewedUserId,
-          existingSubscription,
-          onSubscribed: async () => {
-            if (onSubscribed) await onSubscribed();
-          }
-        });
-      }
+      onClick: handleSubscriptionClick
     });
   }
 
-  // Кнопка "Редактировать" (только в своём профиле)
+  // ========== РЕДАКТИРОВАТЬ ПРОФИЛЬ (только свой) ==========
   if (isOwnProfile && actionsContainer) {
     await renderButton(actionsContainer, {
-      text: 'Редактировать', variant: 'primary-orange', state: 'normal', size: 'medium',
+      text: 'Редактировать',
+      variant: 'primary-orange',
+      state: 'normal',
+      size: 'medium',
       onClick: async () => {
         const currentUser = await api.getCurrentUser();
         let userData = currentUser?.user;
@@ -98,17 +117,20 @@ export async function renderProfileHeader(
           try {
             const fullProfile = await api.getProfile(userData.user_id);
             userData = { ...userData, ...fullProfile };
-          } catch (error) { console.error('Failed to load full profile:', error); }
+          } catch (error) {
+            console.error('Failed to load full profile:', error);
+          }
         }
         openProfileEditModal({
-          api, currentUser: { user: userData },
+          api,
+          currentUser: { user: userData },
           onUpdated: () => window.router.navigateTo('/profile')
         });
       }
     });
   }
 
-  // Остальные кнопки (статистика, подписки, смена аватара) – без изменений
+  // ========== ОСТАЛЬНЫЕ КНОПКИ (статистика, подписки, смена аватара) ==========
   const statBtn = element.querySelector(`#stat-btn-${id}`) as HTMLElement | null;
   if (statBtn) statBtn.addEventListener('click', () => {
     statBtn.classList.add('button--active');
@@ -130,11 +152,14 @@ export async function renderProfileHeader(
       try {
         const fullProfile = await api.getProfile(userData.user_id);
         userData = { ...userData, ...fullProfile };
-      } catch (error) { console.error('Failed to load full profile:', error); }
+      } catch (error) {
+        console.error('Failed to load full profile:', error);
+      }
     }
     const { openProfileEditModal } = await import('../ProfileEditModal/ProfileEditModal');
     openProfileEditModal({
-      api, currentUser: { user: userData },
+      api,
+      currentUser: { user: userData },
       onUpdated: () => window.router.navigateTo('/profile')
     });
   });

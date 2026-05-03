@@ -6,8 +6,8 @@ import type { Tier, Subscription } from '../../../types/api.types';
 export interface SubscriptionModalOptions {
   api: ApiClient;
   trainerId: number;
-  existingSubscription?: Subscription | null; // если уже подписан
-  onSubscribed?: () => void; // вызывается после успешной операции (создание или обновление)
+  existingSubscription?: Subscription | null;
+  onSubscribed?: () => void;
 }
 
 export async function openSubscriptionModal({
@@ -23,13 +23,13 @@ export async function openSubscriptionModal({
       alert('У этого тренера пока нет уровней подписки');
       return;
     }
-    showModal(tiers);
+    showModal(tiers, existingSubscription);
   } catch (error) {
     console.error('[SubscriptionModal] Ошибка загрузки уровней:', error);
     alert('Не удалось загрузить уровни подписки тренера');
   }
 
-  function showModal(tiers: Tier[]): void {
+  function showModal(tiers: Tier[], currentSubscription?: Subscription | null): void {
     const modal = document.createElement('div');
     modal.className = 'subscription-modal';
     modal.innerHTML = `
@@ -37,12 +37,12 @@ export async function openSubscriptionModal({
       <div class="subscription-modal__panel">
         <button class="subscription-modal__close" data-close>×</button>
         <h2 class="subscription-modal__title">
-          ${existingSubscription ? 'Изменить уровень подписки' : 'Выберите уровень подписки'}
+          ${currentSubscription ? 'Изменить или отменить подписку' : 'Выберите уровень подписки'}
         </h2>
         <div class="subscription-modal__list">
           ${tiers.map(tier => {
     const price = (typeof tier.price === 'number' && !isNaN(tier.price)) ? tier.price : 0;
-    const isCurrent = existingSubscription?.tier_id === tier.tier_id;
+    const isCurrent = currentSubscription?.tier_id === tier.tier_id;
     return `
               <div class="subscription-modal__tier ${isCurrent ? 'subscription-modal__tier--current' : ''}">
                 <h3>${escapeHtml(tier.name)} (${price} ₽/мес)</h3>
@@ -52,18 +52,25 @@ export async function openSubscriptionModal({
                   data-subscribe="${tier.tier_id}"
                   ${isCurrent ? 'disabled' : ''}
                 >
-                  ${isCurrent ? 'Текущий уровень' : (existingSubscription ? 'Сменить' : 'Выбрать')}
+                  ${isCurrent ? 'Текущий уровень' : (currentSubscription ? 'Сменить' : 'Выбрать')}
                 </button>
               </div>
             `;
   }).join('')}
         </div>
+        ${currentSubscription ? `
+          <div class="subscription-modal__unsubscribe">
+            <button class="button button--text-orange button--small" data-unsubscribe>Отписаться</button>
+          </div>
+        ` : ''}
       </div>
     `;
     document.body.appendChild(modal);
 
+    // Закрытие по клику на крестик или фон
     modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => modal.remove()));
 
+    // Обработка выбора уровня
     modal.querySelectorAll('[data-subscribe]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const tierId = Number((e.currentTarget as HTMLElement).dataset.subscribe);
@@ -74,12 +81,10 @@ export async function openSubscriptionModal({
         button.textContent = 'Обработка...';
 
         try {
-          if (existingSubscription) {
-            // Обновляем существующую подписку
-            await api.updateSubscription(existingSubscription.subscription_id, tierId);
+          if (currentSubscription) {
+            await api.updateSubscription(currentSubscription.subscription_id, tierId);
             alert('Уровень подписки изменён!');
           } else {
-            // Создаём новую подписку
             await api.subscribeToTrainer(trainerId, tierId);
             alert('Подписка оформлена!');
           }
@@ -94,6 +99,29 @@ export async function openSubscriptionModal({
         }
       });
     });
+
+    // Обработка отписки
+    const unsubscribeBtn = modal.querySelector('[data-unsubscribe]');
+    if (unsubscribeBtn && currentSubscription) {
+      unsubscribeBtn.addEventListener('click', async () => {
+        if (confirm('Вы уверены, что хотите отписаться? Доступ к платному контенту будет потерян.')) {
+          const btn = unsubscribeBtn as HTMLButtonElement;
+          btn.disabled = true;
+          btn.textContent = 'Отписка...';
+          try {
+            await api.cancelSubscription(currentSubscription.subscription_id);
+            alert('Вы отписались от тренера.');
+            modal.remove();
+            if (onSubscribed) await onSubscribed();
+          } catch (error: any) {
+            console.error('Unsubscribe failed:', error);
+            alert(error?.message || 'Не удалось отписаться');
+            btn.disabled = false;
+            btn.textContent = 'Отписаться';
+          }
+        }
+      });
+    }
   }
 }
 
