@@ -1,7 +1,4 @@
-/**
- * @fileoverview Компонент контента профиля
- * @module components/organisms/ProfileContent
- */
+// src/components/organisms/ProfileContent/ProfileContent.ts
 
 import type { ApiClient } from '../../../utils/api';
 import type { PostWithAuthor } from '../../../types/post.types';
@@ -29,9 +26,10 @@ interface FillPostsParams {
   api: ApiClient;
   canManagePosts: boolean;
   onPostsUpdated?: (() => Promise<void>) | null;
+  tierNameMap?: Map<number, string>;
+  tierPriceMap?: Map<number, number>;
 }
 
-// Вспомогательные типы для обратной совместимости с PostCard
 interface PostAttachmentCompat {
   post_attachment_id: number;
   kind: string;
@@ -90,7 +88,9 @@ export async function fillProfilePostsSection(
     posts = [],
     api,
     canManagePosts = false,
-    onPostsUpdated
+    onPostsUpdated,
+    tierNameMap,
+    tierPriceMap
   } = params;
 
   if (posts.length === 0 && activeTab !== 'about') {
@@ -112,6 +112,10 @@ export async function fillProfilePostsSection(
   postsContainer.innerHTML = '';
 
   for (const post of posts) {
+    if (tierNameMap && post.min_tier_id) {
+      post.tier_name = tierNameMap.get(post.min_tier_id);
+      post.tier_price = tierPriceMap?.get(post.min_tier_id) ?? 0;
+    }
     await renderPostCard(postsContainer, {
       ...post,
       api,
@@ -368,6 +372,18 @@ export async function renderProfileContent(
   const HandlebarsGlobal = (window as unknown as { Handlebars: { templates: Record<string, (context: Record<string, unknown>) => string> } }).Handlebars;
   const template = HandlebarsGlobal.templates['ProfileContent.hbs'];
 
+  let tierNameMap: Map<number, string> | undefined;
+  let tierPriceMap: Map<number, number> | undefined;
+  if (isTrainer && !canManagePosts) {
+    try {
+      const tiersResp = await api.getTrainerTiers(viewedUserId);
+      if (tiersResp?.tiers) {
+        tierNameMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.name]));
+        tierPriceMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.price]));
+      }
+    } catch {}
+  }
+
   const tabs = isTrainer
     ? [
       { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
@@ -425,7 +441,6 @@ export async function renderProfileContent(
     if (addButtonContainer) addButtonContainer.style.display = 'none';
   }
 
-  // Сохраняем все посты для клиентской фильтрации
   let allPosts: PostWithAuthor[] = initialPosts || [];
   let searchQuery = '';
 
@@ -452,11 +467,9 @@ export async function renderProfileContent(
     }
   };
 
-  // Фильтрация и отображение постов на основе activeFilters и searchQuery
   function refreshVisiblePosts(): void {
     let filteredPosts = allPosts;
 
-    // Фильтрация по видам спорта (используем sport_type_id)
     if (activeFilters.size > 0) {
       filteredPosts = filteredPosts.filter(p => {
         const sportId = p.sport_type_id;
@@ -464,7 +477,6 @@ export async function renderProfileContent(
       });
     }
 
-    // Фильтрация по поисковому запросу (заголовок, текст, название спорта)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filteredPosts = filteredPosts.filter(p => {
@@ -480,22 +492,20 @@ export async function renderProfileContent(
       posts: filteredPosts,
       api,
       canManagePosts,
-      onPostsUpdated: onPostsUpdated ?? undefined
+      onPostsUpdated: onPostsUpdated ?? undefined,
+      tierNameMap,
+      tierPriceMap
     });
   }
 
-  // Обновление allPosts и перерисовка (при смене вкладки или обновлении)
   async function reloadAllPosts(): Promise<void> {
     try {
       const freshData = await import('../../../utils/profilePageData').then(m => m.loadProfilePageData(api, viewedUserId));
       allPosts = freshData.posts;
-    } catch {
-      // оставляем текущие
-    }
+    } catch {}
     refreshVisiblePosts();
   }
 
-  // Обработчик поиска
   if (searchInput) {
     searchInput.addEventListener('input', () => {
       searchQuery = searchInput.value;
@@ -503,7 +513,6 @@ export async function renderProfileContent(
     });
   }
 
-  // Фильтр по видам спорта
   if (filtersElement) {
     updateFilterLabel();
 
@@ -573,7 +582,6 @@ export async function renderProfileContent(
     });
   }
 
-  // Переключение вкладок
   element.querySelectorAll('.profile-content__tab').forEach((tab: Element) => {
     tab.addEventListener('click', async () => {
       const htmlTab = tab as HTMLElement;
@@ -595,9 +603,7 @@ export async function renderProfileContent(
         if (filtersElement) filtersElement.style.display = 'none';
         if (addButtonContainer) addButtonContainer.style.display = 'none';
         sectionTitleEl.textContent = isTrainer ? 'О тренере' : 'О себе';
-
         if (postsContainer) postsContainer.style.display = 'block';
-
         if (isTrainer) {
           await showTrainerAbout(postsContainer, api, viewedUserId);
         } else {
@@ -609,7 +615,6 @@ export async function renderProfileContent(
         if (filtersElement) filtersElement.style.display = 'none';
         if (addButtonContainer) addButtonContainer.style.display = 'none';
         sectionTitleEl.textContent = 'Подписки';
-
         if (subsContainer) {
           subsContainer.style.display = 'block';
           renderTiersSection(subsContainer, api, isTrainer);
@@ -618,10 +623,8 @@ export async function renderProfileContent(
         if (filtersElement) filtersElement.style.display = 'none';
         if (addButtonContainer) addButtonContainer.style.display = 'none';
         sectionTitleEl.textContent = 'Понравившиеся';
-
         if (postsContainer) postsContainer.style.display = 'block';
         toggleSearchVisibility(true);
-
         const likedPosts = await loadLikedPosts(api, viewedUserId);
         allPosts = likedPosts as PostWithAuthor[];
         refreshVisiblePosts();
@@ -633,10 +636,8 @@ export async function renderProfileContent(
           addButtonContainer.style.display = (canAddPost && tabId === 'publications') ? 'block' : 'none';
         }
         sectionTitleEl.textContent = sectionTitles[tabId] || 'Публикации';
-
         if (postsContainer) postsContainer.style.display = 'block';
         toggleSearchVisibility(true);
-        // Загружаем свежие данные при переходе на вкладку с постами
         if (tabId === 'main' || tabId === 'publications') {
           await reloadAllPosts();
         } else {
@@ -646,7 +647,6 @@ export async function renderProfileContent(
     });
   });
 
-  // Кнопка добавления поста
   if (canAddPost && currentTab === 'publications' && isTrainer) {
     const btnContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
     if (btnContainer) {
@@ -670,7 +670,6 @@ export async function renderProfileContent(
     }
   }
 
-  // Первичная отрисовка текущей вкладки
   if (currentTab === 'about') {
     toggleSidebarVisibility(false);
     if (postsContainer) postsContainer.style.display = 'block';
@@ -689,7 +688,6 @@ export async function renderProfileContent(
   } else {
     if (postsContainer) postsContainer.style.display = 'block';
     toggleSearchVisibility(true);
-    // Загружаем посты при первом открытии
     if (currentTab === 'publications' && !isTrainer) {
       const likedPosts = await loadLikedPosts(api, viewedUserId);
       allPosts = likedPosts as PostWithAuthor[];

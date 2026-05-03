@@ -429,4 +429,27 @@ export class ApiClient {
     await this.ensureCsrfToken();
     await this.request('/v1/profiles/me/avatar', { method: 'DELETE' });
   }
+
+  // ========== SUBSCRIPTION ENDPOINTS ==========
+
+  async getTrainerTiers(trainerId: number): Promise<{ tiers: Tier[] }> {
+    return this.request<{ tiers: Tier[] }>(`/v1/trainers/${trainerId}/tiers`);
+  }
+
+  async subscribeToTrainer(trainerId: number, tierId: number): Promise<any> {
+    await this.ensureCsrfToken();
+    return this.request(`/v1/trainers/${trainerId}/subscribe`, {
+      method: 'POST',
+      body: JSON.stringify({ tier_id: tierId })
+    });
+  }
+
+  async getMySubscriptions(): Promise<{ subscriptions: import('../types/api.types').Subscription[] }> {
+    return this.request<{ subscriptions: import('../types/api.types').Subscription[] }>('/v1/subscriptions/me');
+  }
+
+  async cancelSubscription(subscriptionId: number): Promise<void> {
+    await this.ensureCsrfToken();
+    await this.request(`/v1/subscriptions/${subscriptionId}`, { method: 'DELETE' });
+  }
 }

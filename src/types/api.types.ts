@@ -125,3 +125,15 @@ export interface Tier {
   created_at: string;
   updated_at: string;
 }
+
+export interface Subscription {
+  subscription_id: number;
+  trainer_id: number;
+  tier_id: number;
+  tier_name: string;
+  price: number;
+  active: boolean;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+}

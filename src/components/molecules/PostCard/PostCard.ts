@@ -1,8 +1,3 @@
-/**
- * @fileoverview Компонент карточки публикации
- * @module components/molecules/PostCard
- */
-
 import type { ApiClient } from '../../../utils/api';
 import type { ContentBlockForPost } from '../../../types/post.types';
 import { openPostFormModal } from '../PostFormModal/PostFormModal';
@@ -26,8 +21,8 @@ export interface PostCardData {
   contentBlocks?: ContentBlockForPost[];
   min_tier_id?: number | null;
   sport_type?: string;
-  tierName?: string;       // NEW
-  tierPrice?: number;      // NEW
+  tierName?: string;
+  tierPrice?: number;
 }
 
 interface ContentBlock {
@@ -60,11 +55,10 @@ export async function renderPostCard(
     contentBlocks: existingContentBlocks,
     min_tier_id: minTierId = null,
     sport_type: sportType = '',
-    tierName = '',          // NEW
-    tierPrice = 0           // NEW
+    tierName = '',
+    tierPrice = 0
   } = post;
 
-  // Формируем contentBlocks с правильным порядком
   let contentBlocks: ContentBlock[] = [];
   if (existingContentBlocks && existingContentBlocks.length > 0) {
     contentBlocks = existingContentBlocks.map(block => ({
@@ -90,31 +84,16 @@ export async function renderPostCard(
 
   const template = (window as any).Handlebars.templates['PostCard.hbs'];
   const initials = authorName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-
   const firstTextBlock = contentBlocks.find(b => b.type === 'text');
   const shortTextContent = firstTextBlock?.content
     ? (firstTextBlock.content.length > 200 ? firstTextBlock.content.substring(0, 200) + '...' : firstTextBlock.content)
     : (content.length > 200 ? content.substring(0, 200) + '...' : content);
 
   const html = template({
-    post_id: postId,
-    title,
-    content: shortTextContent,
-    fullContent: content,
-    authorName,
-    authorRole,
-    authorAvatar,
-    authorInitials: initials,
-    likes,
-    liked,
-    comments,
-    can_view: canView,
-    isOwner,
-    contentBlocks,
-    minTierId,
-    sportType,
-    tierName,       // NEW
-    tierPrice       // NEW
+    post_id: postId, title, content: shortTextContent, fullContent: content,
+    authorName, authorRole, authorAvatar, authorInitials: initials,
+    likes, liked, comments, can_view: canView, isOwner,
+    contentBlocks, minTierId, sportType, tierName, tierPrice
   });
 
   const wrapper = document.createElement('div');
@@ -136,9 +115,7 @@ export async function renderPostCard(
         target.closest('[data-post-edit]') ||
         target.closest('[data-post-delete]') ||
         target.closest('[data-post-share]') ||
-        target.closest('[data-post-collapse]')) {
-      return;
-    }
+        target.closest('[data-post-collapse]')) return;
     if (shortBody && fullBody) {
       shortBody.style.display = 'none';
       fullBody.style.display = 'block';

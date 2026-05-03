@@ -1,0 +1,61 @@
+.subscription-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.subscription-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+}
+.subscription-modal__panel {
+  position: relative;
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 460px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.subscription-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #666;
+}
+.subscription-modal__title {
+  margin: 0 0 20px;
+  font-size: 22px;
+  color: #1a2b3c;
+}
+.subscription-modal__list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.subscription-modal__tier {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  background: #fafbfc;
+}
+.subscription-modal__tier h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  color: #1a2b3c;
+}
+.subscription-modal__tier p {
+  margin: 0 0 12px;
+  color: #4a5568;
+  font-size: 14px;
+  line-height: 1.4;
+}
