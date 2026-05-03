@@ -3,7 +3,6 @@
  * @module components/organisms/ProfileContent
  */
 
-import { loadProfilePageData } from '../../../utils/profilePageData';
 import type { ApiClient } from '../../../utils/api';
 import type { PostWithAuthor } from '../../../types/post.types';
 import { renderButton } from '../../atoms/Button/Button';
@@ -63,9 +62,6 @@ function setPostsContainerMessageState(container: HTMLElement, isMessageState: b
   container.closest('.profile-content__main')?.classList.toggle('profile-content__main--message', isMessageState);
 }
 
-/**
- * Извлекает текстовый контент из массива блоков
- */
 function extractTextFromBlocks(blocks: PostBlock[] | undefined): string {
   if (!blocks || !Array.isArray(blocks)) return '';
   return blocks
@@ -74,9 +70,6 @@ function extractTextFromBlocks(blocks: PostBlock[] | undefined): string {
     .join('\n');
 }
 
-/**
- * Извлекает вложения из массива блоков для обратной совместимости с PostCard
- */
 function extractAttachmentsFromBlocks(blocks: PostBlock[] | undefined): PostAttachmentCompat[] {
   if (!blocks || !Array.isArray(blocks)) return [];
   return blocks
@@ -264,10 +257,6 @@ function showClientAbout(container: HTMLElement, profile: Profile): void {
   `;
 }
 
-/**
- * Загружает понравившиеся посты пользователя
- * Адаптировано под новую структуру API с блоками
- */
 async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost[]> {
   try {
     const postsData = await api.getUserPosts(userId);
@@ -293,10 +282,7 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
           updated_at: ''
         }));
 
-        // Извлекаем текстовый контент из блоков
         const textContent = extractTextFromBlocks(fullPost?.blocks);
-
-        // Извлекаем вложения из блоков
         const attachments = extractAttachmentsFromBlocks(fullPost?.blocks);
 
         fullPosts.push({
@@ -328,9 +314,6 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
   }
 }
 
-/**
- * Создаёт секцию подписок: для тренера — кнопка "Настроить уровни", для клиента — заглушка
- */
 function renderTiersSection(container: HTMLElement, api: ApiClient, isTrainer: boolean): void {
   container.innerHTML = '';
 
@@ -372,7 +355,7 @@ export async function renderProfileContent(
 ): Promise<HTMLElement> {
   const {
     activeTab = 'main',
-    posts: _posts = [],
+    posts: initialPosts = [],
     popularPosts = [],
     canAddPost = false,
     api,
@@ -434,12 +417,17 @@ export async function renderProfileContent(
   const postsContainer = element.querySelector('#posts-container') as HTMLElement;
   const subsContainer = element.querySelector('#subscriptions-container') as HTMLElement | null;
   const searchBlock = element.querySelector('.profile-content__search') as HTMLElement | null;
+  const searchInput = searchBlock?.querySelector('.profile-content__search-input') as HTMLInputElement | null;
   const sidebarRight = element.querySelector('.profile-content__sidebar-right') as HTMLElement | null;
 
   if (!isTrainer) {
     if (filtersElement) filtersElement.style.display = 'none';
     if (addButtonContainer) addButtonContainer.style.display = 'none';
   }
+
+  // Сохраняем все посты для клиентской фильтрации
+  let allPosts: PostWithAuthor[] = initialPosts || [];
+  let searchQuery = '';
 
   function toggleSearchVisibility(show: boolean): void {
     if (searchBlock) {
@@ -464,23 +452,58 @@ export async function renderProfileContent(
     }
   };
 
-  const applyFilters = async (): Promise<void> => {
-    const freshData = await loadProfilePageData(api, viewedUserId);
-    const filteredPosts = activeFilters.size > 0
-      ? freshData.posts.filter(p =>
-        activeFilters.has(String((p as PostWithAuthor & { sport_type?: string }).sport_type || ''))
-      )
-      : freshData.posts;
+  // Фильтрация и отображение постов на основе activeFilters и searchQuery
+  function refreshVisiblePosts(): void {
+    let filteredPosts = allPosts;
 
-    await fillProfilePostsSection(postsContainer, {
+    // Фильтрация по видам спорта (используем sport_type_id)
+    if (activeFilters.size > 0) {
+      filteredPosts = filteredPosts.filter(p => {
+        const sportId = (p as any).sport_type_id; // используем добавленное поле
+        return sportId != null && activeFilters.has(String(sportId));
+      });
+    }
+
+    // Фильтрация по поисковому запросу
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filteredPosts = filteredPosts.filter(p => {
+        const title = (p.title || '').toLowerCase();
+        const text = (p.raw_text || '').toLowerCase();
+        const sportName = (p.sport_type || '').toLowerCase();
+        return title.includes(query) || text.includes(query) || sportName.includes(query);
+      });
+    }
+
+    fillProfilePostsSection(postsContainer, {
       activeTab: currentTab,
       posts: filteredPosts,
       api,
       canManagePosts,
       onPostsUpdated: onPostsUpdated ?? undefined
     });
-  };
+  }
 
+  // Обновление allPosts и перерисовка (при смене вкладки или обновлении)
+  async function reloadAllPosts(): Promise<void> {
+    try {
+      const freshData = await import('../../../utils/profilePageData').then(m => m.loadProfilePageData(api, viewedUserId));
+      allPosts = freshData.posts;
+    } catch {
+      // оставляем текущие
+    }
+    refreshVisiblePosts();
+  }
+
+  // Обработчик поиска
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      searchQuery = searchInput.value;
+      refreshVisiblePosts();
+    });
+  }
+
+  // Фильтр по видам спорта
   if (filtersElement) {
     updateFilterLabel();
 
@@ -522,11 +545,11 @@ export async function renderProfileContent(
             event.stopPropagation();
           });
 
-          checkbox.addEventListener('change', async () => {
+          checkbox.addEventListener('change', () => {
             if (checkbox.checked) activeFilters.add(id);
             else activeFilters.delete(id);
             updateFilterLabel();
-            await applyFilters();
+            refreshVisiblePosts();
           });
 
           const textSpan = document.createElement('span');
@@ -550,6 +573,7 @@ export async function renderProfileContent(
     });
   }
 
+  // Переключение вкладок
   element.querySelectorAll('.profile-content__tab').forEach((tab: Element) => {
     tab.addEventListener('click', async () => {
       const htmlTab = tab as HTMLElement;
@@ -599,13 +623,8 @@ export async function renderProfileContent(
         toggleSearchVisibility(true);
 
         const likedPosts = await loadLikedPosts(api, viewedUserId);
-        await fillProfilePostsSection(postsContainer, {
-          activeTab: tabId,
-          posts: likedPosts as PostWithAuthor[],
-          api,
-          canManagePosts: false,
-          onPostsUpdated: onPostsUpdated ?? undefined
-        });
+        allPosts = likedPosts as PostWithAuthor[];
+        refreshVisiblePosts();
       } else {
         if (filtersElement) {
           filtersElement.style.display = (tabId === 'main' || tabId === 'publications') ? 'flex' : 'none';
@@ -617,11 +636,17 @@ export async function renderProfileContent(
 
         if (postsContainer) postsContainer.style.display = 'block';
         toggleSearchVisibility(true);
-        await applyFilters();
+        // При необходимости обновить allPosts (если переключились на другую вкладку)
+        if (tabId === 'main' || tabId === 'publications') {
+          await reloadAllPosts();
+        } else {
+          refreshVisiblePosts();
+        }
       }
     });
   });
 
+  // Кнопка добавления поста
   if (canAddPost && currentTab === 'publications' && isTrainer) {
     const btnContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
     if (btnContainer) {
@@ -635,13 +660,17 @@ export async function renderProfileContent(
           await openPostFormModal({
             api,
             mode: 'create',
-            onSaved: onPostsUpdated
+            onSaved: async () => {
+              if (onPostsUpdated) await onPostsUpdated();
+              await reloadAllPosts();
+            }
           });
         }
       });
     }
   }
 
+  // Первичная отрисовка текущей вкладки
   if (currentTab === 'about') {
     toggleSidebarVisibility(false);
     if (postsContainer) postsContainer.style.display = 'block';
@@ -657,21 +686,14 @@ export async function renderProfileContent(
       subsContainer.style.display = 'block';
       renderTiersSection(subsContainer, api, isTrainer);
     }
-  } else if (currentTab === 'publications' && !isTrainer) {
-    if (postsContainer) postsContainer.style.display = 'block';
-    toggleSearchVisibility(true);
-    const likedPosts = await loadLikedPosts(api, viewedUserId);
-    await fillProfilePostsSection(postsContainer, {
-      activeTab: currentTab,
-      posts: likedPosts as PostWithAuthor[],
-      api,
-      canManagePosts: false,
-      onPostsUpdated: onPostsUpdated ?? undefined
-    });
   } else {
     if (postsContainer) postsContainer.style.display = 'block';
     toggleSearchVisibility(true);
-    await applyFilters();
+    if (currentTab === 'publications' && !isTrainer) {
+      const likedPosts = await loadLikedPosts(api, viewedUserId);
+      allPosts = likedPosts as PostWithAuthor[];
+    }
+    refreshVisiblePosts();
   }
 
   container.appendChild(element);
