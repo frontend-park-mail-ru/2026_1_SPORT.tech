@@ -13,6 +13,7 @@
 @import '../components/molecules/DonationModal/DonationModal.css';
 @import '../components/molecules/ProfileHeader/ProfileHeader.css';
 @import '../components/molecules/ProfileEditModal/ProfileEditModal.css';
+@import '../components/molecules/SubscriptionModal/SubscriptionModal.css';
 
 /* Организмы */
 @import '../components/organisms/AuthForm/AuthForm.css';
