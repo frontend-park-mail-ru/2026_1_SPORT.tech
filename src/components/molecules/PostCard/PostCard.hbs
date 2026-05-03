@@ -41,15 +41,7 @@
         {{/if}}
         {{#if file_url}}
           <div class="post-card__media-block">
-            {{#if (lookup this 'kind')}}
-              {{#if (eq kind "video")}}
-                <video controls src="{{file_url}}"></video>
-              {{else}}
-                <img src="{{file_url}}" alt="" loading="lazy">
-              {{/if}}
-            {{else}}
-              <img src="{{file_url}}" alt="" loading="lazy">
-            {{/if}}
+            <img src="{{file_url}}" alt="" loading="lazy">
           </div>
         {{/if}}
       {{/each}}
