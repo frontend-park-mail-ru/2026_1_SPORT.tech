@@ -50,6 +50,7 @@ export interface Post {
   comments_count: number;
   blocks: PostBlock[];
   can_view: boolean;
+  sport_type_id?: number | null;
 }
 
 export interface PostListItem {
@@ -62,6 +63,7 @@ export interface PostListItem {
   likes_count: number;
   comments_count: number;
   can_view: boolean;
+  sport_type_id?: number | null;
 }
 
 export interface PostLikeResponse {
@@ -113,4 +115,13 @@ export interface UpdateProfilePayload {
   last_name?: string;
   bio?: string;
   trainer_details?: TrainerDetails;
+}
+
+export interface Tier {
+  tier_id: number;
+  name: string;
+  price: number;
+  description: string;
+  created_at: string;
+  updated_at: string;
 }

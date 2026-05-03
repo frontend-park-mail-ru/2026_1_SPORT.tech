@@ -11,7 +11,8 @@ import type {
   TrainerDetails,
   SportType,
   DonationResponse,
-  CSRFTokenResponse
+  CSRFTokenResponse,
+  Tier
 } from '../types/api.types';
 
 export interface ApiResponse<T = unknown> {
@@ -49,7 +50,6 @@ export class ApiClient {
     return this.csrfToken;
   }
 
-
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     const method = options.method || 'GET';
@@ -57,7 +57,6 @@ export class ApiClient {
 
     const headers: Record<string, string> = {};
 
-    // Не устанавливаем Content-Type для FormData
     if (!(options.body instanceof FormData)) {
       headers['Content-Type'] = 'application/json';
     }
@@ -71,36 +70,22 @@ export class ApiClient {
       }
     }
 
-    console.log(`[API] ${method} ${url}`, {
-      headers,
-      body: options.body instanceof FormData
-        ? '[FormData]'
-        : typeof options.body === 'string'
-          ? JSON.parse(options.body)
-          : undefined
-    });
-
     const response = await fetch(url, {
       ...options,
       credentials: 'include',
       headers
     });
 
-    console.log(`[API] Response ${response.status} from ${method} ${url}`);
-
     if (response.status === 204) {
       return null as T;
     }
 
-    // Пытаемся прочитать как JSON
     let data: T;
     const contentType = response.headers.get('content-type');
 
     if (contentType && contentType.includes('application/json')) {
       data = await response.json() as T;
-      console.log('[API] Response data:', data);
     } else {
-      // Если не JSON — читаем как текст для отладки
       const text = await response.text();
       console.error('[API] Non-JSON response:', text.substring(0, 500));
       throw new Error(`Сервер вернул не JSON (${response.status}): ${text.substring(0, 200)}`);
@@ -118,7 +103,8 @@ export class ApiClient {
     return data;
   }
 
-  // Auth endpoints
+  // ========== AUTH ENDPOINTS ==========
+
   async login(email: string, password: string): Promise<AuthResponse> {
     await this.ensureCsrfToken();
     return this.request<AuthResponse>('/v1/auth/login', {
@@ -172,7 +158,8 @@ export class ApiClient {
     });
   }
 
-  // Profile endpoints
+  // ========== PROFILE ENDPOINTS ==========
+
   async getProfile(userId: number): Promise<Profile> {
     return this.request<Profile>(`/v1/profiles/${userId}`);
   }
@@ -242,7 +229,8 @@ export class ApiClient {
     );
   }
 
-  // Post endpoints
+  // ========== POST ENDPOINTS ==========
+
   async getPost(postId: number): Promise<Post> {
     return this.request<Post>(`/v1/posts/${postId}`);
   }
@@ -251,6 +239,7 @@ export class ApiClient {
     title: string;
     blocks: PostBlockInput[];
     min_tier_id?: number;
+    sport_type_id?: number;
   }): Promise<Post> {
     await this.ensureCsrfToken();
     return this.request<Post>('/v1/posts', {
@@ -263,7 +252,9 @@ export class ApiClient {
     title?: string;
     blocks?: PostBlockInput[];
     min_tier_id?: number;
+    sport_type_id?: number;
     clear_min_tier_id?: boolean;
+    clear_sport_type_id?: boolean;
     replace_blocks?: boolean;
   }): Promise<Post> {
     await this.ensureCsrfToken();
@@ -273,20 +264,16 @@ export class ApiClient {
     });
   }
 
-
   async uploadPostMedia(file: File): Promise<{ file_url: string; content_type: string; kind: string; size_bytes: number }> {
     await this.ensureCsrfToken();
 
-    // Создаём чистую FormData только с файлом
     const formData = new FormData();
     formData.append('file', file);
 
-    // Заголовки: НЕ устанавливаем Content-Type!
     const headers: Record<string, string> = {};
     if (this.csrfToken) {
       headers['X-CSRF-Token'] = this.csrfToken;
     }
-    // Важно: Accept тоже можно указать
     headers['Accept'] = 'application/json';
 
     const response = await fetch(`${this.baseURL}/v1/posts/media`, {
@@ -294,7 +281,6 @@ export class ApiClient {
       credentials: 'include',
       headers,
       body: formData
-      // Не указываем mode, cache и т.д.
     });
 
     if (!response.ok) {
@@ -310,7 +296,6 @@ export class ApiClient {
 
     return response.json();
   }
-
 
   async deletePost(postId: number): Promise<void> {
     await this.ensureCsrfToken();
@@ -334,6 +319,7 @@ export class ApiClient {
   async searchPosts(params: {
     query?: string;
     trainer_ids?: number[];
+    sport_type_ids?: number[];
     min_tier_id?: number;
     max_tier_id?: number;
     block_kinds?: string[];
@@ -348,12 +334,50 @@ export class ApiClient {
     });
   }
 
-  // Sport types
+  // ========== TIER ENDPOINTS ==========
+
+  async getTiers(): Promise<{ tiers: Tier[] }> {
+    return this.request<{ tiers: Tier[] }>('/v1/tiers');
+  }
+
+  async createTier(data: {
+    name: string;
+    price: number;
+    description?: string;
+  }): Promise<Tier> {
+    await this.ensureCsrfToken();
+    return this.request<Tier>('/v1/tiers', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateTier(tierId: number, data: {
+    name?: string;
+    price?: number;
+    description?: string;
+    clear_description?: boolean;
+  }): Promise<Tier> {
+    await this.ensureCsrfToken();
+    return this.request<Tier>(`/v1/tiers/${tierId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteTier(tierId: number): Promise<void> {
+    await this.ensureCsrfToken();
+    await this.request(`/v1/tiers/${tierId}`, { method: 'DELETE' });
+  }
+
+  // ========== SPORT TYPES ==========
+
   async getSportTypes(): Promise<{ sport_types: SportType[] }> {
     return this.request<{ sport_types: SportType[] }>('/v1/sport-types');
   }
 
-  // Donation
+  // ========== DONATION ==========
+
   async createDonation(
     recipientUserId: number,
     amountValue: number,
@@ -374,7 +398,8 @@ export class ApiClient {
     );
   }
 
-  // Avatar
+  // ========== AVATAR ==========
+
   async uploadAvatar(file: File): Promise<{ avatar_url: string }> {
     await this.ensureCsrfToken();
     const formData = new FormData();

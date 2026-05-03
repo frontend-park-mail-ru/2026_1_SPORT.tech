@@ -65,6 +65,7 @@ export async function openPostFormModal({
   const blocks: ContentBlock[] = [];
   let blockCounter = 0;
   let selectedTiers: number[] = [];
+  let selectedSportTypeId: number | null = null;
 
   // ========== ЗАГРУЖАЕМ СУЩЕСТВУЮЩИЙ ПОСТ (если редактирование) ==========
   if (mode === 'edit' && postId != null) {
@@ -100,6 +101,11 @@ export async function openPostFormModal({
       if (fullPost.min_tier_id != null && fullPost.min_tier_id > 0) {
         selectedTiers = [fullPost.min_tier_id];
       }
+
+      // Вид спорта
+      if (fullPost.sport_type_id != null) {
+        selectedSportTypeId = fullPost.sport_type_id;
+      }
     } catch (error) {
       console.error('Failed to load existing post:', error);
     }
@@ -117,19 +123,25 @@ export async function openPostFormModal({
 
   // ========== СОЗДАЁМ ПОЛЯ ФОРМЫ ==========
 
-  // Спортивные дисциплины (пока не используются в API, но оставляем)
+  // Спортивные дисциплины
+  let sportFieldApi: SportTypeFieldApi | null = null;
   const sportTypes = await loadSportTypes(api);
   if (sportFieldContainer && sportTypes.length > 0) {
-    createSportTypesField(sportFieldContainer, {
+    sportFieldApi = createSportTypesField(sportFieldContainer, {
       label: '',
       placeholder: 'Выберите вид спорта',
       required: false,
       options: sportTypes,
       onChange: () => {}
     });
+
+    // Восстанавливаем выбранный вид спорта при редактировании
+    if (selectedSportTypeId != null) {
+      sportFieldApi.setValue([selectedSportTypeId]);
+    }
   }
 
-  // Уровни подписки — создаём с правильными начальными значениями
+  // Уровни подписки
   let tierFieldApi: SportTypeFieldApi | null = null;
   if (tierContainer) {
     const tierOptions: SportTypeFieldOption[] = [
@@ -229,7 +241,6 @@ export async function openPostFormModal({
 
   function createMediaPreview(block: ContentBlock, container: HTMLElement): void {
     if (block.existingUrl && !block.file) {
-      // Существующий URL с бэкенда
       container.innerHTML = block.existingUrl.toLowerCase().includes('.mp4') ||
                           block.existingUrl.toLowerCase().includes('.webm') ||
                           block.existingUrl.toLowerCase().includes('.mov')
@@ -239,7 +250,6 @@ export async function openPostFormModal({
     }
 
     if (block.value && block.file) {
-      // Новый файл
       const isVideo = block.file.type.startsWith('video/');
       if (isVideo) {
         const video = document.createElement('video');
@@ -255,7 +265,6 @@ export async function openPostFormModal({
         container.appendChild(img);
       }
     } else {
-      // Плейсхолдер
       container.innerHTML = `
         <div class="post-form__block-media-placeholder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32">
@@ -407,7 +416,7 @@ export async function openPostFormModal({
               file_url: uploadResult.file_url,
               kind: block.file.type.startsWith('video/') ? 'video' : 'image'
             };
-          } catch (_uploadError) {
+          } catch {
             alert('⚠️ Загрузка медиа временно недоступна. Файл не будет добавлен.');
             return null;
           }
@@ -435,12 +444,22 @@ export async function openPostFormModal({
         title: string;
         blocks: Array<{ text_content?: string; file_url?: string; kind?: string }>;
         min_tier_id?: number;
+        sport_type_id?: number;
         replace_blocks?: boolean;
       } = {
         title: title.trim(),
         blocks: validBlocks as Array<{ text_content?: string; file_url?: string; kind?: string }>
       };
 
+      // Добавляем вид спорта
+      if (sportFieldApi) {
+        const sportIds = sportFieldApi.getValue();
+        if (sportIds.length > 0) {
+          payload.sport_type_id = sportIds[0];
+        }
+      }
+
+      // Добавляем уровень подписки
       if (selectedTiers.length > 0) {
         payload.min_tier_id = Math.min(...selectedTiers);
       }

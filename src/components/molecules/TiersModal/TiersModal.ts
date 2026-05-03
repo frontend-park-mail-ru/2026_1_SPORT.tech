@@ -4,6 +4,7 @@
  */
 
 import type { ApiClient } from '../../../utils/api';
+import type { Tier } from '../../../types/api.types';
 import templates from '../../../templates';
 import './TiersModal.css';
 
@@ -13,25 +14,23 @@ export interface TiersModalOptions {
 }
 
 interface TierData {
-  id: string;
+  id: string;        // 'tier-{tier_id}' для существующих, 'new-{counter}' для новых
   name: string;
   price: number;
   description: string;
   index?: number;
+  existingId?: number; // настоящий tier_id с бэкенда
 }
 
 export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
   let tiers: TierData[] = [];
   let tierCounter = 0;
 
-  // Получаем скомпилированный шаблон
   const template = templates['TiersModal.hbs'];
 
-  // Создаём контейнер для модального окна
   const container = document.createElement('div');
   container.className = 'tiers-modal-container';
 
-  // Функция для показа ошибки
   function showError(message: string): void {
     const existingError = container.querySelector('.tiers-error-message');
     if (existingError) {
@@ -57,7 +56,6 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
       tiersList.parentNode?.insertBefore(errorDiv, tiersList);
     }
 
-    // Автоматически убираем через 3 секунды
     setTimeout(() => {
       errorDiv.style.opacity = '0';
       errorDiv.style.transition = 'opacity 0.3s ease';
@@ -65,14 +63,12 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
     }, 3000);
   }
 
-  // Функция обновления индексов
   function updateIndices(): void {
     tiers.forEach((tier, index) => {
       tier.index = index + 1;
     });
   }
 
-  // Функция рендеринга
   function render(): void {
     updateIndices();
     const html = template({ tiers });
@@ -80,9 +76,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
     bindEvents();
   }
 
-  // Привязка событий
   function bindEvents(): void {
-    // Делегирование событий
     container.addEventListener('click', (e: Event) => {
       const target = e.target as HTMLElement;
       const action = target.dataset.action || target.closest('[data-action]')?.getAttribute('data-action');
@@ -97,7 +91,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
         e.preventDefault();
         tierCounter++;
         tiers.push({
-          id: `tier-${Date.now()}-${tierCounter}`,
+          id: `new-${Date.now()}-${tierCounter}`,
           name: '',
           price: 0,
           description: ''
@@ -117,7 +111,6 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
       }
     });
 
-    // Обработка изменений в инпутах
     container.addEventListener('input', (e: Event) => {
       const target = e.target as HTMLInputElement;
       if (!target.classList.contains('tier-input')) return;
@@ -137,7 +130,6 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
       }
     });
 
-    // Обработчик сохранения
     const saveBtn = container.querySelector('[data-action="save"]') as HTMLButtonElement;
     if (saveBtn) {
       saveBtn.addEventListener('click', async (e: MouseEvent) => {
@@ -147,7 +139,6 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
     }
   }
 
-  // Сохранение данных
   async function handleSave(saveBtn: HTMLButtonElement): Promise<void> {
     const validTiers = tiers.filter(t => t.name.trim() && t.price > 0);
 
@@ -160,36 +151,91 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
     saveBtn.textContent = 'Сохранение...';
 
     try {
-      await api.request('/v1/tiers', {
-        method: 'POST',
-        body: JSON.stringify({
-          tiers: validTiers.map(t => ({
-            name: t.name.trim(),
-            price: t.price,
-            description: t.description.trim()
-          }))
-        })
-      });
+      // Получаем существующие уровни для сравнения
+      const existingResponse = await api.getTiers().catch(() => ({ tiers: [] as Tier[] }));
+      const existingTiers: Tier[] = existingResponse?.tiers || [];
+
+      // Удаляем уровни, которых нет в новом списке
+      const existingIds = new Set(validTiers.filter(t => t.existingId).map(t => t.existingId));
+
+      for (const existingTier of existingTiers) {
+        if (!existingIds.has(existingTier.tier_id)) {
+          try {
+            await api.deleteTier(existingTier.tier_id);
+          } catch (error) {
+            console.error(`Failed to delete tier ${existingTier.tier_id}:`, error);
+          }
+        }
+      }
+
+      // Создаём новые и обновляем существующие
+      for (const tier of validTiers) {
+        if (tier.existingId) {
+          // Обновляем существующий
+          try {
+            await api.updateTier(tier.existingId, {
+              name: tier.name.trim(),
+              price: tier.price,
+              description: tier.description.trim() || ''
+            });
+          } catch (error) {
+            console.error(`Failed to update tier ${tier.existingId}:`, error);
+            throw new Error(`Не удалось обновить уровень «${tier.name}»`);
+          }
+        } else {
+          // Создаём новый
+          try {
+            await api.createTier({
+              name: tier.name.trim(),
+              price: tier.price,
+              description: tier.description.trim() || ''
+            });
+          } catch (error) {
+            console.error('Failed to create tier:', error);
+            throw new Error(`Не удалось создать уровень «${tier.name}»`);
+          }
+        }
+      }
 
       if (onSaved) onSaved();
       close();
     } catch (error: unknown) {
-      console.error('Failed to save:', error);
-      showError('Не удалось сохранить уровни подписки');
+      const err = error as Error;
+      console.error('Failed to save tiers:', err);
+      showError(err.message || 'Не удалось сохранить уровни подписки');
       saveBtn.disabled = false;
       saveBtn.textContent = 'Сохранить';
     }
   }
 
-  // Закрытие модального окна
   function close(): void {
     document.removeEventListener('keydown', onKey);
     container.remove();
   }
 
-  // Обработчик клавиши Escape
   function onKey(e: KeyboardEvent): void {
     if (e.key === 'Escape') close();
+  }
+
+  // Загрузка существующих уровней
+  async function loadTiers(): Promise<void> {
+    try {
+      const response = await api.getTiers();
+      if (response?.tiers && Array.isArray(response.tiers)) {
+        tiers = response.tiers.map((t: Tier) => ({
+          id: `tier-${t.tier_id}`,
+          name: t.name || '',
+          price: t.price || 0,
+          description: t.description || '',
+          existingId: t.tier_id
+        }));
+        tierCounter = tiers.length;
+        render();
+      }
+    } catch (error) {
+      console.error('Failed to load tiers:', error);
+      showError('Не удалось загрузить существующие уровни');
+    }
   }
 
   // Инициализация
@@ -197,28 +243,6 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
   document.body.appendChild(container);
   render();
 
-  // Загрузка существующих уровней
-  api.request<{
-    tiers: Array<{
-      tier_id: number;
-      name: string;
-      price: number;
-      description: string;
-    }>;
-  }>('/v1/tiers')
-    .then(response => {
-      if (response?.tiers && Array.isArray(response.tiers)) {
-        tiers = response.tiers.map(t => ({
-          id: `tier-${t.tier_id}`,
-          name: t.name || '',
-          price: t.price || 0,
-          description: t.description || ''
-        }));
-        tierCounter = tiers.length;
-        render();
-      }
-    })
-    .catch(() => {
-      showError('Не удалось загрузить существующие уровни');
-    });
+  // Загружаем существующие уровни с бэкенда
+  void loadTiers();
 }
