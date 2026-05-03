@@ -50,22 +50,20 @@ export async function renderProfileHeader(
     });
   }
 
-  // Подписка / изменение подписки
-  if (!isOwnProfile && showDonate && actionsContainer) {
-    let subscriptionButton: ButtonAPI | null = null;
+  // Функция рендера кнопки подписки (перерисовывается после каждого действия)
+  const renderSubscriptionButton = async () => {
+    if (!actionsContainer) return;
+    // Очищаем контейнер перед перерисовкой
+    actionsContainer.innerHTML = '';
 
-    // Функция обновления текста кнопки на основе актуальных подписок
-    const updateButtonText = async () => {
-      if (!subscriptionButton) return;
-      try {
-        const subs = await api.getMySubscriptions();
-        const hasSubscription = subs.subscriptions.some(s => s.trainer_id === viewedUserId);
-        const newText = hasSubscription ? 'Изменить подписку' : 'Подписаться';
-        subscriptionButton.setText(newText);
-      } catch {
-        // игнорируем
-      }
-    };
+    let buttonText = 'Подписаться';
+    try {
+      const subs = await api.getMySubscriptions();
+      const hasSubscription = subs.subscriptions.some(s => s.trainer_id === viewedUserId);
+      buttonText = hasSubscription ? 'Изменить подписку' : 'Подписаться';
+    } catch {
+      // игнорируем
+    }
 
     const handleSubscriptionClick = async () => {
       if (!viewedUserId) return;
@@ -88,23 +86,25 @@ export async function renderProfileHeader(
         trainerId: viewedUserId,
         existingSubscription,
         onSubscribed: async () => {
-          // Обновляем текст кнопки
-          await updateButtonText();
-          // Также вызываем внешний onSubscribed, если передан (обновляет посты и другие данные)
+          // Перерисовываем кнопку после успешного изменения подписки
+          await renderSubscriptionButton();
           if (onSubscribed) await onSubscribed();
         }
       });
     };
 
-    // Создаём кнопку и сохраняем API
-    subscriptionButton = await renderButton(actionsContainer, {
-      text: 'Подписаться', // временный текст, сразу обновим
+    await renderButton(actionsContainer, {
+      text: buttonText,
       variant: 'primary-orange',
       state: 'normal',
       size: 'medium',
       onClick: handleSubscriptionClick
     });
-    await updateButtonText(); // установим правильный текст после создания
+  };
+
+  // Подписка / изменение подписки
+  if (!isOwnProfile && showDonate && actionsContainer) {
+    await renderSubscriptionButton();
   }
 
   // Редактировать профиль
