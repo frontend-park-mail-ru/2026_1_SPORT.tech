@@ -141,7 +141,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
 
   // ========== СОХРАНЕНИЕ ==========
   async function handleSave(saveBtn: HTMLButtonElement): Promise<void> {
-    const validTiers = tiers.filter(t => t.name.trim() && t.price > 0);
+    const validTiers = tiers.filter(t => t.name.trim() && t.price !== undefined && t.price !== null && t.price >= 0);
 
     if (validTiers.length === 0) {
       showError('Добавьте хотя бы один уровень с названием и ценой');
