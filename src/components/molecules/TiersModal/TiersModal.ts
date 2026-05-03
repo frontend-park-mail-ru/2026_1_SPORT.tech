@@ -28,14 +28,15 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
 
   const template = templates['TiersModal.hbs'];
 
+  // Контейнер модального окна
   const container = document.createElement('div');
   container.className = 'tiers-modal-container';
+  document.body.appendChild(container);
 
+  // ========== ФУНКЦИИ РЕНДЕРИНГА ==========
   function showError(message: string): void {
     const existingError = container.querySelector('.tiers-error-message');
-    if (existingError) {
-      existingError.remove();
-    }
+    if (existingError) existingError.remove();
 
     const errorDiv = document.createElement('div');
     errorDiv.className = 'tiers-error-message';
@@ -69,76 +70,76 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
     });
   }
 
+  // Генерация HTML без повторной привязки событий
   function render(): void {
     updateIndices();
     const html = template({ tiers });
     container.innerHTML = html;
-    bindEvents();
   }
 
-  function bindEvents(): void {
-    container.addEventListener('click', (e: Event) => {
-      const target = e.target as HTMLElement;
-      const action = target.dataset.action || target.closest('[data-action]')?.getAttribute('data-action');
+  // ========== ДЕЛЕГИРОВАННЫЕ СОБЫТИЯ (назначаются один раз) ==========
+  container.addEventListener('click', (e: Event) => {
+    const target = e.target as HTMLElement;
+    // Ищем ближайший элемент с data-action
+    const action = target.dataset.action || target.closest('[data-action]')?.getAttribute('data-action');
 
-      switch (action) {
-      case 'close':
-        e.preventDefault();
-        close();
-        break;
+    switch (action) {
+    case 'close':
+      e.preventDefault();
+      close();
+      break;
 
-      case 'add-tier':
-        e.preventDefault();
-        tierCounter++;
-        tiers.push({
-          id: `new-${Date.now()}-${tierCounter}`,
-          name: '',
-          price: 0,
-          description: ''
-        });
-        render();
-        break;
-
-      case 'remove-tier': {
-        e.preventDefault();
-        const tierId = target.dataset.tierId || target.closest('[data-tier-id]')?.getAttribute('data-tier-id');
-        if (tierId) {
-          tiers = tiers.filter(t => t.id !== tierId);
-          render();
-        }
-        break;
-      }
-      }
-    });
-
-    container.addEventListener('input', (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      if (!target.classList.contains('tier-input')) return;
-
-      const tierId = target.dataset.tierId;
-      const field = target.dataset.field;
-      const tier = tiers.find(t => t.id === tierId);
-
-      if (tier && field) {
-        if (field === 'price') {
-          tier.price = Number(target.value) || 0;
-        } else if (field === 'name') {
-          tier.name = target.value;
-        } else if (field === 'description') {
-          tier.description = target.value;
-        }
-      }
-    });
-
-    const saveBtn = container.querySelector('[data-action="save"]') as HTMLButtonElement;
-    if (saveBtn) {
-      saveBtn.addEventListener('click', async (e: MouseEvent) => {
-        e.preventDefault();
-        await handleSave(saveBtn);
+    case 'add-tier':
+      e.preventDefault();
+      tierCounter++;
+      tiers.push({
+        id: `new-${Date.now()}-${tierCounter}`,
+        name: '',
+        price: 0,
+        description: ''
       });
-    }
-  }
+      render();
+      break;
 
+    case 'remove-tier': {
+      e.preventDefault();
+      const tierId = target.dataset.tierId || target.closest('[data-tier-id]')?.getAttribute('data-tier-id');
+      if (tierId) {
+        tiers = tiers.filter(t => t.id !== tierId);
+        render();
+      }
+      break;
+    }
+
+    case 'save': {
+      e.preventDefault();
+      const saveBtn = target.closest('[data-action="save"]') as HTMLButtonElement;
+      if (saveBtn) handleSave(saveBtn);
+      break;
+    }
+    }
+  });
+
+  container.addEventListener('input', (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    if (!target.classList.contains('tier-input')) return;
+
+    const tierId = target.dataset.tierId;
+    const field = target.dataset.field;
+    const tier = tiers.find(t => t.id === tierId);
+
+    if (tier && field) {
+      if (field === 'price') {
+        tier.price = Number(target.value) || 0;
+      } else if (field === 'name') {
+        tier.name = target.value;
+      } else if (field === 'description') {
+        tier.description = target.value;
+      }
+    }
+  });
+
+  // ========== СОХРАНЕНИЕ ==========
   async function handleSave(saveBtn: HTMLButtonElement): Promise<void> {
     const validTiers = tiers.filter(t => t.name.trim() && t.price > 0);
 
@@ -171,7 +172,6 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
       // Создаём новые и обновляем существующие
       for (const tier of validTiers) {
         if (tier.existingId) {
-          // Обновляем существующий
           try {
             await api.updateTier(tier.existingId, {
               name: tier.name.trim(),
@@ -183,7 +183,6 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
             throw new Error(`Не удалось обновить уровень «${tier.name}»`);
           }
         } else {
-          // Создаём новый
           try {
             await api.createTier({
               name: tier.name.trim(),
@@ -208,6 +207,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
     }
   }
 
+  // ========== ЗАКРЫТИЕ ==========
   function close(): void {
     document.removeEventListener('keydown', onKey);
     container.remove();
@@ -217,7 +217,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
     if (e.key === 'Escape') close();
   }
 
-  // Загрузка существующих уровней
+  // ========== ЗАГРУЗКА СУЩЕСТВУЮЩИХ УРОВНЕЙ ==========
   async function loadTiers(): Promise<void> {
     try {
       const response = await api.getTiers();
@@ -238,11 +238,8 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
     }
   }
 
-  // Инициализация
+  // ========== ИНИЦИАЛИЗАЦИЯ ==========
   document.addEventListener('keydown', onKey);
-  document.body.appendChild(container);
-  render();
-
-  // Загружаем существующие уровни с бэкенда
-  void loadTiers();
+  render(); // Первичный рендер с пустым списком
+  void loadTiers(); // Загружаем данные с бэкенда
 }
