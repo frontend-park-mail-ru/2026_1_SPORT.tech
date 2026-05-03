@@ -1,8 +1,8 @@
 // src/utils/profilePageData.ts
 
 import type { ApiClient } from './api';
-import type { Profile, Post, PostListItem, AuthResponse, User, PostBlock } from '../types/api.types';
-import type { PostWithAuthor, ProfilePageData } from '../types/post.types';
+import type { Profile, Post, PostListItem, AuthResponse, User} from '../types/api.types';
+import type { PostWithAuthor, ProfilePageData, ContentBlockForPost } from '../types/post.types';
 
 export function getUserRoleLabel(isTrainer: boolean): string {
   return isTrainer ? 'Тренер' : 'Клиент';
@@ -28,25 +28,6 @@ export function formatPostContent(textContent: string): string {
     return 'Нет доступа к содержимому поста';
   }
   return escapeHtml(textContent).replace(/\n/g, '<br>');
-}
-
-function extractTextFromBlocks(blocks: PostBlock[] | undefined): string {
-  if (!blocks || !Array.isArray(blocks)) return '';
-  return blocks
-    .filter(block => block.text_content)
-    .map(block => block.text_content)
-    .join('\n');
-}
-
-function extractAttachmentsFromBlocks(blocks: PostBlock[] | undefined): Array<{ post_attachment_id: number; kind: string; file_url: string }> {
-  if (!blocks || !Array.isArray(blocks)) return [];
-  return blocks
-    .filter(block => block.file_url)
-    .map(block => ({
-      post_attachment_id: block.post_block_id,
-      kind: block.kind || 'image',
-      file_url: block.file_url
-    }));
 }
 
 interface MapProfileDataResult {
@@ -108,10 +89,17 @@ export async function loadProfilePageData(
     throw new Error('Пользователь не авторизован');
   }
 
-  const [profileData, postsData] = await Promise.all([
+  // Загружаем профиль, посты и виды спорта параллельно
+  const [profileData, postsData, sportTypesData] = await Promise.all([
     api.getProfile(resolvedUserId),
-    api.getUserPosts(resolvedUserId).catch(() => ({ posts: [] as PostListItem[], user_id: resolvedUserId }))
+    api.getUserPosts(resolvedUserId).catch(() => ({ posts: [] as PostListItem[], user_id: resolvedUserId })),
+    api.getSportTypes().catch(() => ({ sport_types: [] }))
   ]);
+
+  // Мапа для sport_type_id -> название
+  const sportNamesById = new Map<number, string>(
+    (sportTypesData?.sport_types || []).map(s => [s.sport_type_id, s.name])
+  );
 
   const authorName = getFullName(profileData);
   const authorRole = getUserRoleLabel(profileData.is_trainer);
@@ -128,14 +116,42 @@ export async function loadProfilePageData(
       }
     }
 
-    const textContent = extractTextFromBlocks(fullPost?.blocks);
-    const attachments = extractAttachmentsFromBlocks(fullPost?.blocks);
+    // Собираем contentBlocks с сохранением порядка из blocks
+    const contentBlocks: ContentBlockForPost[] = [];
+    if (fullPost?.blocks) {
+      for (const block of fullPost.blocks) {
+        if (block.text_content) {
+          contentBlocks.push({
+            type: 'text',
+            content: block.text_content
+          });
+        }
+        if (block.file_url) {
+          contentBlocks.push({
+            type: 'attachment',
+            file_url: block.file_url,
+            kind: block.kind || 'image'
+          });
+        }
+      }
+    }
+
+    // Преобразуем sport_type_id в название
+    const sportTypeName = post.sport_type_id
+      ? sportNamesById.get(post.sport_type_id) || ''
+      : '';
+
+    // Текстовый контент для краткого превью
+    const allText = contentBlocks
+      .filter(b => b.type === 'text')
+      .map(b => b.content)
+      .join('\n');
 
     return {
       post_id: post.post_id,
       title: post.title,
-      content: post.can_view ? formatPostContent(textContent) : 'Нет доступа к содержимому поста',
-      raw_text: textContent,
+      content: post.can_view ? formatPostContent(allText) : 'Нет доступа к содержимому поста',
+      raw_text: allText,
       authorName,
       authorRole,
       authorAvatar,
@@ -145,8 +161,9 @@ export async function loadProfilePageData(
       can_view: post.can_view,
       created_at: post.created_at,
       min_tier_id: post.min_tier_id ?? null,
-      sport_type: post.sport_type_id?.toString() || '',
-      attachments: attachments
+      sport_type: sportTypeName,
+      contentBlocks: contentBlocks,
+      attachments: []
     };
   }));
 

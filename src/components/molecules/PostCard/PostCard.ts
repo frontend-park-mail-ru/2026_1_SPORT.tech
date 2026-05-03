@@ -4,6 +4,7 @@
  */
 
 import type { ApiClient } from '../../../utils/api';
+import type { ContentBlockForPost } from '../../../types/post.types';
 import { openPostFormModal } from '../PostFormModal/PostFormModal';
 
 export interface PostCardData {
@@ -22,6 +23,7 @@ export interface PostCardData {
   api: ApiClient;
   onPostsUpdated?: (() => Promise<void>) | null;
   attachments?: Array<{ file_url: string; kind: string; post_attachment_id?: number }>;
+  contentBlocks?: ContentBlockForPost[];
   min_tier_id?: number | null;
   sport_type?: string;
 }
@@ -53,39 +55,36 @@ export async function renderPostCard(
     api,
     onPostsUpdated,
     attachments = [],
+    contentBlocks: existingContentBlocks,
     min_tier_id: minTierId = null,
     sport_type: sportType = ''
   } = post;
 
-  // Собираем contentBlocks из raw_text и attachments
-  const contentBlocks: ContentBlock[] = [];
+  // Формируем contentBlocks с правильным порядком
+  let contentBlocks: ContentBlock[] = [];
 
-  // Разбиваем raw_text на абзацы и создаём текстовые блоки
-  if (rawText && rawText.trim()) {
-    const paragraphs = rawText.split('\n').filter(p => p.trim());
-    paragraphs.forEach(paragraph => {
-      contentBlocks.push({
-        type: 'text',
-        content: paragraph
+  if (existingContentBlocks && existingContentBlocks.length > 0) {
+    // Используем готовый массив с правильным порядком из API
+    contentBlocks = existingContentBlocks.map(block => ({
+      type: block.type,
+      content: block.content,
+      file_url: block.file_url,
+      kind: block.kind
+    }));
+  } else {
+    // Запасной вариант (для старых данных)
+    if (rawText && rawText.trim()) {
+      const paragraphs = rawText.split('\n').filter(p => p.trim());
+      paragraphs.forEach(paragraph => {
+        contentBlocks.push({ type: 'text', content: paragraph });
       });
+    }
+    attachments.forEach(att => {
+      contentBlocks.push({ type: 'attachment', file_url: att.file_url, kind: att.kind || 'image' });
     });
-  }
-
-  // Добавляем медиа-блоки
-  attachments.forEach(att => {
-    contentBlocks.push({
-      type: 'attachment',
-      file_url: att.file_url,
-      kind: att.kind || 'image'
-    });
-  });
-
-  // Если нет ни текста, ни вложений — показываем content как текст
-  if (contentBlocks.length === 0 && content) {
-    contentBlocks.push({
-      type: 'text',
-      content: content
-    });
+    if (contentBlocks.length === 0 && content) {
+      contentBlocks.push({ type: 'text', content: content });
+    }
   }
 
   const template = (window as any).Handlebars.templates['PostCard.hbs'];
@@ -111,7 +110,7 @@ export async function renderPostCard(
     comments,
     can_view: canView,
     isOwner,
-    contentBlocks,  // ← Главное: передаём массив блоков
+    contentBlocks,
     minTierId,
     sportType
   });

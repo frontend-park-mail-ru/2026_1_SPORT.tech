@@ -1,5 +1,12 @@
 // src/types/post.types.ts
 
+export interface ContentBlockForPost {
+  type: 'text' | 'attachment';
+  content?: string;
+  file_url?: string;
+  kind?: string;
+}
+
 export interface PostWithAuthor {
   post_id: number;
   title: string;
@@ -15,13 +22,11 @@ export interface PostWithAuthor {
   created_at: string;
   min_tier_id: number | null;
   sport_type?: string;
-  attachments: PostAttachmentCompat[];
+  contentBlocks?: ContentBlockForPost[];
+  attachments?: PostAttachmentCompat[];
   isOwner?: boolean;
 }
 
-/**
- * Совместимый тип для вложений, извлекаемых из PostBlock
- */
 export interface PostAttachmentCompat {
   post_attachment_id: number;
   kind: string;

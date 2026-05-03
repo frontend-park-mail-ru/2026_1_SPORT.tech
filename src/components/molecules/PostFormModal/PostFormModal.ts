@@ -85,7 +85,8 @@ export async function openPostFormModal({
               value: block.text_content,
               file: null
             });
-          } else if (block.file_url) {
+          }
+          if (block.file_url) {
             blocks.push({
               id: `block-${++blockCounter}`,
               type: 'media',
@@ -121,6 +122,28 @@ export async function openPostFormModal({
     });
   }
 
+  // ========== ЗАГРУЖАЕМ ДАННЫЕ ДЛЯ ФОРМЫ ==========
+
+  // Загружаем уровни подписки с бэкенда
+  let tierOptions: SportTypeFieldOption[] = [];
+  try {
+    const tiersResponse = await api.getTiers();
+    if (tiersResponse?.tiers && Array.isArray(tiersResponse.tiers)) {
+      tierOptions = tiersResponse.tiers.map(t => ({
+        sport_type_id: t.tier_id,
+        name: t.name
+      }));
+    }
+  } catch (e) {
+    console.error('Failed to load tiers:', e);
+    // Fallback на случай ошибки
+    tierOptions = [
+      { sport_type_id: 1, name: '1 уровень' },
+      { sport_type_id: 2, name: '2 уровень' },
+      { sport_type_id: 3, name: '3 уровень' }
+    ];
+  }
+
   // ========== СОЗДАЁМ ПОЛЯ ФОРМЫ ==========
 
   // Спортивные дисциплины
@@ -141,14 +164,9 @@ export async function openPostFormModal({
     }
   }
 
-  // Уровни подписки
+  // Уровни подписки (с реальными данными с бэкенда)
   let tierFieldApi: SportTypeFieldApi | null = null;
   if (tierContainer) {
-    const tierOptions: SportTypeFieldOption[] = [
-      { sport_type_id: 1, name: '1 уровень' },
-      { sport_type_id: 2, name: '2 уровень' },
-      { sport_type_id: 3, name: '3 уровень' }
-    ];
     tierFieldApi = createSportTypesField(tierContainer, {
       label: '',
       placeholder: 'Выберите уровень доступа',
