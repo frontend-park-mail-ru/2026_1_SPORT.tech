@@ -22,7 +22,6 @@ export interface CSRFTokenResponse {
   csrf_token: string;
 }
 
-// НОВОЕ: Блок контента поста (как в ответе API)
 export interface PostBlock {
   post_block_id: number;
   text_content: string;
@@ -31,7 +30,6 @@ export interface PostBlock {
   position: number;
 }
 
-// НОВОЕ: Блок для создания/обновления поста
 export interface PostBlockInput {
   text_content?: string;
   file_url?: string;
@@ -136,4 +134,9 @@ export interface Subscription {
   expires_at: string;
   created_at: string;
   updated_at: string;
+}
+
+// НОВЫЙ ТИП для обновления подписки
+export interface UpdateSubscriptionPayload {
+  tier_id: number;
 }

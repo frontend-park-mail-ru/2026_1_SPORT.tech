@@ -10,10 +10,11 @@ export interface ProfileHeaderConfig {
   avatar?: string | null;
   isOwnProfile?: boolean;
   api: ApiClient;
-  viewedUserId?: number;         // ← обязательно
+  viewedUserId?: number;
   onEdit?: (() => void) | null;
   showDonate?: boolean;
   onDonate?: (() => void) | null;
+  onSubscribed?: (() => Promise<void>) | null; // добавили
 }
 
 export async function renderProfileHeader(
@@ -22,7 +23,8 @@ export async function renderProfileHeader(
 ): Promise<HTMLElement> {
   const {
     name, role, avatar = null, isOwnProfile = false, api,
-    viewedUserId, onEdit: _onEdit = null, showDonate = false, onDonate = null
+    viewedUserId, onEdit: _onEdit = null, showDonate = false, onDonate = null,
+    onSubscribed = null
   } = config;
 
   const template = (window as any).Handlebars.templates['ProfileHeader.hbs'];
@@ -36,21 +38,51 @@ export async function renderProfileHeader(
   const donateContainer = element.querySelector(`#profile-donate-${id}`) as HTMLElement | null;
   const actionsContainer = element.querySelector(`#profile-actions-${id}`) as HTMLElement | null;
 
-  // Кнопка "Пожертвовать" (без изменений)
+  // Кнопка "Пожертвовать"
   if (!isOwnProfile && showDonate && donateContainer && onDonate) {
     await renderButton(donateContainer, {
       text: 'Пожертвовать', variant: 'primary-orange', state: 'normal', size: 'medium', onClick: onDonate
     });
   }
 
-  // Кнопка "Подписаться" – теперь открывает модальное окно
+  // Кнопка "Подписаться" – теперь с проверкой роли и существующей подписки
   if (!isOwnProfile && showDonate && actionsContainer) {
+    // Получаем текущего пользователя и его подписки
+    const currentUser = await api.getCurrentUser();
+    const isClient = currentUser?.user && !currentUser.user.is_trainer;
+    let existingSubscription = null;
+
+    if (isClient && viewedUserId) {
+      try {
+        const subs = await api.getMySubscriptions();
+        existingSubscription = subs.subscriptions.find(s => s.trainer_id === viewedUserId) || null;
+      } catch (e) {
+        console.warn('Не удалось загрузить подписки', e);
+      }
+    }
+
+    const buttonText = existingSubscription ? 'Изменить подписку' : 'Подписаться';
+
     await renderButton(actionsContainer, {
-      text: 'Подписаться', variant: 'primary-orange', state: 'normal', size: 'medium',
+      text: buttonText,
+      variant: 'primary-orange',
+      state: 'normal',
+      size: 'medium',
       onClick: async () => {
-        if (!viewedUserId) return;   // если id тренера не передан – выходим
+        if (!viewedUserId) return;
+        if (!isClient) {
+          alert('Подписка доступна только для клиентов');
+          return;
+        }
         const { openSubscriptionModal } = await import('../SubscriptionModal/SubscriptionModal');
-        openSubscriptionModal({ api, trainerId: viewedUserId });
+        await openSubscriptionModal({
+          api,
+          trainerId: viewedUserId,
+          existingSubscription,
+          onSubscribed: async () => {
+            if (onSubscribed) await onSubscribed();
+          }
+        });
       }
     });
   }

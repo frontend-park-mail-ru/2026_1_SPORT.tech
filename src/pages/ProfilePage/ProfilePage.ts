@@ -43,30 +43,48 @@ export async function renderProfilePage(
   const headerContainer = document.createElement('div'); headerContainer.className = 'profile-page__header'; profileContainer.appendChild(headerContainer);
   const contentContainer = document.createElement('div'); contentContainer.className = 'profile-page__content'; profileContainer.appendChild(contentContainer);
 
-  async function reloadPosts(): Promise<void> {
+  // Функция для обновления постов и контента после подписки
+  async function reloadAllData(): Promise<void> {
     const data: ProfilePageData = await loadProfilePageData(api, viewedUserId);
+    // Обновляем контент (посты)
     const postsContainer = contentContainer.querySelector('#posts-container') as HTMLElement;
-    if (!postsContainer) return;
-    const activeTabElement = contentContainer.querySelector('.profile-content__tab--active') as HTMLElement;
-    const currentTab = activeTabElement?.dataset?.tab || 'publications';
-    await fillProfilePostsSection(postsContainer, {
-      activeTab: currentTab, posts: data.posts, api,
-      canManagePosts: profile.isOwnProfile, onPostsUpdated: reloadPosts
-    });
+    if (postsContainer) {
+      const activeTabElement = contentContainer.querySelector('.profile-content__tab--active') as HTMLElement;
+      const currentTab = activeTabElement?.dataset?.tab || 'publications';
+      await fillProfilePostsSection(postsContainer, {
+        activeTab: currentTab,
+        posts: data.posts,
+        api,
+        canManagePosts: profile.isOwnProfile,
+        onPostsUpdated: reloadAllData
+      });
+    }
+    // При необходимости можно обновить шапку (аватар, имя) – но это уже статично
   }
 
   await Promise.all([
     renderSidebar(sidebarContainer, { activePage: 'profile', currentUser, users: subscriptions, api, onLogout }),
     renderProfileHeader(headerContainer, {
-      name: profile.name, role: profile.role, avatar: profile.avatar,
-      isOwnProfile: profile.isOwnProfile, showDonate: profile.isTrainer, api, viewedUserId,
-      onDonate: () => openDonationModal({ api, recipientUserId: viewedUserId })
+      name: profile.name,
+      role: profile.role,
+      avatar: profile.avatar,
+      isOwnProfile: profile.isOwnProfile,
+      showDonate: profile.isTrainer,
+      api,
+      viewedUserId,
+      onDonate: () => openDonationModal({ api, recipientUserId: viewedUserId }),
+      onSubscribed: reloadAllData // Передаём обновление данных
     }),
     renderProfileContent(contentContainer, {
-      activeTab, posts, popularPosts, api,
+      activeTab,
+      posts,
+      popularPosts,
+      api,
       canAddPost: profile.isOwnProfile && profile.isTrainer,
       canManagePosts: profile.isOwnProfile && profile.isTrainer,
-      onPostsUpdated: reloadPosts, viewedUserId, isTrainer: profile.isTrainer
+      onPostsUpdated: reloadAllData,
+      viewedUserId,
+      isTrainer: profile.isTrainer
     })
   ]);
 

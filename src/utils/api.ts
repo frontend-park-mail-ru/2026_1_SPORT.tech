@@ -1,4 +1,5 @@
 // src/utils/api.ts
+
 import { API_BASE_URL } from '../config/constants';
 import type {
   AuthResponse,
@@ -12,7 +13,8 @@ import type {
   SportType,
   DonationResponse,
   CSRFTokenResponse,
-  Tier
+  Tier,
+  Subscription
 } from '../types/api.types';
 
 export interface ApiResponse<T = unknown> {
@@ -436,16 +438,24 @@ export class ApiClient {
     return this.request<{ tiers: Tier[] }>(`/v1/trainers/${trainerId}/tiers`);
   }
 
-  async subscribeToTrainer(trainerId: number, tierId: number): Promise<any> {
+  async subscribeToTrainer(trainerId: number, tierId: number): Promise<Subscription> {
     await this.ensureCsrfToken();
-    return this.request(`/v1/trainers/${trainerId}/subscribe`, {
+    return this.request<Subscription>(`/v1/trainers/${trainerId}/subscribe`, {
       method: 'POST',
       body: JSON.stringify({ tier_id: tierId })
     });
   }
 
-  async getMySubscriptions(): Promise<{ subscriptions: import('../types/api.types').Subscription[] }> {
-    return this.request<{ subscriptions: import('../types/api.types').Subscription[] }>('/v1/subscriptions/me');
+  async updateSubscription(subscriptionId: number, tierId: number): Promise<Subscription> {
+    await this.ensureCsrfToken();
+    return this.request<Subscription>(`/v1/subscriptions/${subscriptionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ tier_id: tierId })
+    });
+  }
+
+  async getMySubscriptions(): Promise<{ subscriptions: Subscription[] }> {
+    return this.request<{ subscriptions: Subscription[] }>('/v1/subscriptions/me');
   }
 
   async cancelSubscription(subscriptionId: number): Promise<void> {

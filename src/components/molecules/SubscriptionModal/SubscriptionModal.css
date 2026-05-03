@@ -59,3 +59,16 @@
   font-size: 14px;
   line-height: 1.4;
 }
+/* Добавить в конец файла SubscriptionModal.css */
+.subscription-modal__tier--current {
+  background: #E8F5E9;
+  border-color: #A5D6A7;
+  position: relative;
+}
+
+.subscription-modal__tier--current button:disabled {
+  opacity: 0.6;
+  cursor: default;
+  background: #C8E6C9;
+  color: #2E7D32;
+}
