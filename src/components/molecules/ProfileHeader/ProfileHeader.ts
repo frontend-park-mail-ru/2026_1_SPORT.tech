@@ -24,7 +24,7 @@ export async function renderProfileHeader(
 ): Promise<HTMLElement> {
   const {
     name, role, avatar = null, isOwnProfile = false, api,
-    viewedUserId, onEdit: _onEdit = null, showDonate = false, onDonate = null,
+    viewedUserId, showDonate = false, onDonate = null,
     onSubscribed = null
   } = config;
 
@@ -54,33 +54,31 @@ export async function renderProfileHeader(
   if (!isOwnProfile && showDonate && actionsContainer) {
     let subscriptionButton: ButtonAPI | null = null;
 
-    // Функция обновления текста кнопки на основе актуальных подписок
+    // Функция обновления текста кнопки
     const updateButtonText = async () => {
       if (!subscriptionButton) return;
       try {
         const subs = await api.getMySubscriptions();
         const hasSubscription = subs.subscriptions.some(s => s.trainer_id === viewedUserId);
-        const newText = hasSubscription ? 'Изменить подписку' : 'Подписаться';
-        subscriptionButton.setText(newText);
+        subscriptionButton.setText(hasSubscription ? 'Изменить подписку' : 'Подписаться');
       } catch {
-        // игнорируем – оставляем текущий текст
+        // оставляем текущий текст
       }
     };
 
-    const handleSubscriptionClick = async () => {
+    const handleClick = async () => {
       if (!viewedUserId) return;
 
       const currentUser = await api.getCurrentUser();
       const isClient = currentUser?.user && !currentUser.user.is_trainer;
       if (!isClient) return;
 
+      // Свежая подписка перед открытием
       let existingSubscription = null;
       try {
         const subs = await api.getMySubscriptions();
         existingSubscription = subs.subscriptions.find(s => s.trainer_id === viewedUserId) || null;
-      } catch {
-        // игнорируем
-      }
+      } catch {}
 
       const { openSubscriptionModal } = await import('../SubscriptionModal/SubscriptionModal');
       await openSubscriptionModal({
@@ -88,27 +86,27 @@ export async function renderProfileHeader(
         trainerId: viewedUserId,
         existingSubscription,
         onSubscribed: async () => {
-          // Обновляем текст кнопки после любого действия (подписка, отписка, смена)
+          // Обновить текст кнопки
           await updateButtonText();
-          // Вызываем внешний колбэк для обновления остальной части страницы
+          // Обновить остальную часть страницы (посты и т.д.)
           if (onSubscribed) await onSubscribed();
         }
       });
     };
 
-    // Создаём кнопку и сохраняем её API
+    // Создаём кнопку один раз
     subscriptionButton = await renderButton(actionsContainer, {
-      text: 'Подписаться', // временный текст
+      text: 'Подписаться',
       variant: 'primary-orange',
       state: 'normal',
       size: 'medium',
-      onClick: handleSubscriptionClick
+      onClick: handleClick
     });
     // Устанавливаем правильный текст после создания
     await updateButtonText();
   }
 
-  // Редактировать профиль
+  // Редактировать профиль (только свой)
   if (isOwnProfile && actionsContainer) {
     await renderButton(actionsContainer, {
       text: 'Редактировать',
@@ -122,9 +120,7 @@ export async function renderProfileHeader(
           try {
             const fullProfile = await api.getProfile(userData.user_id);
             userData = { ...userData, ...fullProfile };
-          } catch {
-            // игнорируем
-          }
+          } catch {}
         }
         openProfileEditModal({
           api,
@@ -135,7 +131,7 @@ export async function renderProfileHeader(
     });
   }
 
-  // Остальные кнопки (статистика, подписки, смена аватара) – без изменений
+  // Остальные кнопки – без изменений
   const statBtn = element.querySelector(`#stat-btn-${id}`) as HTMLElement | null;
   if (statBtn) statBtn.addEventListener('click', () => {
     statBtn.classList.add('button--active');
@@ -157,9 +153,7 @@ export async function renderProfileHeader(
       try {
         const fullProfile = await api.getProfile(userData.user_id);
         userData = { ...userData, ...fullProfile };
-      } catch {
-        // игнорируем
-      }
+      } catch {}
     }
     const { openProfileEditModal } = await import('../ProfileEditModal/ProfileEditModal');
     openProfileEditModal({

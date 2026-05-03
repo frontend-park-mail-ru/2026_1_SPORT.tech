@@ -37,9 +37,9 @@ export async function openSubscriptionModal({
         </h2>
         <div class="subscription-modal__list">
           ${tiers.map(tier => {
-    const price = (typeof tier.price === 'number' && !isNaN(tier.price)) ? tier.price : 0;
-    const isCurrent = currentSubscription?.tier_id === tier.tier_id;
-    return `
+            const price = (typeof tier.price === 'number' && !isNaN(tier.price)) ? tier.price : 0;
+            const isCurrent = currentSubscription?.tier_id === tier.tier_id;
+            return `
               <div class="subscription-modal__tier ${isCurrent ? 'subscription-modal__tier--current' : ''}">
                 <h3>${escapeHtml(tier.name)} (${price} ₽/мес)</h3>
                 <p>${escapeHtml(tier.description || 'Описание отсутствует')}</p>
@@ -52,7 +52,7 @@ export async function openSubscriptionModal({
                 </button>
               </div>
             `;
-  }).join('')}
+          }).join('')}
         </div>
         ${currentSubscription ? `
           <div class="subscription-modal__unsubscribe">
@@ -65,6 +65,7 @@ export async function openSubscriptionModal({
 
     modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => modal.remove()));
 
+    // Обработка выбора уровня (подписка или смена)
     modal.querySelectorAll('[data-subscribe]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const tierId = Number((e.currentTarget as HTMLElement).dataset.subscribe);
@@ -81,6 +82,7 @@ export async function openSubscriptionModal({
             await api.subscribeToTrainer(trainerId, tierId);
           }
           modal.remove();
+          // Колбэк для обновления UI
           if (onSubscribed) onSubscribed();
         } catch {
           button.disabled = false;
@@ -89,6 +91,7 @@ export async function openSubscriptionModal({
       });
     });
 
+    // Отписка
     const unsubscribeBtn = modal.querySelector('[data-unsubscribe]');
     if (unsubscribeBtn && currentSubscription) {
       unsubscribeBtn.addEventListener('click', async () => {
