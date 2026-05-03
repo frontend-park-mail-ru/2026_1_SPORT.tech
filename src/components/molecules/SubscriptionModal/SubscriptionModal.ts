@@ -14,9 +14,12 @@ export function openSubscriptionModal({ api, trainerId, onSubscribed }: Subscrip
   api.getTrainerTiers(trainerId)
     .then(response => {
       const tiers: Tier[] = response?.tiers || [];
+      // Отладка: посмотрим, что пришло с бэкенда
+      console.log('[SubscriptionModal] Получены уровни:', tiers);
       showModal(tiers);
     })
-    .catch(() => {
+    .catch(error => {
+      console.error('[SubscriptionModal] Ошибка загрузки уровней:', error);
       alert('Не удалось загрузить уровни подписки тренера');
     });
 
@@ -29,13 +32,17 @@ export function openSubscriptionModal({ api, trainerId, onSubscribed }: Subscrip
         <button class="subscription-modal__close" data-close>×</button>
         <h2 class="subscription-modal__title">Выберите уровень подписки</h2>
         <div class="subscription-modal__list">
-          ${tiers.map(tier => `
-            <div class="subscription-modal__tier">
-              <h3>${tier.name} (${tier.price} ₽/мес)</h3>
-              <p>${tier.description || 'Описание отсутствует'}</p>
-              <button class="button button--primary-orange button--small" data-subscribe="${tier.tier_id}">Выбрать</button>
-            </div>
-          `).join('')}
+          ${tiers.map(tier => {
+    // Нормализуем цену: если нет или не число, то 0
+    const price = (typeof tier.price === 'number' && !isNaN(tier.price)) ? tier.price : 0;
+    return `
+              <div class="subscription-modal__tier">
+                <h3>${escapeHtml(tier.name)} (${price} ₽/мес)</h3>
+                <p>${escapeHtml(tier.description || 'Описание отсутствует')}</p>
+                <button class="button button--primary-orange button--small" data-subscribe="${tier.tier_id}">Выбрать</button>
+              </div>
+            `;
+  }).join('')}
         </div>
       </div>
     `;
@@ -59,3 +66,14 @@ export function openSubscriptionModal({ api, trainerId, onSubscribed }: Subscrip
     });
   }
 }
+
+// Простая функция для экранирования HTML, чтобы избежать XSS
+function escapeHtml(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}   
