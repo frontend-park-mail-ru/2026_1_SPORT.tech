@@ -11,6 +11,7 @@
  */
 
 import type { ApiClient } from '../../../utils/api';
+import { translateErrorMessage } from '../../../utils/api';
 import type { InputAPI, InputType } from '../../atoms/Input/Input';
 import type { ButtonAPI } from '../../atoms/Button/Button';
 import type { SportTypeFieldApi, SportTypeFieldOption } from '../../../types/components.types';
@@ -73,9 +74,9 @@ export async function loadSportTypes(api: ApiClient): Promise<SportTypeFieldOpti
   if (!sportTypesPromise) {
     sportTypesPromise = api.getSportTypes()
       .then(response => Array.isArray(response?.sport_types) ? response.sport_types : [])
-      .catch(error => {
+      .catch(() => {
         sportTypesPromise = null;
-        throw error;
+        return [];
       });
   }
 
@@ -629,24 +630,20 @@ export async function renderAuthForm(
         : error.field;
       const api = inputsApi.get(fieldName);
       if (api && 'setError' in api) {
-        (api as InputAPI).setError(error.message);
+        const translatedMessage = translateErrorMessage(error.message);
+        (api as InputAPI).setError(translatedMessage);
       }
     });
   };
 
   const resetForm = (): void => {
     for (const api of inputsApi.values()) {
-    // Определяем тип API и вызываем соответствующий setValue
       const currentValue = api.getValue();
       if (Array.isArray(currentValue)) {
-      // Это SportTypeFieldApi - передаем пустой массив
         (api as SportTypeFieldApi).setValue([]);
       } else {
-      // Это InputAPI - передаем пустую строку
         (api as InputAPI).setValue('');
       }
-
-      // Сбрасываем состояние если возможно
       if ('setNormal' in api) {
         (api as InputAPI).setNormal();
       }
@@ -669,7 +666,7 @@ export async function renderAuthForm(
       `;
       fieldsContainer.parentNode?.insertBefore(globalError, fieldsContainer);
     }
-    globalError.textContent = message;
+    globalError.textContent = translateErrorMessage(message);
   };
 
   const clearGlobalError = (): void => {

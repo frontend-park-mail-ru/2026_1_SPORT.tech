@@ -66,7 +66,6 @@ export async function openSubscriptionModal({
 
     modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => modal.remove()));
 
-    // Обработка выбора уровня (подписка или смена)
     modal.querySelectorAll('[data-subscribe]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const tierId = Number((e.currentTarget as HTMLElement).dataset.subscribe);
@@ -83,7 +82,6 @@ export async function openSubscriptionModal({
             await api.subscribeToTrainer(trainerId, tierId);
           }
           modal.remove();
-          // Колбэк для обновления UI
           if (onSubscribed) onSubscribed();
         } catch {
           button.disabled = false;
@@ -92,7 +90,6 @@ export async function openSubscriptionModal({
       });
     });
 
-    // Отписка
     const unsubscribeBtn = modal.querySelector('[data-unsubscribe]');
     if (unsubscribeBtn && currentSubscription) {
       unsubscribeBtn.addEventListener('click', async () => {

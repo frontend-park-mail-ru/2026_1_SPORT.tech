@@ -22,6 +22,26 @@ export interface ApiResponse<T = unknown> {
   error?: { message: string };
 }
 
+// Функция перевода английских сообщений об ошибках
+export function translateErrorMessage(message: string): string {
+  if (!message) return 'Неизвестная ошибка';
+  const lower = message.toLowerCase();
+  if (lower.includes('internal error')) return 'Внутренняя ошибка сервера';
+  if (lower.includes('only client can perform this action')) return 'Только клиенты могут выполнить это действие';
+  if (lower.includes('tier not found')) return 'Уровень подписки не найден';
+  if (lower.includes('already subscribed')) return 'Вы уже подписаны на этого тренера';
+  if (lower.includes('subscription not found')) return 'Подписка не найдена';
+  if (lower.includes('invalid tier id')) return 'Некорректный ID уровня подписки';
+  if (lower.includes('forbidden')) return 'Доступ запрещён';
+  if (lower.includes('not found')) return 'Ресурс не найден';
+  if (lower.includes('unauthorized')) return 'Необходима авторизация';
+  if (lower.includes('email already exists')) return 'Пользователь с таким email уже существует';
+  if (lower.includes('username already exists')) return 'Имя пользователя уже занято';
+  if (lower.includes('invalid credentials')) return 'Неверный email или пароль';
+  if (lower.includes('password')) return 'Неверный пароль';
+  return message;
+}
+
 export class ApiClient {
   private baseURL: string;
   private csrfToken: string | null = null;
@@ -41,8 +61,8 @@ export class ApiClient {
         this.csrfToken = data.csrf_token;
         return this.csrfToken;
       }
-    } catch (error) {
-      console.error('Failed to fetch CSRF token:', error);
+    } catch {
+      // игнорируем
     }
     return null;
   }
@@ -89,14 +109,13 @@ export class ApiClient {
       data = await response.json() as T;
     } else {
       const text = await response.text();
-      console.error('[API] Non-JSON response:', text.substring(0, 500));
       throw new Error(`Сервер вернул не JSON (${response.status}): ${text.substring(0, 200)}`);
     }
 
     if (!response.ok) {
       const errorData = data as { error?: { message?: string; code?: string } };
-      const errorMessage = errorData?.error?.message || `HTTP ${response.status}`;
-      console.error('[API] Error:', errorData);
+      let errorMessage = errorData?.error?.message || `HTTP ${response.status}`;
+      errorMessage = translateErrorMessage(errorMessage);
       const error = new Error(errorMessage);
       (error as Error & { data: T }).data = data;
       throw error;
@@ -293,7 +312,7 @@ export class ApiClient {
       } catch {
         // Если не JSON — используем статус
       }
-      throw new Error(errorMessage);
+      throw new Error(translateErrorMessage(errorMessage));
     }
 
     return response.json();
@@ -421,7 +440,7 @@ export class ApiClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({} as { error?: { message?: string } }));
-      throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
+      throw new Error(translateErrorMessage(errorData?.error?.message || `HTTP ${response.status}`));
     }
 
     return response.json();

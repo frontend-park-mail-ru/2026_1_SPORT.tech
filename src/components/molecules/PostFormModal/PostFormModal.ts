@@ -102,8 +102,8 @@ export async function openPostFormModal({
       if (fullPost.sport_type_id != null) {
         selectedSportTypeId = fullPost.sport_type_id;
       }
-    } catch (error) {
-      console.error('Failed to load existing post:', error);
+    } catch {
+      // игнорируем ошибку загрузки
     }
   }
 
@@ -127,8 +127,7 @@ export async function openPostFormModal({
         name: t.name
       }));
     }
-  } catch (e) {
-    console.error('Failed to load tiers:', e);
+  } catch {
     tierOptions = [
       { sport_type_id: 1, name: '1 уровень' },
       { sport_type_id: 2, name: '2 уровень' },
@@ -198,14 +197,18 @@ export async function openPostFormModal({
       return 'Неподдерживаемый формат файла. Разрешены: JPEG, PNG, GIF, WebP, MP4, WebM, MOV';
     }
     if (file.size > MAX_FILE_SIZE) {
-      return `Файл слишком большой. Максимальный размер: ${MAX_FILE_SIZE / 1024 / 1024}MB`;
+      return `Файл слишком большой. Максимальный размер: ${MAX_FILE_SIZE / 1024 / 1024} МБ`;
     }
     return null;
   }
 
   function handleFileSelect(file: File, block: ContentBlock, mediaContainer: HTMLElement): void {
     const error = validateFile(file);
-    if (error) { alert(error); return; }
+    if (error) {
+      globalErr.textContent = error;
+      globalErr.hidden = false;
+      return;
+    }
 
     block.file = file;
     block.existingUrl = undefined;
@@ -366,7 +369,8 @@ export async function openPostFormModal({
       return;
     }
     if (blocks.length === 0) {
-      globalErr.textContent = 'Добавьте хотя бы один блок контента'; globalErr.hidden = false;
+      globalErr.textContent = 'Добавьте хотя бы один блок контента';
+      globalErr.hidden = false;
       return;
     }
 
@@ -380,7 +384,8 @@ export async function openPostFormModal({
             const uploadResult = await api.uploadPostMedia(block.file);
             return { file_url: uploadResult.file_url, kind: block.file.type.startsWith('video/') ? 'video' : 'image' };
           } catch {
-            alert('⚠️ Загрузка медиа временно недоступна. Файл не будет добавлен.');
+            globalErr.textContent = 'Не удалось загрузить файл. Будет пропущен.';
+            globalErr.hidden = false;
             return null;
           }
         } else if (block.type === 'media' && block.existingUrl) {
@@ -405,7 +410,6 @@ export async function openPostFormModal({
         blocks: validBlocks as Array<{ text_content?: string; file_url?: string; kind?: string }>
       };
 
-      // Выбранный вид спорта из select
       const sportSelect = document.getElementById('post-form-sport-select') as HTMLSelectElement | null;
       if (sportSelect && sportSelect.value) {
         payload.sport_type_id = Number(sportSelect.value);
