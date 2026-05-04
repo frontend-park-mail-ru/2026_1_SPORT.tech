@@ -28,6 +28,9 @@ export function formatPostContent(textContent: string): string {
   return escapeHtml(textContent).replace(/\n/g, '<br>');
 }
 
+// Клиентский кеш профилей (переживает офлайн-сессии)
+const profilesCache = new Map<number, ProfilePageData>();
+
 export async function loadProfilePageData(
   api: ApiClient,
   userId: number,
@@ -36,15 +39,146 @@ export async function loadProfilePageData(
   const resolvedUserId = userId || currentUser?.user?.user_id;
   if (!resolvedUserId) throw new Error('Пользователь не авторизован');
 
-  // Загружаем профиль, посты, виды спорта – с защитой от ошибок
-  const [profileData, postsData, sportTypesData] = await Promise.all([
-    api.getProfile(resolvedUserId).catch(() => null),
-    api.getUserPosts(resolvedUserId).catch(() => ({ posts: [] as PostListItem[], user_id: resolvedUserId })),
-    api.getSportTypes().catch(() => ({ sport_types: [] }))
-  ]);
+  try {
+    // Загружаем профиль, посты, виды спорта
+    const [profileData, postsData, sportTypesData] = await Promise.all([
+      api.getProfile(resolvedUserId),
+      api.getUserPosts(resolvedUserId),
+      api.getSportTypes()
+    ]);
 
-  // Если профиль совсем не загрузился (null), вернуть минимальную заглушку
-  if (!profileData) {
+    // Загружаем уровни подписки, если просматриваем тренера
+    let tierNameById = new Map<number, string>();
+    let tierPriceById = new Map<number, number>();
+    if (profileData.is_trainer) {
+      try {
+        const tiersResp = await api.getTrainerTiers(resolvedUserId);
+        if (tiersResp?.tiers) {
+          tiersResp.tiers.forEach((tier: Tier) => {
+            tierNameById.set(tier.tier_id, tier.name);
+            tierPriceById.set(tier.tier_id, tier.price);
+          });
+        }
+      } catch {
+        // игнорируем ошибку – уровни могут отсутствовать
+      }
+    }
+
+    const sportNamesById = new Map<number, string>(
+      (sportTypesData?.sport_types || []).map(s => [s.sport_type_id, s.name])
+    );
+
+    const authorName = getFullName(profileData);
+    const authorRole = getUserRoleLabel(profileData.is_trainer);
+    const authorAvatar = profileData.avatar_url || null;
+    const postList: PostListItem[] = Array.isArray(postsData?.posts) ? postsData.posts : [];
+
+    const posts: PostWithAuthor[] = await Promise.all(postList.map(async (post: PostListItem): Promise<PostWithAuthor> => {
+      let fullPost: Post | null = null;
+      if (post.can_view) {
+        try {
+          fullPost = await api.getPost(post.post_id);
+        } catch {
+          // отдельный пост может быть недоступен
+        }
+      }
+
+      const contentBlocks: ContentBlockForPost[] = [];
+      if (fullPost?.blocks) {
+        for (const block of fullPost.blocks) {
+          if (block.text_content) {
+            contentBlocks.push({ type: 'text', content: block.text_content });
+          }
+          if (block.file_url) {
+            contentBlocks.push({ type: 'attachment', file_url: block.file_url, kind: block.kind || 'image' });
+          }
+        }
+      }
+
+      const sportTypeName = post.sport_type_id ? sportNamesById.get(post.sport_type_id) || '' : '';
+      const allText = contentBlocks.filter(b => b.type === 'text').map(b => b.content).join('\n');
+
+      let tierName: string | undefined = undefined;
+      let tierPrice: number | undefined = undefined;
+      if (post.min_tier_id) {
+        tierName = tierNameById.get(post.min_tier_id);
+        tierPrice = tierPriceById.get(post.min_tier_id);
+        if (tierPrice === undefined) tierPrice = 0;
+      }
+
+      return {
+        post_id: post.post_id,
+        title: post.title,
+        content: post.can_view ? (allText ? formatPostContent(allText) : '') : 'Нет доступа к содержимому поста',
+        raw_text: allText,
+        authorName,
+        authorRole,
+        authorAvatar,
+        likes: post.likes_count,
+        liked: post.is_liked,
+        comments: post.comments_count ?? 0,
+        can_view: post.can_view,
+        created_at: post.created_at,
+        min_tier_id: post.min_tier_id ?? null,
+        sport_type_id: post.sport_type_id ?? null,
+        sport_type: sportTypeName,
+        tier_name: tierName,
+        tier_price: tierPrice,
+        contentBlocks,
+        attachments: []
+      };
+    }));
+
+    const isOwnProfile = profileData.is_me;
+    const fullProfileName = getFullName(profileData);
+    const currentUserData: User | null = currentUser?.user || null;
+
+    let currentUserAvatar: string | null = null;
+    if (isOwnProfile) {
+      currentUserAvatar = profileData.avatar_url;
+    } else if (currentUserData) {
+      currentUserAvatar = currentUserData.avatar_url || null;
+    }
+
+    const profile = {
+      name: fullProfileName,
+      role: getUserRoleLabel(profileData.is_trainer),
+      avatar: profileData.avatar_url,
+      isOwnProfile,
+      isTrainer: Boolean(profileData.is_trainer)
+    };
+
+    const currentUserMapped = currentUserData
+      ? {
+        id: currentUserData.user_id,
+        name: getFullName(currentUserData),
+        role: getUserRoleLabel(currentUserData.is_trainer),
+        avatar: currentUserAvatar
+      }
+      : null;
+
+    const pageData: ProfilePageData = {
+      profile,
+      currentUser: currentUserMapped,
+      posts,
+      subscriptions: [],
+      popularPosts: [],
+      viewedUserId: resolvedUserId
+    };
+
+    // Сохраняем в клиентский кеш
+    profilesCache.set(resolvedUserId, pageData);
+
+    return pageData;
+
+  } catch {
+    // При ошибке сети пытаемся достать из кеша
+    const cached = profilesCache.get(resolvedUserId);
+    if (cached) {
+      return cached;
+    }
+
+    // Если ничего не закэшировано – возвращаем безопасную заглушку
     return {
       profile: {
         name: 'Пользователь',
@@ -60,126 +194,4 @@ export async function loadProfilePageData(
       viewedUserId: resolvedUserId
     };
   }
-
-  // ... оставшаяся часть функции БЕЗ ИЗМЕНЕНИЙ (см. исходный код ниже) ...
-
-  // Загружаем уровни подписки, если просматриваем тренера
-  let tierNameById = new Map<number, string>();
-  let tierPriceById = new Map<number, number>();
-  if (profileData.is_trainer) {
-    try {
-      const tiersResp = await api.getTrainerTiers(resolvedUserId);
-      if (tiersResp?.tiers) {
-        tiersResp.tiers.forEach((tier: Tier) => {
-          tierNameById.set(tier.tier_id, tier.name);
-          tierPriceById.set(tier.tier_id, tier.price);
-        });
-      }
-    } catch {
-      // игнорируем ошибку – уровни могут отсутствовать
-    }
-  }
-
-  const sportNamesById = new Map<number, string>(
-    (sportTypesData?.sport_types || []).map(s => [s.sport_type_id, s.name])
-  );
-
-  const authorName = getFullName(profileData);
-  const authorRole = getUserRoleLabel(profileData.is_trainer);
-  const authorAvatar = profileData.avatar_url || null;
-  const postList: PostListItem[] = Array.isArray(postsData?.posts) ? postsData.posts : [];
-
-  const posts: PostWithAuthor[] = await Promise.all(postList.map(async (post: PostListItem): Promise<PostWithAuthor> => {
-    let fullPost: Post | null = null;
-    if (post.can_view) {
-      try {
-        fullPost = await api.getPost(post.post_id);
-      } catch {
-        // отдельный пост может быть недоступен
-      }
-    }
-
-    const contentBlocks: ContentBlockForPost[] = [];
-    if (fullPost?.blocks) {
-      for (const block of fullPost.blocks) {
-        if (block.text_content) {
-          contentBlocks.push({ type: 'text', content: block.text_content });
-        }
-        if (block.file_url) {
-          contentBlocks.push({ type: 'attachment', file_url: block.file_url, kind: block.kind || 'image' });
-        }
-      }
-    }
-
-    const sportTypeName = post.sport_type_id ? sportNamesById.get(post.sport_type_id) || '' : '';
-    const allText = contentBlocks.filter(b => b.type === 'text').map(b => b.content).join('\n');
-
-    // Определяем название и цену уровня подписки
-    let tierName: string | undefined = undefined;
-    let tierPrice: number | undefined = undefined;
-    if (post.min_tier_id) {
-      tierName = tierNameById.get(post.min_tier_id);
-      tierPrice = tierPriceById.get(post.min_tier_id);
-      if (tierPrice === undefined) tierPrice = 0;
-    }
-
-    return {
-      post_id: post.post_id,
-      title: post.title,
-      content: post.can_view ? (allText ? formatPostContent(allText) : '') : 'Нет доступа к содержимому поста',
-      raw_text: allText,
-      authorName,
-      authorRole,
-      authorAvatar,
-      likes: post.likes_count,
-      liked: post.is_liked,
-      comments: post.comments_count ?? 0,
-      can_view: post.can_view,
-      created_at: post.created_at,
-      min_tier_id: post.min_tier_id ?? null,
-      sport_type_id: post.sport_type_id ?? null,
-      sport_type: sportTypeName,
-      tier_name: tierName,
-      tier_price: tierPrice,
-      contentBlocks,
-      attachments: []
-    };
-  }));
-
-  const isOwnProfile = profileData.is_me;
-  const fullProfileName = getFullName(profileData);
-  const currentUserData: User | null = currentUser?.user || null;
-
-  let currentUserAvatar: string | null = null;
-  if (isOwnProfile) {
-    currentUserAvatar = profileData.avatar_url;
-  } else if (currentUserData) {
-    currentUserAvatar = currentUserData.avatar_url || null;
-  }
-
-  const profile = {
-    name: fullProfileName,
-    role: getUserRoleLabel(profileData.is_trainer),
-    avatar: profileData.avatar_url,
-    isOwnProfile,
-    isTrainer: Boolean(profileData.is_trainer)
-  };
-
-  const currentUserMapped = currentUserData
-    ? {
-      id: currentUserData.user_id,
-      name: getFullName(currentUserData),
-      role: getUserRoleLabel(currentUserData.is_trainer),
-      avatar: currentUserAvatar
-    }
-    : null;
-
-  return {
-    profile,
-    currentUser: currentUserMapped,
-    posts,
-    subscriptions: [],
-    popularPosts: [],
-    viewedUserId: resolvedUserId
-  };
 }
