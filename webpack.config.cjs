@@ -48,7 +48,14 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'public/static', to: 'static', noErrorOnMissing: true }
+        // Статические ресурсы из public/static (CSS, изображения и пр.)
+        { from: 'public/static', to: 'static', noErrorOnMissing: true },
+        // Service Worker
+        { from: 'public/sw.js', to: 'sw.js', noErrorOnMissing: true },
+        // Манифест PWA
+        { from: 'public/manifest.json', to: 'manifest.json', noErrorOnMissing: true },
+        // Иконки для PWA
+        { from: 'public/icons', to: 'icons', noErrorOnMissing: true }
       ]
     })
   ]

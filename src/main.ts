@@ -221,4 +221,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('popstate', () => {
     void router.handleRouting();
   });
+
+  // Регистрируем Service Worker для офлайн-работы
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.warn('Service Worker зарегистрирован:', reg.scope))
+      .catch(err => console.error('Ошибка регистрации Service Worker:', err));
+  }
 });
