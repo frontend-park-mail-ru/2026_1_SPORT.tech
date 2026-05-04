@@ -18,7 +18,7 @@ interface ProfileContentParams {
   onPostsUpdated?: (() => Promise<void>) | null;
   viewedUserId: number;
   isTrainer?: boolean;
-  isOwnProfile?: boolean;   // добавлено
+  isOwnProfile?: boolean;
 }
 
 interface FillPostsParams {
@@ -27,8 +27,6 @@ interface FillPostsParams {
   api: ApiClient;
   canManagePosts: boolean;
   onPostsUpdated?: (() => Promise<void>) | null;
-  tierNameMap?: Map<number, string>;
-  tierPriceMap?: Map<number, number>;
 }
 
 interface PostAttachmentCompat {
@@ -89,9 +87,7 @@ export async function fillProfilePostsSection(
     posts = [],
     api,
     canManagePosts = false,
-    onPostsUpdated,
-    tierNameMap,
-    tierPriceMap
+    onPostsUpdated
   } = params;
 
   if (posts.length === 0 && activeTab !== 'about') {
@@ -113,10 +109,6 @@ export async function fillProfilePostsSection(
   postsContainer.innerHTML = '';
 
   for (const post of posts) {
-    if (tierNameMap && post.min_tier_id) {
-      post.tier_name = tierNameMap.get(post.min_tier_id);
-      post.tier_price = tierPriceMap?.get(post.min_tier_id) ?? 0;
-    }
     await renderPostCard(postsContainer, {
       ...post,
       api,
@@ -356,23 +348,10 @@ export async function renderProfileContent(
   const HandlebarsGlobal = (window as unknown as { Handlebars: { templates: Record<string, (context: Record<string, unknown>) => string> } }).Handlebars;
   const template = HandlebarsGlobal.templates['ProfileContent.hbs'];
 
-  let tierNameMap: Map<number, string> | undefined;
-  let tierPriceMap: Map<number, number> | undefined;
-  if (isTrainer) {
-    try {
-      const tiersResp = await api.getTrainerTiers(viewedUserId);
-      if (tiersResp?.tiers) {
-        tierNameMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.name]));
-        tierPriceMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.price]));
-      }
-    } catch {}
-  }
-
-  // Формируем вкладки в зависимости от типа профиля
+  // Вкладки в зависимости от типа профиля
   let tabs: { id: string; label: string; active: boolean }[] = [];
   if (isTrainer) {
     if (isOwnProfile) {
-      // Свой профиль тренера – показываем настройку уровней
       tabs = [
         { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
         { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
@@ -380,7 +359,6 @@ export async function renderProfileContent(
         { id: 'about', label: 'О тренере', active: activeTab === 'about' }
       ];
     } else {
-      // Чужой профиль тренера – без вкладки "Подписки"
       tabs = [
         { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
         { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
@@ -388,7 +366,6 @@ export async function renderProfileContent(
       ];
     }
   } else {
-    // Клиентский профиль
     tabs = [
       { id: 'publications', label: 'Понравившиеся', active: activeTab === 'publications' || activeTab === 'main' },
       { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
@@ -488,9 +465,7 @@ export async function renderProfileContent(
       posts: filteredPosts,
       api,
       canManagePosts,
-      onPostsUpdated: onPostsUpdated ?? undefined,
-      tierNameMap,
-      tierPriceMap
+      onPostsUpdated: onPostsUpdated ?? undefined
     });
   }
 
@@ -605,7 +580,6 @@ export async function renderProfileContent(
         }
       } else if (tabId === 'subscriptions') {
         if (isTrainer && isOwnProfile) {
-          // Свой профиль тренера – настройка уровней
           toggleSidebarVisibility(false);
           if (filtersElement) filtersElement.style.display = 'none';
           if (addButtonContainer) addButtonContainer.style.display = 'none';
@@ -615,7 +589,6 @@ export async function renderProfileContent(
             renderTiersSettings(subsContainer, api);
           }
         } else if (!isTrainer) {
-          // Список подписок клиента – пока заглушка
           toggleSidebarVisibility(false);
           if (filtersElement) filtersElement.style.display = 'none';
           if (addButtonContainer) addButtonContainer.style.display = 'none';

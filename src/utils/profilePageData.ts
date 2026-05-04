@@ -1,7 +1,7 @@
 // src/utils/profilePageData.ts
 
 import type { ApiClient } from './api';
-import type { Profile, Post, PostListItem, AuthResponse, User} from '../types/api.types';
+import type { Post, PostListItem, AuthResponse, User, Tier } from '../types/api.types';
 import type { PostWithAuthor, ProfilePageData, ContentBlockForPost } from '../types/post.types';
 
 export function getUserRoleLabel(isTrainer: boolean): string {
@@ -24,58 +24,8 @@ export function escapeHtml(value: string = ''): string {
 }
 
 export function formatPostContent(textContent: string): string {
-  if (!textContent) {
-    return 'Нет доступа к содержимому поста';
-  }
+  if (!textContent) return 'Нет доступа к содержимому поста';
   return escapeHtml(textContent).replace(/\n/g, '<br>');
-}
-
-interface MapProfileDataResult {
-  profile: {
-    name: string;
-    role: string;
-    avatar: string | null;
-    isOwnProfile: boolean;
-    isTrainer: boolean;
-  };
-  currentUser: {
-    id: number;
-    name: string;
-    role: string;
-    avatar: string | null;
-  } | null;
-}
-
-export function mapProfileData(
-  apiData: Profile,
-  currentUser: AuthResponse | null
-): MapProfileDataResult {
-  const isOwnProfile = apiData.is_me;
-  const fullName = getFullName(apiData);
-  const currentUserData: User | null = currentUser?.user || null;
-
-  let currentUserAvatar: string | null = null;
-  if (isOwnProfile) {
-    currentUserAvatar = apiData.avatar_url;
-  } else if (currentUserData) {
-    currentUserAvatar = currentUserData.avatar_url || null;
-  }
-
-  return {
-    profile: {
-      name: fullName,
-      role: getUserRoleLabel(apiData.is_trainer),
-      avatar: apiData.avatar_url,
-      isOwnProfile,
-      isTrainer: Boolean(apiData.is_trainer)
-    },
-    currentUser: currentUserData ? {
-      id: currentUserData.user_id,
-      name: getFullName(currentUserData),
-      role: getUserRoleLabel(currentUserData.is_trainer),
-      avatar: currentUserAvatar
-    } : null
-  };
 }
 
 export async function loadProfilePageData(
@@ -84,19 +34,32 @@ export async function loadProfilePageData(
   currentUser: AuthResponse | null = null
 ): Promise<ProfilePageData> {
   const resolvedUserId = userId || currentUser?.user?.user_id;
+  if (!resolvedUserId) throw new Error('Пользователь не авторизован');
 
-  if (!resolvedUserId) {
-    throw new Error('Пользователь не авторизован');
-  }
-
-  // Загружаем профиль, посты и виды спорта параллельно
+  // Загружаем профиль, посты, виды спорта
   const [profileData, postsData, sportTypesData] = await Promise.all([
     api.getProfile(resolvedUserId),
     api.getUserPosts(resolvedUserId).catch(() => ({ posts: [] as PostListItem[], user_id: resolvedUserId })),
     api.getSportTypes().catch(() => ({ sport_types: [] }))
   ]);
 
-  // Мапа для sport_type_id -> название
+  // Загружаем уровни подписки, если просматриваем тренера
+  let tierNameById = new Map<number, string>();
+  let tierPriceById = new Map<number, number>();
+  if (profileData.is_trainer) {
+    try {
+      const tiersResp = await api.getTrainerTiers(resolvedUserId);
+      if (tiersResp?.tiers) {
+        tiersResp.tiers.forEach((tier: Tier) => {
+          tierNameById.set(tier.tier_id, tier.name);
+          tierPriceById.set(tier.tier_id, tier.price);
+        });
+      }
+    } catch {
+      // игнорируем ошибку – уровни могут отсутствовать
+    }
+  }
+
   const sportNamesById = new Map<number, string>(
     (sportTypesData?.sport_types || []).map(s => [s.sport_type_id, s.name])
   );
@@ -116,36 +79,30 @@ export async function loadProfilePageData(
       }
     }
 
-    // Собираем contentBlocks с сохранением порядка из blocks
     const contentBlocks: ContentBlockForPost[] = [];
     if (fullPost?.blocks) {
       for (const block of fullPost.blocks) {
         if (block.text_content) {
-          contentBlocks.push({
-            type: 'text',
-            content: block.text_content
-          });
+          contentBlocks.push({ type: 'text', content: block.text_content });
         }
         if (block.file_url) {
-          contentBlocks.push({
-            type: 'attachment',
-            file_url: block.file_url,
-            kind: block.kind || 'image'
-          });
+          contentBlocks.push({ type: 'attachment', file_url: block.file_url, kind: block.kind || 'image' });
         }
       }
     }
 
-    // Преобразуем sport_type_id в название
-    const sportTypeName = post.sport_type_id
-      ? sportNamesById.get(post.sport_type_id) || ''
-      : '';
+    const sportTypeName = post.sport_type_id ? sportNamesById.get(post.sport_type_id) || '' : '';
+    const allText = contentBlocks.filter(b => b.type === 'text').map(b => b.content).join('\n');
 
-    // Текстовый контент для краткого превью
-    const allText = contentBlocks
-      .filter(b => b.type === 'text')
-      .map(b => b.content)
-      .join('\n');
+    // Определяем название и цену уровня подписки
+    let tierName: string | undefined = undefined;
+    let tierPrice: number | undefined = undefined;
+    if (post.min_tier_id) {
+      tierName = tierNameById.get(post.min_tier_id);
+      tierPrice = tierPriceById.get(post.min_tier_id);
+      // Если цена не определена (нет в мапе), ставим 0 (бесплатно)
+      if (tierPrice === undefined) tierPrice = 0;
+    }
 
     return {
       post_id: post.post_id,
@@ -163,15 +120,44 @@ export async function loadProfilePageData(
       min_tier_id: post.min_tier_id ?? null,
       sport_type_id: post.sport_type_id ?? null,
       sport_type: sportTypeName,
-      contentBlocks: contentBlocks,
+      tier_name: tierName,
+      tier_price: tierPrice,
+      contentBlocks,
       attachments: []
     };
   }));
 
-  const mappedData = mapProfileData(profileData, currentUser);
+  const isOwnProfile = profileData.is_me;
+  const fullProfileName = getFullName(profileData);
+  const currentUserData: User | null = currentUser?.user || null;
+
+  let currentUserAvatar: string | null = null;
+  if (isOwnProfile) {
+    currentUserAvatar = profileData.avatar_url;
+  } else if (currentUserData) {
+    currentUserAvatar = currentUserData.avatar_url || null;
+  }
+
+  const profile = {
+    name: fullProfileName,
+    role: getUserRoleLabel(profileData.is_trainer),
+    avatar: profileData.avatar_url,
+    isOwnProfile,
+    isTrainer: Boolean(profileData.is_trainer)
+  };
+
+  const currentUserMapped = currentUserData
+    ? {
+      id: currentUserData.user_id,
+      name: getFullName(currentUserData),
+      role: getUserRoleLabel(currentUserData.is_trainer),
+      avatar: currentUserAvatar
+    }
+    : null;
 
   return {
-    ...mappedData,
+    profile,
+    currentUser: currentUserMapped,
     posts,
     subscriptions: [],
     popularPosts: [],
