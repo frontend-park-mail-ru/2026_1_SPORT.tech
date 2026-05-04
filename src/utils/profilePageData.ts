@@ -36,12 +36,32 @@ export async function loadProfilePageData(
   const resolvedUserId = userId || currentUser?.user?.user_id;
   if (!resolvedUserId) throw new Error('Пользователь не авторизован');
 
-  // Загружаем профиль, посты, виды спорта
+  // Загружаем профиль, посты, виды спорта – с защитой от ошибок
   const [profileData, postsData, sportTypesData] = await Promise.all([
-    api.getProfile(resolvedUserId),
+    api.getProfile(resolvedUserId).catch(() => null),
     api.getUserPosts(resolvedUserId).catch(() => ({ posts: [] as PostListItem[], user_id: resolvedUserId })),
     api.getSportTypes().catch(() => ({ sport_types: [] }))
   ]);
+
+  // Если профиль совсем не загрузился (null), вернуть минимальную заглушку
+  if (!profileData) {
+    return {
+      profile: {
+        name: 'Пользователь',
+        role: 'Клиент',
+        avatar: null,
+        isOwnProfile: false,
+        isTrainer: false
+      },
+      currentUser: null,
+      posts: [],
+      subscriptions: [],
+      popularPosts: [],
+      viewedUserId: resolvedUserId
+    };
+  }
+
+  // ... оставшаяся часть функции БЕЗ ИЗМЕНЕНИЙ (см. исходный код ниже) ...
 
   // Загружаем уровни подписки, если просматриваем тренера
   let tierNameById = new Map<number, string>();
@@ -100,7 +120,6 @@ export async function loadProfilePageData(
     if (post.min_tier_id) {
       tierName = tierNameById.get(post.min_tier_id);
       tierPrice = tierPriceById.get(post.min_tier_id);
-      // Если цена не определена (нет в мапе), ставим 0 (бесплатно)
       if (tierPrice === undefined) tierPrice = 0;
     }
 

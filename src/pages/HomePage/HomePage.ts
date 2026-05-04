@@ -82,7 +82,6 @@ function renderTrainerCard(trainer: TrainerListItem, sportNamesById: Map<number,
     </button>`;
 }
 
-// Функция debounce
 function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
   let timer: ReturnType<typeof setTimeout>;
   return ((...args: any[]) => {
@@ -156,10 +155,37 @@ export async function renderHomePage(
     sportCheckboxesContainer.appendChild(label);
   });
 
-  // Состояние фильтров
   const getSelectedSportIds = (): number[] => Array.from(sportCheckboxesContainer.querySelectorAll('input:checked')).map(cb => Number((cb as HTMLInputElement).value));
 
-  // Функция загрузки тренеров с сервера
+  // ========== ИЗМЕНЕНИЯ ДЛЯ ОФЛАЙНА ==========
+  let lastTrainers: TrainerListItem[] = [];                         // хранит последний успешный ответ
+
+  const showEmptyState = () => {
+    grid.innerHTML = '';
+    emptyState.hidden = false;
+  };
+
+  const renderGrid = (trainers: TrainerListItem[]) => {
+    if (trainers.length === 0) {
+      showEmptyState();
+      return;
+    }
+    const sportNamesById = new Map<number, string>(
+      sportTypes.map(s => [s.sport_type_id, s.name])
+    );
+    grid.innerHTML = trainers.map(t => renderTrainerCard(t, sportNamesById)).join('');
+    emptyState.hidden = true;
+
+    // обработчики клика
+    grid.querySelectorAll('.trainer-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const trainerId = Number((card as HTMLElement).dataset.trainerId);
+        if (!Number.isFinite(trainerId)) return;
+        window.router.navigateTo(`/profile/${trainerId}`);
+      });
+    });
+  };
+
   const loadTrainers = async (query: string, sportTypeIds: number[]) => {
     try {
       const response = await api.getTrainers({
@@ -171,57 +197,36 @@ export async function renderHomePage(
         ? response.trainers.filter(t => t.is_trainer)
         : [];
 
-      if (trainers.length === 0) {
-        grid.innerHTML = '';
-        emptyState.hidden = false;
-        return;
-      }
-
-      // Возобновляем карту видов спорта (нужно для отображения названий)
-      const sportNamesById = new Map<number, string>(
-        sportTypes.map(s => [s.sport_type_id, s.name])
-      );
-
-      grid.innerHTML = trainers.map(t => renderTrainerCard(t, sportNamesById)).join('');
-      emptyState.hidden = true;
-
-      // Вешаем обработчики клика для перехода в профиль
-      grid.querySelectorAll('.trainer-card').forEach(card => {
-        card.addEventListener('click', () => {
-          const trainerId = Number((card as HTMLElement).dataset.trainerId);
-          if (!Number.isFinite(trainerId)) return;
-          window.router.navigateTo(`/profile/${trainerId}`);
-        });
-      });
+      lastTrainers = trainers;   // запомнили
+      renderGrid(trainers);
     } catch (error) {
       console.error('Failed to load trainers:', error);
+      // если есть сохранённые данные – показать их, иначе пустое состояние
+      if (lastTrainers.length > 0) {
+        renderGrid(lastTrainers);
+      } else {
+        showEmptyState();
+      }
     }
   };
+  // ==========================================
 
-  // Обработчик изменений: перезапрос с сервера
   const handleFilterChange = debounce(() => {
     const query = searchInput.value.trim();
     const sportIds = getSelectedSportIds();
     loadTrainers(query, sportIds);
   }, 300);
 
-  // Обработчики событий
   searchInput.addEventListener('input', handleFilterChange);
-
-  // При клике на кнопку «Фильтры» показываем/скрываем выпадашку
   filtersBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     filtersDropdown.hidden = !filtersDropdown.hidden;
   });
-
-  // Скрываем фильтр при клике вне
   document.addEventListener('click', (e) => {
     if (!filtersDropdown.hidden && !filtersDropdown.contains(e.target as Node) && e.target !== filtersBtn) {
       filtersDropdown.hidden = true;
     }
   });
-
-  // При изменении чекбоксов
   sportCheckboxesContainer.addEventListener('change', handleFilterChange);
 
   // Первичная загрузка
