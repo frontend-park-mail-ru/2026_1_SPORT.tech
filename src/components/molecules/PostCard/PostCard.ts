@@ -61,7 +61,7 @@ export async function renderPostCard(
 
   // Если пост имеет бесплатный уровень (min_tier_id задан и цена 0), то он доступен всем
   let finalCanView = canView;
-  if (minTierId != null && tierPrice === 0) {
+  if (minTierId != null && tierPrice == 0) {
     finalCanView = true;
   }
 
