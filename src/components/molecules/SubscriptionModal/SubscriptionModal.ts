@@ -36,12 +36,13 @@ export async function openSubscriptionModal({
           ${currentSubscription ? 'Изменить или отменить подписку' : 'Выберите уровень подписки'}
         </h2>
         <div class="subscription-modal__list">
-          ${tiers.map(tier => {
+          ${tiers.map((tier, index) => {
     const price = (typeof tier.price === 'number' && !isNaN(tier.price)) ? tier.price : 0;
     const isCurrent = currentSubscription?.tier_id === tier.tier_id;
+    const levelNumber = index + 1;
     return `
               <div class="subscription-modal__tier ${isCurrent ? 'subscription-modal__tier--current' : ''}">
-                <h3>${escapeHtml(tier.name)} (${price} ₽/мес)</h3>
+                <h3>Уровень ${levelNumber}: ${escapeHtml(tier.name)} (${price} ₽/мес)</h3>
                 <p>${escapeHtml(tier.description || 'Описание отсутствует')}</p>
                 <button
                   class="button button--primary-orange button--small"
