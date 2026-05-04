@@ -73,8 +73,16 @@ export class ApiClient {
   }
 
   async ensureCsrfToken(): Promise<string | null> {
-    await this.fetchCsrfToken();
-    return this.csrfToken;
+    // Если токен уже есть, не делаем лишний запрос, чтобы не инвалидировать его
+    if (this.csrfToken) {
+      return this.csrfToken;
+    }
+    return this.fetchCsrfToken();
+  }
+
+  async refreshCsrfToken(): Promise<string | null> {
+    this.csrfToken = null;
+    return this.fetchCsrfToken();
   }
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
