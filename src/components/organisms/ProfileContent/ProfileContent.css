@@ -414,7 +414,7 @@
     flex-direction: column;
   }
   .profile-content__sidebar-right {
-    display: none;
+    display: none !important;
   }
   .profile-content__main,
   .profile-content__main--message {

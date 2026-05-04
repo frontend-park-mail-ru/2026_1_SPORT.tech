@@ -373,16 +373,17 @@ export async function renderProfileContent(
   const template = HandlebarsGlobal.templates['ProfileContent.hbs'];
 
   let tierNameMap: Map<number, string> | undefined;
-  let tierPriceMap: Map<number, number> | undefined;
-  if (isTrainer && !canManagePosts) {
-    try {
-      const tiersResp = await api.getTrainerTiers(viewedUserId);
-      if (tiersResp?.tiers) {
-        tierNameMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.name]));
-        tierPriceMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.price]));
-      }
-    } catch {}
-  }
+let tierPriceMap: Map<number, number> | undefined;
+// Загружаем уровни подписки, если просматриваем тренера (своего или чужого)
+if (isTrainer) {
+  try {
+    const tiersResp = await api.getTrainerTiers(viewedUserId);
+    if (tiersResp?.tiers) {
+      tierNameMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.name]));
+      tierPriceMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.price]));
+    }
+  } catch {}
+}
 
   const tabs = isTrainer
     ? [
