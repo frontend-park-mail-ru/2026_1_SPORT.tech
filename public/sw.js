@@ -1,7 +1,8 @@
+// public/sw.js
+
 const CACHE_STATIC = 'sportech-static-v2';
 const CACHE_API = 'sportech-api-v1';
 
-// Ресурсы, кэшируемые сразу при установке (можно дополнить)
 const STATIC_ASSETS = [
   '/',
   '/index.html'
@@ -30,14 +31,23 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  if (url.pathname.startsWith('/api')) {
-    // API: Сеть → Кэш
-    event.respondWith(networkFirst(request, CACHE_API));
-  } else {
-    // Статика и прочее: Кэш → Сеть
+  // Статика – Cache First
+  if (!url.pathname.startsWith('/api')) {
     event.respondWith(cacheFirst(request, CACHE_STATIC));
+    return;
   }
+
+  // GET-запросы к API: Stale‑While‑Revalidate
+  if (request.method === 'GET') {
+    event.respondWith(staleWhileRevalidate(request, CACHE_API));
+    return;
+  }
+
+  // Остальные методы (POST, PATCH, DELETE) – только сеть
+  event.respondWith(networkOnly(request));
 });
+
+// --- стратегии ---
 
 async function cacheFirst(request, cacheName) {
   const cached = await caches.match(request);
@@ -58,16 +68,28 @@ async function cacheFirst(request, cacheName) {
   }
 }
 
-async function networkFirst(request, cacheName) {
-  try {
-    const response = await fetch(request);
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+
+  // Фоновая попытка обновить кэш (не ждём её)
+  const fetchPromise = fetch(request).then(response => {
     if (response.ok) {
-      const cache = await caches.open(cacheName);
       cache.put(request, response.clone());
     }
     return response;
-  } catch (err) {
-    const cached = await caches.match(request);
-    return cached || Promise.reject(err);
+  }).catch(() => {});
+
+  // Если кэш есть – возвращаем его немедленно
+  if (cached) {
+    // Не ждём завершения fetchPromise
+    return cached;
   }
+
+  // Кэша нет – ждём сеть
+  return fetchPromise;
+}
+
+async function networkOnly(request) {
+  return fetch(request);
 }
