@@ -59,6 +59,12 @@ export async function renderPostCard(
     tierPrice = 0
   } = post;
 
+  // Если пост имеет бесплатный уровень (min_tier_id задан и цена 0), то он доступен всем
+  let finalCanView = canView;
+  if (minTierId != null && tierPrice === 0) {
+    finalCanView = true;
+  }
+
   let contentBlocks: ContentBlock[] = [];
   if (existingContentBlocks && existingContentBlocks.length > 0) {
     contentBlocks = existingContentBlocks.map(block => ({
@@ -92,7 +98,7 @@ export async function renderPostCard(
   const html = template({
     post_id: postId, title, content: shortTextContent, fullContent: content,
     authorName, authorRole, authorAvatar, authorInitials: initials,
-    likes, liked, comments, can_view: canView, isOwner,
+    likes, liked, comments, can_view: finalCanView, isOwner,
     contentBlocks, minTierId, sportType, tierName, tierPrice
   });
 
@@ -141,7 +147,7 @@ export async function renderPostCard(
     if (svg) svg.setAttribute('fill', nextLiked ? 'currentColor' : 'none');
   };
 
-  if (likeBtn && api && canView) {
+  if (likeBtn && api && finalCanView) {
     likeBtn.addEventListener('click', async (e: Event) => {
       e.stopPropagation();
       if (likeBtn.disabled) return;
