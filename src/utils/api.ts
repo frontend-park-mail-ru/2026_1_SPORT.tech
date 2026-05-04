@@ -35,6 +35,9 @@ export function translateErrorMessage(message: string): string {
   if (lower.includes('forbidden')) return 'Доступ запрещён';
   if (lower.includes('not found')) return 'Ресурс не найден';
   if (lower.includes('unauthorized')) return 'Необходима авторизация';
+  if (lower.includes('email already exists') || lower.includes('email already taken')) {
+    return 'Пользователь с таким email уже существует';
+  }
   if (lower.includes('email already exists')) return 'Пользователь с таким email уже существует';
   if (lower.includes('username already exists')) return 'Имя пользователя уже занято';
   if (lower.includes('invalid credentials')) return 'Неверный email или пароль';
