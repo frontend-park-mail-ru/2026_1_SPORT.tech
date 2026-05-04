@@ -6,11 +6,11 @@
 import type { ApiClient } from '../../../utils/api';
 import type { ButtonAPI } from '../../atoms/Button/Button';
 import type { InputAPI } from '../../atoms/Input/Input';
-import type { SportTypeFieldOption, SportTypeFieldApi } from '../../../types/components.types';
+import type { SportTypeFieldOption } from '../../../types/components.types';
 import type { PostBlock } from '../../../types/api.types';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
-import { createSportTypesField, loadSportTypes } from '../../organisms/AuthForm/AuthForm';
+import { loadSportTypes } from '../../organisms/AuthForm/AuthForm';
 
 export interface PostFormModalOptions {
   api: ApiClient;
@@ -64,7 +64,7 @@ export async function openPostFormModal({
 
   const blocks: ContentBlock[] = [];
   let blockCounter = 0;
-  let selectedTiers: number[] = [];
+  let selectedTierId: number | null = null;
   let selectedSportTypeId: number | null = null;
 
   // ========== ЗАГРУЖАЕМ СУЩЕСТВУЮЩИЙ ПОСТ (если редактирование) ==========
@@ -96,7 +96,7 @@ export async function openPostFormModal({
       }
 
       if (fullPost.min_tier_id != null && fullPost.min_tier_id > 0) {
-        selectedTiers = [fullPost.min_tier_id];
+        selectedTierId = fullPost.min_tier_id;
       }
 
       if (fullPost.sport_type_id != null) {
@@ -163,19 +163,48 @@ export async function openPostFormModal({
     sportFieldContainer.appendChild(selectEl);
   }
 
-  // Уровни подписки – чекбоксы (можно выбрать несколько, передаётся минимальный)
-  let tierFieldApi: SportTypeFieldApi | null = null;
+  // Уровни подписки – радиокнопки (один вариант выбора)
   if (tierContainer) {
-    tierFieldApi = createSportTypesField(tierContainer, {
-      label: '',
-      placeholder: 'Выберите уровень доступа',
-      required: false,
-      options: tierOptions,
-      onChange: (ids: number[]) => { selectedTiers = ids; }
-    });
+    tierContainer.innerHTML = '';
+    tierContainer.className = 'post-form__tier-radio-group';
 
-    if (selectedTiers.length > 0) {
-      tierFieldApi.setValue(selectedTiers);
+    const label = document.createElement('label');
+    label.className = 'post-form-modal__label';
+    label.textContent = 'Минимальный уровень доступа';
+    tierContainer.appendChild(label);
+
+    if (tierOptions.length === 0) {
+      const emptyMsg = document.createElement('p');
+      emptyMsg.style.cssText = 'color:#999; font-size:13px; margin:8px 0;';
+      emptyMsg.textContent = 'Нет доступных уровней подписки';
+      tierContainer.appendChild(emptyMsg);
+    } else {
+      tierOptions.forEach(option => {
+        const radioWrapper = document.createElement('div');
+        radioWrapper.className = 'post-form__tier-radio';
+
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'min_tier_id';
+        radio.value = String(option.sport_type_id);
+        radio.id = `tier-${option.sport_type_id}`;
+        radio.checked = selectedTierId === option.sport_type_id;
+
+        radio.addEventListener('change', () => {
+          if (radio.checked) {
+            selectedTierId = option.sport_type_id;
+          }
+        });
+
+        const radioLabel = document.createElement('label');
+        radioLabel.htmlFor = `tier-${option.sport_type_id}`;
+        radioLabel.textContent = option.name;
+        radioLabel.style.cssText = 'font-size:14px; cursor:pointer;';
+
+        radioWrapper.appendChild(radio);
+        radioWrapper.appendChild(radioLabel);
+        tierContainer.appendChild(radioWrapper);
+      });
     }
   }
 
@@ -415,8 +444,8 @@ export async function openPostFormModal({
         payload.sport_type_id = Number(sportSelect.value);
       }
 
-      if (selectedTiers.length > 0) {
-        payload.min_tier_id = Math.min(...selectedTiers);
+      if (selectedTierId !== null && selectedTierId > 0) {
+        payload.min_tier_id = selectedTierId;
       }
 
       if (mode === 'edit' && postId != null) {

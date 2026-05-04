@@ -40,8 +40,8 @@ export function translateErrorMessage(message: string): string {
   }
   if (lower.includes('email already exists')) return 'Пользователь с таким email уже существует';
   if (lower.includes('username already exists') || lower.includes('username already taken')) {
-  return 'Имя пользователя уже занято';
-}
+    return 'Имя пользователя уже занято';
+  }
   if (lower.includes('invalid credentials')) return 'Неверный email или пароль';
   if (lower.includes('password')) return 'Неверный пароль';
   return message;

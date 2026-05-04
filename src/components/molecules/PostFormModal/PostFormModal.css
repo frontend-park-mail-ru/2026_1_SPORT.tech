@@ -398,3 +398,56 @@
   color: #E85A2B;
   background: #FFF5F0;
 }
+/* Добавить в конец файла PostFormModal.css */
+
+/* Группа радиокнопок для выбора уровня доступа */
+.post-form__tier-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.post-form__tier-radio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: #F8FAFC;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.post-form__tier-radio:hover {
+  background: #FFF5F0;
+  border-color: #FFD4CC;
+}
+
+.post-form__tier-radio input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #E85A2B;
+  cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.post-form__tier-radio label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1A2B3C;
+  cursor: pointer;
+  flex: 1;
+}
+
+.post-form__tier-radio input[type="radio"]:checked + label,
+.post-form__tier-radio input[type="radio"]:checked ~ label {
+  color: #E85A2B;
+}
+
+.post-form__tier-radio:has(input[type="radio"]:checked) {
+  background: #FFF5F0;
+  border-color: #E85A2B;
+}
