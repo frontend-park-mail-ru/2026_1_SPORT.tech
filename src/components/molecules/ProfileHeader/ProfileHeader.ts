@@ -50,62 +50,63 @@ export async function renderProfileHeader(
     });
   }
 
-  // Подписка / изменение подписки
+  // Подписка / изменение подписки – показываем только если текущий пользователь клиент
   if (!isOwnProfile && showDonate && actionsContainer) {
-    let subscriptionButton: ButtonAPI | null = null;
+    const currentUser = await api.getCurrentUser();
+    const isCurrentUserClient = currentUser?.user && !currentUser.user.is_trainer;
 
-    // Функция обновления текста кнопки с учётом active === true
-    const updateButtonText = async () => {
-      if (!subscriptionButton) return;
-      try {
-        const subs = await api.getMySubscriptions();
-        const hasActiveSubscription = subs.subscriptions.some(
-          s => s.trainer_id === viewedUserId && s.active === true
-        );
-        subscriptionButton.setText(hasActiveSubscription ? 'Изменить подписку' : 'Подписаться');
-      } catch {
-        // игнорируем
-      }
-    };
+    if (isCurrentUserClient) {
+      let subscriptionButton: ButtonAPI | null = null;
 
-    const handleClick = async () => {
-      if (!viewedUserId) return;
-
-      const currentUser = await api.getCurrentUser();
-      const isClient = currentUser?.user && !currentUser.user.is_trainer;
-      if (!isClient) return;
-
-      // Свежая активная подписка перед открытием
-      let existingSubscription = null;
-      try {
-        const subs = await api.getMySubscriptions();
-        existingSubscription = subs.subscriptions.find(
-          s => s.trainer_id === viewedUserId && s.active === true
-        ) || null;
-      } catch {}
-
-      const { openSubscriptionModal } = await import('../SubscriptionModal/SubscriptionModal');
-      await openSubscriptionModal({
-        api,
-        trainerId: viewedUserId,
-        existingSubscription,
-        onSubscribed: async () => {
-          // Обновить текст кнопки и остальную часть страницы
-          await updateButtonText();
-          if (onSubscribed) await onSubscribed();
+      const updateButtonText = async () => {
+        if (!subscriptionButton) return;
+        try {
+          const subs = await api.getMySubscriptions();
+          const hasActiveSubscription = subs.subscriptions.some(
+            s => s.trainer_id === viewedUserId && s.active === true
+          );
+          subscriptionButton.setText(hasActiveSubscription ? 'Изменить подписку' : 'Подписаться');
+        } catch {
+          // игнорируем
         }
-      });
-    };
+      };
 
-    // Создаём кнопку один раз
-    subscriptionButton = await renderButton(actionsContainer, {
-      text: 'Подписаться',
-      variant: 'primary-orange',
-      state: 'normal',
-      size: 'medium',
-      onClick: handleClick
-    });
-    await updateButtonText();
+      const handleClick = async () => {
+        if (!viewedUserId) return;
+
+        const currentUserInner = await api.getCurrentUser();
+        const isClient = currentUserInner?.user && !currentUserInner.user.is_trainer;
+        if (!isClient) return;
+
+        let existingSubscription = null;
+        try {
+          const subs = await api.getMySubscriptions();
+          existingSubscription = subs.subscriptions.find(
+            s => s.trainer_id === viewedUserId && s.active === true
+          ) || null;
+        } catch {}
+
+        const { openSubscriptionModal } = await import('../SubscriptionModal/SubscriptionModal');
+        await openSubscriptionModal({
+          api,
+          trainerId: viewedUserId,
+          existingSubscription,
+          onSubscribed: async () => {
+            await updateButtonText();
+            if (onSubscribed) await onSubscribed();
+          }
+        });
+      };
+
+      subscriptionButton = await renderButton(actionsContainer, {
+        text: 'Подписаться',
+        variant: 'primary-orange',
+        state: 'normal',
+        size: 'medium',
+        onClick: handleClick
+      });
+      await updateButtonText();
+    }
   }
 
   // Редактировать профиль (только свой)
@@ -133,7 +134,6 @@ export async function renderProfileHeader(
     });
   }
 
-  // Остальные кнопки – без изменений
   const statBtn = element.querySelector(`#stat-btn-${id}`) as HTMLElement | null;
   if (statBtn) statBtn.addEventListener('click', () => {
     statBtn.classList.add('button--active');

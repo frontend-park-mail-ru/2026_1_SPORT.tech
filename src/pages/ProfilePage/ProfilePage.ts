@@ -43,10 +43,8 @@ export async function renderProfilePage(
   const headerContainer = document.createElement('div'); headerContainer.className = 'profile-page__header'; profileContainer.appendChild(headerContainer);
   const contentContainer = document.createElement('div'); contentContainer.className = 'profile-page__content'; profileContainer.appendChild(contentContainer);
 
-  // Функция для обновления постов и контента после подписки
   async function reloadAllData(): Promise<void> {
     const data: ProfilePageData = await loadProfilePageData(api, viewedUserId);
-    // Обновляем контент (посты)
     const postsContainer = contentContainer.querySelector('#posts-container') as HTMLElement;
     if (postsContainer) {
       const activeTabElement = contentContainer.querySelector('.profile-content__tab--active') as HTMLElement;
@@ -59,7 +57,6 @@ export async function renderProfilePage(
         onPostsUpdated: reloadAllData
       });
     }
-    // При необходимости можно обновить шапку (аватар, имя) – но это уже статично
   }
 
   await Promise.all([
@@ -73,7 +70,7 @@ export async function renderProfilePage(
       api,
       viewedUserId,
       onDonate: () => openDonationModal({ api, recipientUserId: viewedUserId }),
-      onSubscribed: reloadAllData // Передаём обновление данных
+      onSubscribed: reloadAllData
     }),
     renderProfileContent(contentContainer, {
       activeTab,
@@ -84,7 +81,8 @@ export async function renderProfilePage(
       canManagePosts: profile.isOwnProfile && profile.isTrainer,
       onPostsUpdated: reloadAllData,
       viewedUserId,
-      isTrainer: profile.isTrainer
+      isTrainer: profile.isTrainer,
+      isOwnProfile: profile.isOwnProfile   // передаём флаг
     })
   ]);
 

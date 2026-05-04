@@ -18,6 +18,7 @@ interface ProfileContentParams {
   onPostsUpdated?: (() => Promise<void>) | null;
   viewedUserId: number;
   isTrainer?: boolean;
+  isOwnProfile?: boolean;   // добавлено
 }
 
 interface FillPostsParams {
@@ -128,7 +129,6 @@ export async function fillProfilePostsSection(
 function getYearsWord(years: number): string {
   const lastDigit = years % 10;
   const lastTwoDigits = years % 100;
-
   if (lastTwoDigits >= 11 && lastTwoDigits <= 19) return 'лет';
   if (lastDigit === 1) return 'год';
   if (lastDigit >= 2 && lastDigit <= 4) return 'года';
@@ -179,7 +179,6 @@ async function showTrainerAbout(
     const careerDate: Date | null = trainerDetails.career_since_date
       ? new Date(trainerDetails.career_since_date)
       : null;
-
     const careerDateStr: string = careerDate
       ? careerDate.toLocaleDateString('ru-RU')
       : 'Не указано';
@@ -242,7 +241,6 @@ async function showTrainerAbout(
 function showClientAbout(container: HTMLElement, profile: Profile): void {
   setPostsContainerMessageState(container, false);
   const fullName: string = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Не указано';
-
   container.innerHTML = `
     <div class="trainer-about">
       <div class="trainer-about__section">
@@ -310,7 +308,6 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
         continue;
       }
     }
-
     return fullPosts;
   } catch (error: unknown) {
     console.error('Failed to load liked posts:', error);
@@ -318,39 +315,35 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
   }
 }
 
-function renderTiersSection(container: HTMLElement, api: ApiClient, isTrainer: boolean): void {
+// Обновлённая функция – учитывает isOwnProfile
+function renderTiersSection(container: HTMLElement, api: ApiClient, isTrainer: boolean, isOwnProfile: boolean): void {
   container.innerHTML = '';
-
   const wrapper = document.createElement('div');
   wrapper.className = 'tiers-settings';
-  wrapper.innerHTML = `
-    <h3 style="margin-bottom:16px;">Уровни подписки</h3>
-    <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
-  `;
 
-  container.appendChild(wrapper);
-
-  if (isTrainer) {
+  if (isTrainer && isOwnProfile) {
+    wrapper.innerHTML = `
+      <h3 style="margin-bottom:16px;">Уровни подписки</h3>
+      <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
+    `;
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'button button--primary-orange button--medium';
     button.style.cssText = 'width:100%;max-width:300px;margin:0 auto;display:block;';
     button.textContent = 'Настроить уровни';
-
     button.addEventListener('click', () => {
       openTiersModal({
         api,
         onSaved: () => {}
       });
     });
-
     wrapper.appendChild(button);
+  } else if (isTrainer && !isOwnProfile) {
+    wrapper.innerHTML = '<p style="color:#999;text-align:center;padding:20px;">Информация об уровнях подписки недоступна</p>';
   } else {
-    const message = document.createElement('p');
-    message.style.cssText = 'color:#999;text-align:center;padding:20px;';
-    message.textContent = 'У вас нет доступа к настройке уровней подписки';
-    wrapper.appendChild(message);
+    wrapper.innerHTML = '<p style="color:#999;text-align:center;padding:20px;">У вас нет доступа к настройке уровней подписки</p>';
   }
+  container.appendChild(wrapper);
 }
 
 export async function renderProfileContent(
@@ -366,24 +359,24 @@ export async function renderProfileContent(
     canManagePosts = false,
     onPostsUpdated = null,
     viewedUserId,
-    isTrainer = true
+    isTrainer = true,
+    isOwnProfile = false   // добавлено
   } = params;
 
   const HandlebarsGlobal = (window as unknown as { Handlebars: { templates: Record<string, (context: Record<string, unknown>) => string> } }).Handlebars;
   const template = HandlebarsGlobal.templates['ProfileContent.hbs'];
 
   let tierNameMap: Map<number, string> | undefined;
-let tierPriceMap: Map<number, number> | undefined;
-// Загружаем уровни подписки, если просматриваем тренера (своего или чужого)
-if (isTrainer) {
-  try {
-    const tiersResp = await api.getTrainerTiers(viewedUserId);
-    if (tiersResp?.tiers) {
-      tierNameMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.name]));
-      tierPriceMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.price]));
-    }
-  } catch {}
-}
+  let tierPriceMap: Map<number, number> | undefined;
+  if (isTrainer) {
+    try {
+      const tiersResp = await api.getTrainerTiers(viewedUserId);
+      if (tiersResp?.tiers) {
+        tierNameMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.name]));
+        tierPriceMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.price]));
+      }
+    } catch {}
+  }
 
   const tabs = isTrainer
     ? [
@@ -470,14 +463,12 @@ if (isTrainer) {
 
   function refreshVisiblePosts(): void {
     let filteredPosts = allPosts;
-
     if (activeFilters.size > 0) {
       filteredPosts = filteredPosts.filter(p => {
         const sportId = p.sport_type_id;
         return sportId != null && activeFilters.has(String(sportId));
       });
     }
-
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filteredPosts = filteredPosts.filter(p => {
@@ -487,7 +478,6 @@ if (isTrainer) {
         return title.includes(query) || text.includes(query) || sportName.includes(query);
       });
     }
-
     fillProfilePostsSection(postsContainer, {
       activeTab: currentTab,
       posts: filteredPosts,
@@ -516,7 +506,6 @@ if (isTrainer) {
 
   if (filtersElement) {
     updateFilterLabel();
-
     filtersElement.addEventListener('click', async (e: Event) => {
       e.stopPropagation();
 
@@ -618,7 +607,7 @@ if (isTrainer) {
         sectionTitleEl.textContent = 'Подписки';
         if (subsContainer) {
           subsContainer.style.display = 'block';
-          renderTiersSection(subsContainer, api, isTrainer);
+          renderTiersSection(subsContainer, api, isTrainer, isOwnProfile);
         }
       } else if (tabId === 'publications' && !isTrainer) {
         if (filtersElement) filtersElement.style.display = 'none';
@@ -684,7 +673,7 @@ if (isTrainer) {
     toggleSidebarVisibility(false);
     if (subsContainer) {
       subsContainer.style.display = 'block';
-      renderTiersSection(subsContainer, api, isTrainer);
+      renderTiersSection(subsContainer, api, isTrainer, isOwnProfile);
     }
   } else {
     if (postsContainer) postsContainer.style.display = 'block';
