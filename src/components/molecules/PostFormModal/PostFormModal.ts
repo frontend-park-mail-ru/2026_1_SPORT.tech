@@ -179,7 +179,7 @@ export async function openPostFormModal({
       emptyMsg.textContent = 'Нет доступных уровней подписки';
       tierContainer.appendChild(emptyMsg);
     } else {
-      tierOptions.forEach(option => {
+      tierOptions.forEach((option, index) => {
         const radioWrapper = document.createElement('div');
         radioWrapper.className = 'post-form__tier-radio';
 
@@ -198,7 +198,7 @@ export async function openPostFormModal({
 
         const radioLabel = document.createElement('label');
         radioLabel.htmlFor = `tier-${option.sport_type_id}`;
-        radioLabel.textContent = option.name;
+        radioLabel.textContent = `Уровень ${index + 1}: ${option.name}`;
         radioLabel.style.cssText = 'font-size:14px; cursor:pointer;';
 
         radioWrapper.appendChild(radio);
