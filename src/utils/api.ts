@@ -22,7 +22,6 @@ export interface ApiResponse<T = unknown> {
   error?: { message: string };
 }
 
-// Функция перевода английских сообщений об ошибках
 export function translateErrorMessage(message: string): string {
   if (!message) return 'Неизвестная ошибка';
   const lower = message.toLowerCase();
@@ -73,7 +72,6 @@ export class ApiClient {
   }
 
   async ensureCsrfToken(): Promise<string | null> {
-    // Если токен уже есть, не делаем лишний запрос, чтобы не инвалидировать его
     if (this.csrfToken) {
       return this.csrfToken;
     }
@@ -85,7 +83,17 @@ export class ApiClient {
     return this.fetchCsrfToken();
   }
 
-  async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  /**
+   * Проверяет, является ли ошибка проблемой с CSRF-токеном
+   */
+  private isCsrfError(data: unknown): boolean {
+    const errorData = data as { error?: { code?: string; message?: string } };
+    const code = errorData?.error?.code;
+    const message = errorData?.error?.message || '';
+    return code === 'forbidden' && message.toLowerCase().includes('csrf');
+  }
+
+  async request<T>(endpoint: string, options: RequestInit = {}, retryOnCsrf = true): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     const method = options.method || 'GET';
     const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
@@ -126,6 +134,13 @@ export class ApiClient {
     }
 
     if (!response.ok) {
+      // При ошибке CSRF пробуем обновить токен и повторить запрос один раз
+      if (retryOnCsrf && isMutating && this.isCsrfError(data)) {
+        await this.refreshCsrfToken();
+        // Повторяем запрос, но без дальнейших повторных попыток, чтобы избежать бесконечного цикла
+        return this.request<T>(endpoint, options, false);
+      }
+
       const errorData = data as { error?: { message?: string; code?: string } };
       let errorMessage = errorData?.error?.message || `HTTP ${response.status}`;
       errorMessage = translateErrorMessage(errorMessage);
@@ -299,36 +314,48 @@ export class ApiClient {
   }
 
   async uploadPostMedia(file: File): Promise<{ file_url: string; content_type: string; kind: string; size_bytes: number }> {
-    await this.ensureCsrfToken();
+    // Будем повторять при ошибке CSRF максимум один раз
+    let attempt = 0;
+    while (true) {
+      await this.ensureCsrfToken();
 
-    const formData = new FormData();
-    formData.append('file', file);
+      const formData = new FormData();
+      formData.append('file', file);
 
-    const headers: Record<string, string> = {};
-    if (this.csrfToken) {
-      headers['X-CSRF-Token'] = this.csrfToken;
-    }
-    headers['Accept'] = 'application/json';
-
-    const response = await fetch(`${this.baseURL}/v1/posts/media`, {
-      method: 'POST',
-      credentials: 'include',
-      headers,
-      body: formData
-    });
-
-    if (!response.ok) {
-      let errorMessage = `HTTP ${response.status}`;
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData?.error?.message || errorData?.message || errorMessage;
-      } catch {
-        // Если не JSON — используем статус
+      const headers: Record<string, string> = {};
+      if (this.csrfToken) {
+        headers['X-CSRF-Token'] = this.csrfToken;
       }
-      throw new Error(translateErrorMessage(errorMessage));
-    }
+      headers['Accept'] = 'application/json';
 
-    return response.json();
+      const response = await fetch(`${this.baseURL}/v1/posts/media`, {
+        method: 'POST',
+        credentials: 'include',
+        headers,
+        body: formData
+      });
+
+      if (!response.ok) {
+        let errorData: any;
+        try {
+          errorData = await response.json();
+        } catch {
+          // не JSON
+        }
+
+        if (attempt === 0 && this.isCsrfError(errorData)) {
+          // CSRF ошибка, обновляем токен и пробуем ещё раз
+          await this.refreshCsrfToken();
+          attempt++;
+          continue;
+        }
+
+        const errorMessage = errorData?.error?.message || errorData?.message || `HTTP ${response.status}`;
+        throw new Error(translateErrorMessage(errorMessage));
+      }
+
+      return response.json();
+    }
   }
 
   async deletePost(postId: number): Promise<void> {
@@ -435,28 +462,42 @@ export class ApiClient {
   // ========== AVATAR ==========
 
   async uploadAvatar(file: File): Promise<{ avatar_url: string }> {
-    await this.ensureCsrfToken();
-    const formData = new FormData();
-    formData.append('avatar', file);
+    let attempt = 0;
+    while (true) {
+      await this.ensureCsrfToken();
+      const formData = new FormData();
+      formData.append('avatar', file);
 
-    const headers: Record<string, string> = {};
-    if (this.csrfToken) {
-      headers['X-CSRF-Token'] = this.csrfToken;
+      const headers: Record<string, string> = {};
+      if (this.csrfToken) {
+        headers['X-CSRF-Token'] = this.csrfToken;
+      }
+
+      const response = await fetch(`${this.baseURL}/v1/profiles/me/avatar`, {
+        method: 'POST',
+        credentials: 'include',
+        headers,
+        body: formData
+      });
+
+      if (!response.ok) {
+        let errorData: any;
+        try {
+          errorData = await response.json();
+        } catch {}
+
+        if (attempt === 0 && this.isCsrfError(errorData)) {
+          await this.refreshCsrfToken();
+          attempt++;
+          continue;
+        }
+
+        const errorMessage = errorData?.error?.message || `HTTP ${response.status}`;
+        throw new Error(translateErrorMessage(errorMessage));
+      }
+
+      return response.json();
     }
-
-    const response = await fetch(`${this.baseURL}/v1/profiles/me/avatar`, {
-      method: 'POST',
-      credentials: 'include',
-      headers,
-      body: formData
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({} as { error?: { message?: string } }));
-      throw new Error(translateErrorMessage(errorData?.error?.message || `HTTP ${response.status}`));
-    }
-
-    return response.json();
   }
 
   async deleteAvatar(): Promise<void> {
