@@ -373,17 +373,17 @@ export async function renderProfileContent(
   const template = HandlebarsGlobal.templates['ProfileContent.hbs'];
 
   let tierNameMap: Map<number, string> | undefined;
-let tierPriceMap: Map<number, number> | undefined;
-// Загружаем уровни подписки, если просматриваем тренера (своего или чужого)
-if (isTrainer) {
-  try {
-    const tiersResp = await api.getTrainerTiers(viewedUserId);
-    if (tiersResp?.tiers) {
-      tierNameMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.name]));
-      tierPriceMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.price]));
-    }
-  } catch {}
-}
+  let tierPriceMap: Map<number, number> | undefined;
+  // Загружаем уровни подписки, если просматриваем тренера (своего или чужого)
+  if (isTrainer) {
+    try {
+      const tiersResp = await api.getTrainerTiers(viewedUserId);
+      if (tiersResp?.tiers) {
+        tierNameMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.name]));
+        tierPriceMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.price]));
+      }
+    } catch {}
+  }
 
   const tabs = isTrainer
     ? [
@@ -437,6 +437,36 @@ if (isTrainer) {
   const searchInput = searchBlock?.querySelector('.profile-content__search-input') as HTMLInputElement | null;
   const sidebarRight = element.querySelector('.profile-content__sidebar-right') as HTMLElement | null;
 
+  // Функция для проверки, является ли устройство мобильным (ширина ≤ 1024px)
+  const isMobile = () => window.innerWidth <= 1024;
+
+  // Функция управления видимостью правой колонки с учётом мобильных устройств
+  const setSidebarVisibility = (visible: boolean) => {
+    if (!sidebarRight) return;
+    if (isMobile()) {
+      // На мобильных всегда скрываем
+      sidebarRight.style.display = 'none';
+    } else {
+      sidebarRight.style.display = visible ? 'flex' : 'none';
+    }
+  };
+
+  // Инициализация: скрываем на мобильных
+  setSidebarVisibility(true); // начальное состояние для десктопа (покажем)
+  // При загрузке сразу применим мобильное правило
+  if (isMobile()) {
+    setSidebarVisibility(false);
+  }
+
+  // Слушаем изменение размера окна
+  const handleResize = () => {
+    setSidebarVisibility(true); // сброс на десктопе
+    if (isMobile()) {
+      setSidebarVisibility(false);
+    }
+  };
+  window.addEventListener('resize', handleResize);
+
   if (!isTrainer) {
     if (filtersElement) filtersElement.style.display = 'none';
     if (addButtonContainer) addButtonContainer.style.display = 'none';
@@ -451,10 +481,10 @@ if (isTrainer) {
     }
   }
 
+  // Оставляем функцию toggleSidebarVisibility для совместимости с существующим кодом,
+  // но она теперь будет использовать setSidebarVisibility.
   function toggleSidebarVisibility(show: boolean): void {
-    if (sidebarRight) {
-      sidebarRight.style.display = show ? 'flex' : 'none';
-    }
+    setSidebarVisibility(show);
   }
 
   const activeFilters = new Set<string>();
