@@ -59,6 +59,10 @@ export async function renderProfilePage(
     }
   }
 
+  const initialData = await loadProfilePageData(api, viewedUserId);
+  const trainerDetails = initialData.trainerDetails;
+  const profileBio = initialData.bio;
+
   await Promise.all([
     renderSidebar(sidebarContainer, { activePage: 'profile', currentUser, users: subscriptions, api, onLogout }),
     renderProfileHeader(headerContainer, {
@@ -82,7 +86,9 @@ export async function renderProfilePage(
       onPostsUpdated: reloadAllData,
       viewedUserId,
       isTrainer: profile.isTrainer,
-      isOwnProfile: profile.isOwnProfile
+      isOwnProfile: profile.isOwnProfile,
+      trainerDetails,
+      profileBio
     })
   ]);
 

@@ -28,8 +28,24 @@ export function formatPostContent(textContent: string): string {
   return escapeHtml(textContent).replace(/\n/g, '<br>');
 }
 
-// Клиентский кеш профилей (переживает офлайн-сессии)
+// Клиентский кэш профилей
 const profilesCache = new Map<number, ProfilePageData>();
+
+// Кэш названий видов спорта
+const sportNamesCache = new Map<number, string>();
+
+export async function ensureSportTypes(api: ApiClient): Promise<Map<number, string>> {
+  if (sportNamesCache.size > 0) return sportNamesCache;
+  try {
+    const resp = await api.getSportTypes();
+    if (resp?.sport_types) {
+      resp.sport_types.forEach(s => sportNamesCache.set(s.sport_type_id, s.name));
+    }
+  } catch {
+    // без сети останется пустым
+  }
+  return sportNamesCache;
+}
 
 export async function loadProfilePageData(
   api: ApiClient,
@@ -40,14 +56,17 @@ export async function loadProfilePageData(
   if (!resolvedUserId) throw new Error('Пользователь не авторизован');
 
   try {
-    // Загружаем профиль, посты, виды спорта
     const [profileData, postsData, sportTypesData] = await Promise.all([
       api.getProfile(resolvedUserId),
       api.getUserPosts(resolvedUserId),
       api.getSportTypes()
     ]);
 
-    // Загружаем уровни подписки, если просматриваем тренера
+    // Кэшируем виды спорта
+    if (sportTypesData?.sport_types) {
+      sportTypesData.sport_types.forEach(s => sportNamesCache.set(s.sport_type_id, s.name));
+    }
+
     let tierNameById = new Map<number, string>();
     let tierPriceById = new Map<number, number>();
     if (profileData.is_trainer) {
@@ -59,9 +78,7 @@ export async function loadProfilePageData(
             tierPriceById.set(tier.tier_id, tier.price);
           });
         }
-      } catch {
-        // игнорируем ошибку – уровни могут отсутствовать
-      }
+      } catch {}
     }
 
     const sportNamesById = new Map<number, string>(
@@ -78,9 +95,7 @@ export async function loadProfilePageData(
       if (post.can_view) {
         try {
           fullPost = await api.getPost(post.post_id);
-        } catch {
-          // отдельный пост может быть недоступен
-        }
+        } catch {}
       }
 
       const contentBlocks: ContentBlockForPost[] = [];
@@ -163,22 +178,18 @@ export async function loadProfilePageData(
       posts,
       subscriptions: [],
       popularPosts: [],
-      viewedUserId: resolvedUserId
+      viewedUserId: resolvedUserId,
+      trainerDetails: profileData.trainer_details,
+      bio: profileData.bio
     };
 
-    // Сохраняем в клиентский кеш
     profilesCache.set(resolvedUserId, pageData);
-
     return pageData;
 
   } catch {
-    // При ошибке сети пытаемся достать из кеша
     const cached = profilesCache.get(resolvedUserId);
-    if (cached) {
-      return cached;
-    }
+    if (cached) return cached;
 
-    // Если ничего не закэшировано – возвращаем безопасную заглушку
     return {
       profile: {
         name: 'Пользователь',

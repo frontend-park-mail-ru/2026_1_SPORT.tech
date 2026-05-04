@@ -1,5 +1,6 @@
 // src/components/organisms/ProfileContent/ProfileContent.ts
 
+import { ensureSportTypes } from '../../../utils/profilePageData';
 import type { ApiClient } from '../../../utils/api';
 import type { PostWithAuthor } from '../../../types/post.types';
 import { renderButton } from '../../atoms/Button/Button';
@@ -19,6 +20,8 @@ interface ProfileContentParams {
   viewedUserId: number;
   isTrainer?: boolean;
   isOwnProfile?: boolean;
+  trainerDetails?: import('../../../types/api.types').TrainerDetails;
+  profileBio?: string | null;
 }
 
 interface FillPostsParams {
@@ -307,7 +310,6 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
   }
 }
 
-// Функция для отображения настроек уровней (только для своего профиля тренера)
 function renderTiersSettings(container: HTMLElement, api: ApiClient): void {
   container.innerHTML = '';
   const wrapper = document.createElement('div');
@@ -342,13 +344,14 @@ export async function renderProfileContent(
     onPostsUpdated = null,
     viewedUserId,
     isTrainer = true,
-    isOwnProfile = false
+    isOwnProfile = false,
+    trainerDetails,   // <-- извлекаем
+    profileBio        // <-- извлекаем
   } = params;
 
   const HandlebarsGlobal = (window as unknown as { Handlebars: { templates: Record<string, (context: Record<string, unknown>) => string> } }).Handlebars;
   const template = HandlebarsGlobal.templates['ProfileContent.hbs'];
 
-  // Вкладки в зависимости от типа профиля
   let tabs: { id: string; label: string; active: boolean }[] = [];
   if (isTrainer) {
     if (isOwnProfile) {
@@ -572,11 +575,27 @@ export async function renderProfileContent(
         if (addButtonContainer) addButtonContainer.style.display = 'none';
         sectionTitleEl.textContent = isTrainer ? 'О тренере' : 'О себе';
         if (postsContainer) postsContainer.style.display = 'block';
+
         if (isTrainer) {
-          await showTrainerAbout(postsContainer, api, viewedUserId);
+          if (trainerDetails) {
+            const sportMap = await ensureSportTypes(api);
+            showTrainerAboutFromData(postsContainer, trainerDetails, sportMap, profileBio ?? '');
+          } else {
+            try {
+              await showTrainerAbout(postsContainer, api, viewedUserId);
+            } catch {
+              setPostsContainerMessageState(postsContainer, true);
+              postsContainer.innerHTML = '<div class="profile-content__empty"><p>Информация о тренере недоступна</p></div>';
+            }
+          }
         } else {
-          const profile = await api.getProfile(viewedUserId);
-          showClientAbout(postsContainer, profile);
+          try {
+            const profile = await api.getProfile(viewedUserId);
+            showClientAbout(postsContainer, profile);
+          } catch {
+            setPostsContainerMessageState(postsContainer, true);
+            postsContainer.innerHTML = '<div class="profile-content__empty"><p>Не удалось загрузить информацию о пользователе</p></div>';
+          }
         }
       } else if (tabId === 'subscriptions') {
         if (isTrainer && isOwnProfile) {
@@ -626,6 +645,12 @@ export async function renderProfileContent(
     });
   });
 
+  // Активируем текущую вкладку программно, чтобы не дублировать логику загрузки
+  const activeTabElement = element.querySelector('.profile-content__tab--active') as HTMLElement;
+  if (activeTabElement) {
+    activeTabElement.click();
+  }
+
   if (canAddPost && currentTab === 'publications' && isTrainer) {
     const btnContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
     if (btnContainer) {
@@ -649,41 +674,60 @@ export async function renderProfileContent(
     }
   }
 
-  if (currentTab === 'about') {
-    toggleSidebarVisibility(false);
-    if (postsContainer) postsContainer.style.display = 'block';
-    if (isTrainer) {
-      await showTrainerAbout(postsContainer, api, viewedUserId);
-    } else {
-      const profile = await api.getProfile(viewedUserId);
-      showClientAbout(postsContainer, profile);
-    }
-  } else if (currentTab === 'subscriptions') {
-    if (isTrainer && isOwnProfile) {
-      toggleSidebarVisibility(false);
-      if (subsContainer) {
-        subsContainer.style.display = 'block';
-        renderTiersSettings(subsContainer, api);
-      }
-    } else if (!isTrainer) {
-      toggleSidebarVisibility(false);
-      if (subsContainer) {
-        subsContainer.style.display = 'block';
-        subsContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">Список подписок в разработке</div>';
-      }
-    }
-  } else {
-    if (postsContainer) postsContainer.style.display = 'block';
-    toggleSearchVisibility(true);
-    if (currentTab === 'publications' && !isTrainer) {
-      const likedPosts = await loadLikedPosts(api, viewedUserId);
-      allPosts = likedPosts as PostWithAuthor[];
-    } else {
-      await reloadAllPosts();
-    }
-    refreshVisiblePosts();
-  }
-
   container.appendChild(element);
   return element;
+}
+
+// Функция для офлайн-отображения "О тренере" без сетевых запросов
+function showTrainerAboutFromData(
+  container: HTMLElement,
+  trainerDetails: TrainerDetails,
+  sportNamesMap: Map<number, string>,
+  bio: string | null
+): void {
+  const careerDate = trainerDetails.career_since_date
+    ? new Date(trainerDetails.career_since_date).toLocaleDateString('ru-RU')
+    : 'Не указано';
+  let experienceYears = 0;
+  if (trainerDetails.career_since_date) {
+    const start = new Date(trainerDetails.career_since_date);
+    const today = new Date();
+    experienceYears = today.getFullYear() - start.getFullYear();
+    const mDiff = today.getMonth() - start.getMonth();
+    if (mDiff < 0 || (mDiff === 0 && today.getDate() < start.getDate())) experienceYears--;
+    if (experienceYears < 0) experienceYears = 0;
+  }
+
+  const sports = trainerDetails.sports || [];
+  const sportsList = sports.length > 0
+    ? sports.map(s => {
+      const name = sportNamesMap.get(Number(s.sport_type_id)) || `Вид спорта #${s.sport_type_id}`;
+      return `<div class="trainer-about__sport-item"><span class="trainer-about__sport-name">${escapeHtml(name)}</span></div>`;
+    }).join('')
+    : '<p class="trainer-about__section-text">Не указано</p>';
+
+  container.innerHTML = `
+    <div class="trainer-about">
+      <div class="trainer-about__section">
+        <h3 class="trainer-about__section-title">Образование</h3>
+        <p class="trainer-about__section-text">${escapeHtml(trainerDetails.education_degree || 'Не указано')}</p>
+      </div>
+      <div class="trainer-about__section">
+        <h3 class="trainer-about__section-title">Начало карьеры</h3>
+        <p class="trainer-about__section-text">${careerDate}</p>
+      </div>
+      <div class="trainer-about__section">
+        <h3 class="trainer-about__section-title">Стаж</h3>
+        <p class="trainer-about__section-text">${experienceYears} ${getYearsWord(experienceYears)}</p>
+      </div>
+      <div class="trainer-about__section">
+        <h3 class="trainer-about__section-title">Специализация</h3>
+        <div class="trainer-about__sports-list">${sportsList}</div>
+      </div>
+      <div class="trainer-about__section">
+        <h3 class="trainer-about__section-title">О себе</h3>
+        <p class="trainer-about__section-text">${escapeHtml(bio || 'Не указано')}</p>
+      </div>
+    </div>
+  `;
 }

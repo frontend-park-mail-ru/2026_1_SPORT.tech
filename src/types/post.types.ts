@@ -54,6 +54,8 @@ export interface ProfilePageData {
   subscriptions: never[];
   popularPosts: never[];
   viewedUserId: number;
+  trainerDetails?: import('../types/api.types').TrainerDetails;
+  bio?: string | null;
 }
 
 export interface PostEngagement {
