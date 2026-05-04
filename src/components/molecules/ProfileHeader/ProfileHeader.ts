@@ -39,7 +39,6 @@ export async function renderProfileHeader(
   const donateContainer = element.querySelector(`#profile-donate-${id}`) as HTMLElement | null;
   const actionsContainer = element.querySelector(`#profile-actions-${id}`) as HTMLElement | null;
 
-  // Пожертвовать
   if (!isOwnProfile && showDonate && donateContainer && onDonate) {
     await renderButton(donateContainer, {
       text: 'Пожертвовать',
@@ -50,66 +49,51 @@ export async function renderProfileHeader(
     });
   }
 
-  // Подписка / изменение подписки – показываем только если текущий пользователь клиент
   if (!isOwnProfile && showDonate && actionsContainer) {
-    const currentUser = await api.getCurrentUser();
-    const isCurrentUserClient = currentUser?.user && !currentUser.user.is_trainer;
+    let subscriptionButton: ButtonAPI | null = null;
 
-    if (isCurrentUserClient) {
-      let subscriptionButton: ButtonAPI | null = null;
+    const updateButtonText = async () => {
+      if (!subscriptionButton) return;
+      try {
+        const subs = await api.getMySubscriptions();
+        const hasActiveSubscription = subs.subscriptions.some(
+          s => s.trainer_id === viewedUserId && s.active === true
+        );
+        subscriptionButton.setText(hasActiveSubscription ? 'Изменить подписку' : 'Подписаться');
+      } catch {}
+    };
 
-      const updateButtonText = async () => {
-        if (!subscriptionButton) return;
-        try {
-          const subs = await api.getMySubscriptions();
-          const hasActiveSubscription = subs.subscriptions.some(
-            s => s.trainer_id === viewedUserId && s.active === true
-          );
-          subscriptionButton.setText(hasActiveSubscription ? 'Изменить подписку' : 'Подписаться');
-        } catch {
-          // игнорируем
+    const handleClick = async () => {
+      if (!viewedUserId) return;
+      let existingSubscription = null;
+      try {
+        const subs = await api.getMySubscriptions();
+        existingSubscription = subs.subscriptions.find(
+          s => s.trainer_id === viewedUserId && s.active === true
+        ) || null;
+      } catch {}
+      const { openSubscriptionModal } = await import('../SubscriptionModal/SubscriptionModal');
+      await openSubscriptionModal({
+        api,
+        trainerId: viewedUserId,
+        existingSubscription,
+        onSubscribed: async () => {
+          await updateButtonText();
+          if (onSubscribed) await onSubscribed();
         }
-      };
-
-      const handleClick = async () => {
-        if (!viewedUserId) return;
-
-        const currentUserInner = await api.getCurrentUser();
-        const isClient = currentUserInner?.user && !currentUserInner.user.is_trainer;
-        if (!isClient) return;
-
-        let existingSubscription = null;
-        try {
-          const subs = await api.getMySubscriptions();
-          existingSubscription = subs.subscriptions.find(
-            s => s.trainer_id === viewedUserId && s.active === true
-          ) || null;
-        } catch {}
-
-        const { openSubscriptionModal } = await import('../SubscriptionModal/SubscriptionModal');
-        await openSubscriptionModal({
-          api,
-          trainerId: viewedUserId,
-          existingSubscription,
-          onSubscribed: async () => {
-            await updateButtonText();
-            if (onSubscribed) await onSubscribed();
-          }
-        });
-      };
-
-      subscriptionButton = await renderButton(actionsContainer, {
-        text: 'Подписаться',
-        variant: 'primary-orange',
-        state: 'normal',
-        size: 'medium',
-        onClick: handleClick
       });
-      await updateButtonText();
-    }
+    };
+
+    subscriptionButton = await renderButton(actionsContainer, {
+      text: 'Подписаться',
+      variant: 'primary-orange',
+      state: 'normal',
+      size: 'medium',
+      onClick: handleClick
+    });
+    await updateButtonText();
   }
 
-  // Редактировать профиль (только свой)
   if (isOwnProfile && actionsContainer) {
     await renderButton(actionsContainer, {
       text: 'Редактировать',

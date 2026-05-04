@@ -82,7 +82,7 @@ export async function renderProfilePage(
       onPostsUpdated: reloadAllData,
       viewedUserId,
       isTrainer: profile.isTrainer,
-      isOwnProfile: profile.isOwnProfile   // передаём флаг
+      isOwnProfile: profile.isOwnProfile
     })
   ]);
 

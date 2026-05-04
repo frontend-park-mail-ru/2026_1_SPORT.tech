@@ -315,34 +315,24 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
   }
 }
 
-// Обновлённая функция – учитывает isOwnProfile
-function renderTiersSection(container: HTMLElement, api: ApiClient, isTrainer: boolean, isOwnProfile: boolean): void {
+// Функция для отображения настроек уровней (только для своего профиля тренера)
+function renderTiersSettings(container: HTMLElement, api: ApiClient): void {
   container.innerHTML = '';
   const wrapper = document.createElement('div');
   wrapper.className = 'tiers-settings';
-
-  if (isTrainer && isOwnProfile) {
-    wrapper.innerHTML = `
-      <h3 style="margin-bottom:16px;">Уровни подписки</h3>
-      <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
-    `;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'button button--primary-orange button--medium';
-    button.style.cssText = 'width:100%;max-width:300px;margin:0 auto;display:block;';
-    button.textContent = 'Настроить уровни';
-    button.addEventListener('click', () => {
-      openTiersModal({
-        api,
-        onSaved: () => {}
-      });
-    });
-    wrapper.appendChild(button);
-  } else if (isTrainer && !isOwnProfile) {
-    wrapper.innerHTML = '<p style="color:#999;text-align:center;padding:20px;">Информация об уровнях подписки недоступна</p>';
-  } else {
-    wrapper.innerHTML = '<p style="color:#999;text-align:center;padding:20px;">У вас нет доступа к настройке уровней подписки</p>';
-  }
+  wrapper.innerHTML = `
+    <h3 style="margin-bottom:16px;">Уровни подписки</h3>
+    <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
+  `;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'button button--primary-orange button--medium';
+  button.style.cssText = 'width:100%;max-width:300px;margin:0 auto;display:block;';
+  button.textContent = 'Настроить уровни';
+  button.addEventListener('click', () => {
+    openTiersModal({ api, onSaved: () => {} });
+  });
+  wrapper.appendChild(button);
   container.appendChild(wrapper);
 }
 
@@ -360,7 +350,7 @@ export async function renderProfileContent(
     onPostsUpdated = null,
     viewedUserId,
     isTrainer = true,
-    isOwnProfile = false   // добавлено
+    isOwnProfile = false
   } = params;
 
   const HandlebarsGlobal = (window as unknown as { Handlebars: { templates: Record<string, (context: Record<string, unknown>) => string> } }).Handlebars;
@@ -378,18 +368,33 @@ export async function renderProfileContent(
     } catch {}
   }
 
-  const tabs = isTrainer
-    ? [
-      { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
-      { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
-      { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
-      { id: 'about', label: 'О тренере', active: activeTab === 'about' }
-    ]
-    : [
+  // Формируем вкладки в зависимости от типа профиля
+  let tabs: { id: string; label: string; active: boolean }[] = [];
+  if (isTrainer) {
+    if (isOwnProfile) {
+      // Свой профиль тренера – показываем настройку уровней
+      tabs = [
+        { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
+        { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
+        { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
+        { id: 'about', label: 'О тренере', active: activeTab === 'about' }
+      ];
+    } else {
+      // Чужой профиль тренера – без вкладки "Подписки"
+      tabs = [
+        { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
+        { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
+        { id: 'about', label: 'О тренере', active: activeTab === 'about' }
+      ];
+    }
+  } else {
+    // Клиентский профиль
+    tabs = [
       { id: 'publications', label: 'Понравившиеся', active: activeTab === 'publications' || activeTab === 'main' },
       { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
       { id: 'about', label: 'О себе', active: activeTab === 'about' }
     ];
+  }
 
   const sectionTitles: Record<string, string> = {
     main: 'Недавние публикации',
@@ -508,13 +513,11 @@ export async function renderProfileContent(
     updateFilterLabel();
     filtersElement.addEventListener('click', async (e: Event) => {
       e.stopPropagation();
-
       if (activeDropdown) {
         activeDropdown.remove();
         activeDropdown = null;
         return;
       }
-
       activeDropdown = document.createElement('div');
       activeDropdown.className = 'profile-content__filters-dropdown';
       activeDropdown.innerHTML = `
@@ -601,13 +604,26 @@ export async function renderProfileContent(
           showClientAbout(postsContainer, profile);
         }
       } else if (tabId === 'subscriptions') {
-        toggleSidebarVisibility(false);
-        if (filtersElement) filtersElement.style.display = 'none';
-        if (addButtonContainer) addButtonContainer.style.display = 'none';
-        sectionTitleEl.textContent = 'Подписки';
-        if (subsContainer) {
-          subsContainer.style.display = 'block';
-          renderTiersSection(subsContainer, api, isTrainer, isOwnProfile);
+        if (isTrainer && isOwnProfile) {
+          // Свой профиль тренера – настройка уровней
+          toggleSidebarVisibility(false);
+          if (filtersElement) filtersElement.style.display = 'none';
+          if (addButtonContainer) addButtonContainer.style.display = 'none';
+          sectionTitleEl.textContent = 'Подписки';
+          if (subsContainer) {
+            subsContainer.style.display = 'block';
+            renderTiersSettings(subsContainer, api);
+          }
+        } else if (!isTrainer) {
+          // Список подписок клиента – пока заглушка
+          toggleSidebarVisibility(false);
+          if (filtersElement) filtersElement.style.display = 'none';
+          if (addButtonContainer) addButtonContainer.style.display = 'none';
+          sectionTitleEl.textContent = 'Подписки';
+          if (subsContainer) {
+            subsContainer.style.display = 'block';
+            subsContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">Список подписок в разработке</div>';
+          }
         }
       } else if (tabId === 'publications' && !isTrainer) {
         if (filtersElement) filtersElement.style.display = 'none';
@@ -670,10 +686,18 @@ export async function renderProfileContent(
       showClientAbout(postsContainer, profile);
     }
   } else if (currentTab === 'subscriptions') {
-    toggleSidebarVisibility(false);
-    if (subsContainer) {
-      subsContainer.style.display = 'block';
-      renderTiersSection(subsContainer, api, isTrainer, isOwnProfile);
+    if (isTrainer && isOwnProfile) {
+      toggleSidebarVisibility(false);
+      if (subsContainer) {
+        subsContainer.style.display = 'block';
+        renderTiersSettings(subsContainer, api);
+      }
+    } else if (!isTrainer) {
+      toggleSidebarVisibility(false);
+      if (subsContainer) {
+        subsContainer.style.display = 'block';
+        subsContainer.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">Список подписок в разработке</div>';
+      }
     }
   } else {
     if (postsContainer) postsContainer.style.display = 'block';
