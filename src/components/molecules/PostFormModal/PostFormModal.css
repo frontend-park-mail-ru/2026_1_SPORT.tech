@@ -1,0 +1,400 @@
+.post-form-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  font-family: var(--font-body);
+}
+
+.post-form-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.45);
+}
+
+.post-form-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--base-white);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+  padding: var(--spacing-2xl);
+}
+
+.post-form-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
+}
+
+.post-form-modal__title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.post-form-modal__close {
+  border: none;
+  background: transparent;
+  color: var(--text-placeholder);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--spacing-xs);
+  border-radius: var(--radius-sm);
+}
+
+.post-form-modal__close:hover,
+.post-form-modal__close:focus-visible {
+  color: var(--text-secondary);
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.post-form-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.post-form-modal__field {
+  width: 100%;
+}
+
+.post-form-modal__label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.post-form-modal__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 160px;
+  transition: border-color 0.2s;
+}
+
+.post-form-modal__textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+.post-form-modal__textarea--error {
+  border-color: var(--error-red);
+}
+
+.post-form-modal__inline-error {
+  display: block;
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--error-red);
+}
+
+.post-form-modal__global-error {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--error-red);
+}
+
+.post-form-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .post-form-modal {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .post-form-modal__panel {
+    max-width: none;
+    max-height: calc(100dvh - 24px);
+    padding: 18px 16px;
+    border-radius: 16px;
+  }
+
+  .post-form-modal__textarea {
+    min-height: 140px;
+    font-size: 16px;
+  }
+
+  .post-form-modal__actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .post-form-modal__actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Стили для select в форме поста */
+.post-form__tier-select {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.post-form__tier-select:focus {
+  outline: none;
+  border-color: #FF6B4A;
+  box-shadow: 0 0 0 3px rgba(255, 107, 74, 0.1);
+}
+/* Стили для чекбоксов видов спорта (как в регистрации) */
+#post-form-sport-field .sport-types-field {
+  width: 100%;
+}
+
+#post-form-sport-field .sport-types-field__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+#post-form-sport-field .sport-types-field__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#post-form-sport-field .sport-types-field__option:hover {
+  background: #FFF5F0;
+}
+
+#post-form-sport-field .sport-types-field__checkbox {
+  accent-color: #E85A2B;
+}
+/* Стили для чекбоксов видов спорта в форме поста */
+#post-form-sport-field .sport-types-field {
+  width: 100%;
+  position: relative;
+}
+
+#post-form-sport-field .sport-types-field__trigger {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: white;
+  padding: 10px 42px 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.2s;
+}
+
+#post-form-sport-field .sport-types-field__trigger:hover {
+  border-color: #FF6B4A;
+}
+
+#post-form-sport-field .sport-types-field__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+#post-form-sport-field .sport-types-field__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#post-form-sport-field .sport-types-field__option:hover {
+  background: #FFF5F0;
+}
+
+#post-form-sport-field .sport-types-field__checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #E85A2B;
+  cursor: pointer;
+}
+/* Стили для select уровня подписки */
+.post-form__tier-select {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  appearance: auto;
+  -webkit-appearance: auto;
+}
+
+.post-form__tier-select:focus {
+  outline: none;
+  border-color: #FF6B4A;
+  box-shadow: 0 0 0 3px rgba(255, 107, 74, 0.1);
+}
+
+.post-form__tier-select option {
+  padding: 8px;
+  font-size: 14px;
+}
+
+/* Блоки контента */
+.post-form__blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.post-form__block {
+  position: relative;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.post-form__block-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+}
+
+.post-form__block-media {
+  position: relative;
+  min-height: 120px;
+  background: #F8FAFC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.post-form__block-media img,
+.post-form__block-media video {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+}
+
+.post-form__block-media-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #999;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 20px;
+}
+
+.post-form__block-media-placeholder svg {
+  width: 32px;
+  height: 32px;
+  opacity: 0.5;
+}
+
+.post-form__remove-block {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: #E85A2B;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.post-form__remove-block:hover {
+  background: #D04A1B;
+}
+
+/* Кнопки добавления блоков */
+.post-form__block-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.post-form__add-block-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px dashed #CBD5E1;
+  border-radius: 8px;
+  background: #F8FAFC;
+  color: #64748B;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.post-form__add-block-btn:hover {
+  border-color: #E85A2B;
+  color: #E85A2B;
+  background: #FFF5F0;
+}

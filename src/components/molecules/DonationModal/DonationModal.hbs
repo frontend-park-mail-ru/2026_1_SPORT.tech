@@ -1,0 +1,23 @@
+<div class="donation-modal" role="dialog" aria-modal="true" aria-labelledby="donation-modal-title" tabindex="-1">
+  <div class="donation-modal__backdrop" data-donation-close></div>
+  <div class="donation-modal__panel">
+    <div class="donation-modal__head">
+      <h2 class="donation-modal__title" id="donation-modal-title">Сделать пожертвование</h2>
+      <button type="button" class="donation-modal__close" data-donation-close aria-label="Закрыть окно">
+        <span aria-hidden="true">×</span>
+      </button>
+    </div>
+    <form class="donation-modal__form" novalidate>
+      <div id="donation-field-amount" class="donation-modal__field"></div>
+      <div id="donation-field-email" class="donation-modal__field"></div>
+      <p class="donation-modal__global-error" data-donation-global-error hidden></p>
+      <button type="submit" class="donation-modal__cta">
+        <span class="donation-modal__cta-text">Пожертвовать</span>
+        <span class="donation-modal__sbp" aria-hidden="true">
+          <span class="donation-modal__sbp-icon"></span>
+          <span class="donation-modal__sbp-label">сбп система быстрых платежей</span>
+        </span>
+      </button>
+    </form>
+  </div>
+</div>

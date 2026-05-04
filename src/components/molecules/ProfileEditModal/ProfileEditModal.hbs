@@ -1,0 +1,38 @@
+<!-- components/molecules/ProfileEditModal/ProfileEditModal.hbs -->
+<div class="profile-edit-modal" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title" tabindex="-1">
+  <div class="profile-edit-modal__backdrop" data-profile-edit-close></div>
+  <div class="profile-edit-modal__panel">
+    <div class="profile-edit-modal__head">
+      <h2 class="profile-edit-modal__title" id="profile-edit-title">Редактировать профиль</h2>
+      <button type="button" class="profile-edit-modal__close" data-profile-edit-close aria-label="Закрыть окно">
+        <span aria-hidden="true">×</span>
+      </button>
+    </div>
+    <form class="profile-edit-modal__form" novalidate>
+      <!-- Аватар -->
+      <div class="profile-edit-modal__avatar-section">
+        <div class="profile-edit-modal__avatar-preview">
+          <img id="profile-avatar-preview" src="{{avatar}}" alt="Аватар" class="profile-edit-modal__avatar-img">
+          <span class="profile-edit-modal__avatar-placeholder" style="display: none;">{{initials}}</span>
+        </div>
+        <div class="profile-edit-modal__avatar-actions">
+          <label class="profile-edit-modal__avatar-label">
+            <input type="file" id="profile-avatar-input" name="avatar" accept="image/jpeg,image/png,image/gif" hidden>
+            <span class="profile-edit-modal__avatar-button">Выбрать фото</span>
+          </label>
+          <button type="button" id="profile-avatar-remove" class="profile-edit-modal__avatar-remove">Удалить</button>
+        </div>
+      </div>
+
+      <div id="profile-edit-fields" class="profile-edit-modal__fields">
+        <!-- Поля будут вставлены через JS -->
+      </div>
+
+      <p class="profile-edit-modal__global-error" data-profile-edit-global-error hidden></p>
+      <div class="profile-edit-modal__actions">
+        <div id="profile-edit-cancel-wrap"></div>
+        <div id="profile-edit-submit-wrap"></div>
+      </div>
+    </form>
+  </div>
+</div>

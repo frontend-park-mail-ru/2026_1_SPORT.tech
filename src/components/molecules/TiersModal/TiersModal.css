@@ -1,0 +1,219 @@
+/* Backdrop */
+.tiers-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9998;
+}
+
+/* Panel */
+.tiers-modal-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  width: 90%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* Header */
+.tiers-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.tiers-modal-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1A2B3C;
+}
+
+.tiers-modal-close-btn {
+  border: none;
+  background: transparent;
+  color: #999;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.tiers-modal-close-btn:hover {
+  background: #f0f0f0;
+}
+
+/* Tiers list */
+.tiers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.tiers-empty-message {
+  color: #999;
+  text-align: center;
+  padding: 32px 20px;
+  margin: 0;
+}
+
+/* Tier card */
+.tier-card {
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 20px;
+  background: #F8FAFC;
+  margin-bottom: 12px;
+}
+
+.tier-card:last-child {
+  margin-bottom: 0;
+}
+
+.tier-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.tier-card-index {
+  font-size: 13px;
+  font-weight: 600;
+  color: #E85A2B;
+}
+
+.tier-remove-btn {
+  border: none;
+  background: none;
+  color: #999;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 6px;
+}
+
+.tier-remove-btn:hover {
+  color: #E85A2B;
+}
+
+.tier-card-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tier-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.tier-field-label {
+  display: block;
+  font-size: 13px;
+  color: #4A5568;
+  margin-bottom: 6px;
+}
+
+.tier-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.tier-input:focus {
+  outline: none;
+  border-color: #E85A2B;
+  box-shadow: 0 0 0 2px rgba(232, 90, 43, 0.1);
+}
+
+/* Add button */
+.tiers-add-btn {
+  width: 100%;
+  padding: 12px;
+  border: 2px dashed #CBD5E1;
+  border-radius: 10px;
+  background: #F8FAFC;
+  color: #64748B;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 24px;
+}
+
+.tiers-add-btn:hover {
+  border-color: #E85A2B;
+  color: #E85A2B;
+  background: #FFF5F2;
+}
+
+/* Actions */
+.tiers-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.tiers-cancel-btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: #E85A2B;
+}
+
+.tiers-cancel-btn:hover {
+  background: #FFF5F2;
+}
+
+.tiers-save-btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  background: #E85A2B;
+  color: white;
+}
+
+.tiers-save-btn:hover {
+  background: #D04A1F;
+}
+
+.tiers-save-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Анимация для сообщения об ошибке */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tiers-error-message {
+  animation: fadeIn 0.3s ease;
+}
