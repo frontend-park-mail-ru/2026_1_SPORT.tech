@@ -1,3 +1,5 @@
+// src/pages/HomePage/HomePage.ts
+
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse, TrainerListItem } from '../../types/api.types';
 import type { SportType } from '../../types/api.types';
@@ -90,6 +92,9 @@ function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
   }) as T;
 }
 
+// 👇 Модульная переменная – сохраняется между вызовами renderHomePage
+let lastTrainers: TrainerListItem[] = [];
+
 export async function renderHomePage(
   api: ApiClient,
   container: HTMLElement,
@@ -157,8 +162,7 @@ export async function renderHomePage(
 
   const getSelectedSportIds = (): number[] => Array.from(sportCheckboxesContainer.querySelectorAll('input:checked')).map(cb => Number((cb as HTMLInputElement).value));
 
-  // ========== ИЗМЕНЕНИЯ ДЛЯ ОФЛАЙНА ==========
-  let lastTrainers: TrainerListItem[] = [];                         // хранит последний успешный ответ
+  // ========== ОСНОВНЫЕ ИЗМЕНЕНИЯ ==========
 
   const showEmptyState = () => {
     grid.innerHTML = '';
@@ -197,18 +201,24 @@ export async function renderHomePage(
         ? response.trainers.filter(t => t.is_trainer)
         : [];
 
-      lastTrainers = trainers;   // запомнили
+      lastTrainers = trainers;   // сохраняем в модульную переменную
       renderGrid(trainers);
     } catch (error) {
       console.error('Failed to load trainers:', error);
-      // если есть сохранённые данные – показать их, иначе пустое состояние
+      // Если есть сохранённые данные – показать их, иначе сообщение о сети
       if (lastTrainers.length > 0) {
         renderGrid(lastTrainers);
       } else {
-        showEmptyState();
+        grid.innerHTML = `<div class="profile-content__empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.14 11.5M1.86 11.5a16 16 0 014.89-5.22M8.66 15.9A6 6 0 0012 17a6 6 0 003.77-1.33"/>
+          </svg>
+          <p>Нет соединения с интернетом</p>
+        </div>`;
+        emptyState.hidden = true;
       }
     }
   };
+
   // ==========================================
 
   const handleFilterChange = debounce(() => {
