@@ -107,7 +107,7 @@ export async function loadProfilePageData(
     return {
       post_id: post.post_id,
       title: post.title,
-      content: post.can_view ? formatPostContent(allText) : 'Нет доступа к содержимому поста',
+      content: post.can_view ? (allText ? formatPostContent(allText) : '') : 'Нет доступа к содержимому поста',
       raw_text: allText,
       authorName,
       authorRole,

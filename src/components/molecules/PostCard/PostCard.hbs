@@ -29,14 +29,16 @@
 
   <h3 class="post-card__title">{{title}}</h3>
 
-  <!-- Короткая версия -->
+  <!-- Короткая версия (свёрнуто) -->
   <div class="post-card__body post-card__body--short">
     <div class="post-card__content">
-      <div class="post-card__text-block">{{{content}}}</div>
+      {{#if content}}
+        <div class="post-card__text-block">{{{content}}}</div>
+      {{/if}}
     </div>
   </div>
 
-  <!-- Полная версия -->
+  <!-- Полная версия (развёрнуто) -->
   <div class="post-card__body post-card__body--full" style="display:none;">
     <div class="post-card__content">
       {{#each contentBlocks}}
