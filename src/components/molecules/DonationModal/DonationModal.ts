@@ -51,10 +51,18 @@ export async function openDonationModal({
     name: 'amount',
     required: true,
     onChange: (value: string) => {
-      // Живая валидация суммы
+      // Живая валидация суммы: от 1 до 1 000 000 ₽
       const parsed = Validator.parseDonationAmount(value);
-      if (value.trim() !== '' && (parsed === null || parsed <= 0)) {
-        amountApi.setError('Введите корректную сумму больше нуля');
+      if (value.trim() === '') {
+        amountApi.setNormal();   // пустое поле не ругаем сразу
+        return;
+      }
+      if (parsed === null) {
+        amountApi.setError('Введите корректную сумму');
+      } else if (parsed <= 0) {
+        amountApi.setError('Сумма должна быть больше нуля');
+      } else if (parsed > 1_000_000) {
+        amountApi.setError('Сумма не может превышать 1 000 000 ₽');
       } else {
         amountApi.setNormal();
       }

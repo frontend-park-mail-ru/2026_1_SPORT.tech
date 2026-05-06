@@ -537,8 +537,8 @@ export class Validator {
       this.addError('amount', 'Введите корректную сумму');
     } else if (amountNum <= 0) {
       this.addError('amount', 'Сумма должна быть больше нуля');
-    } else if (amountNum > 1_000_000_000) {
-      this.addError('amount', 'Сумма слишком велика');
+    } else if (amountNum > 1_000_000) {   // <-- исправлено: максимум 1 000 000 ₽
+      this.addError('amount', 'Сумма не может превышать 1 000 000 ₽');
     }
 
     this.validateField(email, 'email', rules.receipt_email);
