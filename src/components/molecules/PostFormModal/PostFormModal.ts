@@ -34,6 +34,8 @@ interface ContentBlock {
   file: File | null;
   existingUrl?: string;
   kind?: string;                // 'image' | 'video' | 'document'
+  errorMessage?: string;        // Сообщение об ошибке для блока
+  isValid?: boolean;            // Валиден ли блок
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;   // 10 MB (как требует бэк)
@@ -104,7 +106,8 @@ export async function openPostFormModal({
               id: `block-${++blockCounter}`,
               type: 'text',
               value: block.text_content,
-              file: null
+              file: null,
+              isValid: true
             });
           }
           if (block.file_url) {
@@ -115,7 +118,8 @@ export async function openPostFormModal({
               value: block.file_url,
               file: null,
               existingUrl: block.file_url,
-              kind: blockKind
+              kind: blockKind,
+              isValid: true
             });
           }
         });
@@ -138,7 +142,8 @@ export async function openPostFormModal({
       id: `block-${++blockCounter}`,
       type: 'text',
       value: initial.raw_text,
-      file: null
+      file: null,
+      isValid: true
     });
   }
 
@@ -265,16 +270,39 @@ export async function openPostFormModal({
     return null;
   }
 
+  /**
+   * Валидация текстового блока
+   */
+  function validateTextBlock(block: ContentBlock): boolean {
+    const textContent = (block.value || '').trim();
+    if (textContent.length === 0) {
+      block.errorMessage = 'Текст не может быть пустым';
+      block.isValid = false;
+      return false;
+    }
+    if (textContent.length > 10000) {
+      block.errorMessage = 'Максимум 10000 символов';
+      block.isValid = false;
+      return false;
+    }
+    block.errorMessage = undefined;
+    block.isValid = true;
+    return true;
+  }
+
   function handleFileSelect(file: File, block: ContentBlock, mediaContainer: HTMLElement): void {
     const error = validateFile(file);
     if (error) {
-      globalErr.textContent = error;
-      globalErr.hidden = false;
+      block.errorMessage = error;
+      block.isValid = false;
+      renderBlocks(); // Перерендерить для отображения ошибки
       return;
     }
 
     block.file = file;
     block.existingUrl = undefined;
+    block.isValid = true;
+    block.errorMessage = undefined;
     const url = URL.createObjectURL(file);
     block.value = url;
 
@@ -317,7 +345,13 @@ export async function openPostFormModal({
       globalErr.hidden = false;
       return;
     }
-    blocks.push({ id: `block-${++blockCounter}`, type, value: '', file: null });
+    blocks.push({
+      id: `block-${++blockCounter}`,
+      type,
+      value: '',
+      file: null,
+      isValid: true // Новый блок считается валидным изначально
+    });
     renderBlocks();
   }
 
@@ -410,9 +444,45 @@ export async function openPostFormModal({
         textarea.className = 'post-form__block-textarea';
         textarea.placeholder = 'Введите текст...';
         textarea.value = block.value;
-        textarea.addEventListener('input', () => { block.value = textarea.value; });
+
+        // Живая валидация текстового блока
+        textarea.addEventListener('input', () => {
+          block.value = textarea.value;
+          validateTextBlock(block);
+
+          // Обновляем только отображение ошибки, не перерендеривая весь блок
+          const existingError = blockEl.querySelector('.post-form__block-error');
+          if (existingError) {
+            existingError.remove();
+          }
+
+          if (!block.isValid && block.errorMessage) {
+            textarea.style.borderColor = '#EF4444';
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'post-form__block-error';
+            errorDiv.style.cssText = 'color:#EF4444;font-size:12px;margin-top:4px;';
+            errorDiv.textContent = block.errorMessage;
+            blockEl.appendChild(errorDiv);
+          } else {
+            textarea.style.borderColor = '';
+          }
+        });
+
         textarea.addEventListener('click', (e) => e.stopPropagation());
         blockEl.appendChild(textarea);
+
+        // При первой отрисовке проверяем валидность
+        if (block.value) {
+          validateTextBlock(block);
+          if (!block.isValid && block.errorMessage) {
+            textarea.style.borderColor = '#EF4444';
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'post-form__block-error';
+            errorDiv.style.cssText = 'color:#EF4444;font-size:12px;margin-top:4px;';
+            errorDiv.textContent = block.errorMessage;
+            blockEl.appendChild(errorDiv);
+          }
+        }
       } else {
         const mediaContainer = document.createElement('div');
         mediaContainer.className = 'post-form__block-media';
@@ -446,6 +516,15 @@ export async function openPostFormModal({
 
         mediaContainer.appendChild(fileInput);
         blockEl.appendChild(mediaContainer);
+
+        // Отображение ошибки для медиа-блока
+        if (!block.isValid && block.errorMessage) {
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'post-form__block-error';
+          errorDiv.style.cssText = 'color:#EF4444;font-size:12px;margin-top:4px;';
+          errorDiv.textContent = block.errorMessage;
+          blockEl.appendChild(errorDiv);
+        }
       }
       blocksContainer.appendChild(blockEl);
     });
@@ -476,6 +555,7 @@ export async function openPostFormModal({
 
   modal.querySelectorAll('[data-post-form-close]').forEach(el => el.addEventListener('click', close));
 
+  // Финальная валидация перед отправкой
   form.addEventListener('submit', async (e: Event) => {
     e.preventDefault();
     globalErr.hidden = true; globalErr.textContent = '';
@@ -486,6 +566,32 @@ export async function openPostFormModal({
     validator.validateField(title, 'title', validator.rules.post_title);
     if (validator.hasErrors()) {
       titleApi.setError(validator.getErrors()[0].message);
+      return;
+    }
+
+    // Проверка всех блоков перед отправкой
+    let hasInvalidBlocks = false;
+    blocks.forEach(block => {
+      if (block.type === 'text') {
+        validateTextBlock(block);
+        if (!block.isValid) {
+          hasInvalidBlocks = true;
+        }
+      } else if (block.type === 'media') {
+        if (!block.file && !block.existingUrl) {
+          block.isValid = false;
+          block.errorMessage = 'Добавьте файл';
+          hasInvalidBlocks = true;
+        } else if (!block.isValid) {
+          hasInvalidBlocks = true;
+        }
+      }
+    });
+
+    if (hasInvalidBlocks) {
+      renderBlocks();
+      globalErr.textContent = 'Исправьте ошибки в блоках';
+      globalErr.hidden = false;
       return;
     }
 
