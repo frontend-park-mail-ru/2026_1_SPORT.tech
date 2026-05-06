@@ -67,7 +67,8 @@ export async function openDonationModal({
   const messageContainer = document.createElement('div');
   messageContainer.className = 'donation-modal__field';
   messageContainer.id = 'donation-field-message';
-  form.insertBefore(messageContainer, submitBtn.parentElement);
+  // Вставляем перед кнопкой отправки внутри её родительского элемента
+  submitBtn.parentNode!.insertBefore(messageContainer, submitBtn);
 
   const messageApi: InputAPI = await renderInput(messageContainer, {
     type: INPUT_TYPES.WITHOUTS,
