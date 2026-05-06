@@ -20,6 +20,18 @@ export async function openDonationModal({
   api,
   recipientUserId
 }: DonationModalOptions): Promise<void> {
+  // Проверка: нельзя донатить самому себе
+  try {
+    const currentUser = await api.getCurrentUser();
+    if (currentUser?.user?.user_id === recipientUserId) {
+      alert('Нельзя отправить пожертвование самому себе.');
+      return;
+    }
+  } catch {
+    // если не удалось получить пользователя, всё равно откроем окно,
+    // бэкенд сам вернёт ошибку при попытке задонатить себе
+  }
+
   const template = (window as any).Handlebars.templates['DonationModal.hbs'];
   const root = document.createElement('div');
   root.innerHTML = template({}).trim();
@@ -51,6 +63,22 @@ export async function openDonationModal({
     onChange: () => emailApi.setNormal()
   });
 
+  // Поле «Сообщение» (опционально)
+  const messageContainer = document.createElement('div');
+  messageContainer.className = 'donation-modal__field';
+  messageContainer.id = 'donation-field-message';
+  form.insertBefore(messageContainer, submitBtn.parentElement);
+
+  const messageApi: InputAPI = await renderInput(messageContainer, {
+    type: INPUT_TYPES.WITHOUTS,
+    label: 'Сообщение (необязательно)',
+    placeholder: 'Ваше сообщение получателю',
+    name: 'message',
+    required: false,
+    maxlength: 500,
+    onChange: () => messageApi.setNormal()
+  });
+
   const close = (): void => {
     document.removeEventListener('keydown', onKey);
     modal.remove();
@@ -70,14 +98,26 @@ export async function openDonationModal({
     globalErr.textContent = '';
 
     const amountStr = amountApi.getValue();
-    const email = emailApi.getValue();
+    const email = emailApi.getValue().trim();
+    const message = messageApi.getValue().trim();
 
-    const result = validator.validateDonationForm({ amount: amountStr, email });
+    // Валидация длины сообщения
+    if (message.length > 500) {
+      messageApi.setError('Максимум 500 символов');
+      return;
+    }
+
+    const result = validator.validateDonationForm({
+      amount: amountStr,
+      email,
+      message
+    });
 
     if (!result.isValid) {
       result.errors.forEach((err: { field: string; message: string }) => {
         if (err.field === 'amount') amountApi.setError(err.message);
         if (err.field === 'email') emailApi.setError(err.message);
+        if (err.field === 'message') messageApi.setError(err.message);
       });
       return;
     }
@@ -94,18 +134,19 @@ export async function openDonationModal({
     `;
 
     try {
-      const amountInCents = Math.round((result.amountNumber || 0) * 100);
-
+      // Сумма передаётся в целых рублях (int32)
+      const amountValue = Math.round(result.amountNumber || 0);
       await api.createDonation(
         recipientUserId,
-        amountInCents,
+        amountValue,
         'RUB',
-        'Пожертвование'
+        message || 'Пожертвование'
       );
 
       // Успех
       amountApi.setValue('');
       emailApi.setValue('');
+      messageApi.setValue('');
 
       form.querySelectorAll('.donation-modal__field').forEach(field => {
         (field as HTMLElement).style.display = 'none';
@@ -119,7 +160,7 @@ export async function openDonationModal({
         <div class="donation-modal__success-icon">✓</div>
         <h3 class="donation-modal__success-title">Спасибо!</h3>
         <p class="donation-modal__success-text">
-          Ваше пожертвование в размере <strong>${result.amountNumber} ₽</strong> успешно отправлено.
+          Ваше пожертвование в размере <strong>${amountValue} ₽</strong> успешно отправлено.
         </p>
         <button class="donation-modal__success-btn" type="button">Закрыть</button>
       `;

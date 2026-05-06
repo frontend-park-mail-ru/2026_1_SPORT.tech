@@ -11,6 +11,7 @@ import type { PostBlock } from '../../../types/api.types';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { loadSportTypes } from '../../organisms/AuthForm/AuthForm';
+import { Validator } from '../../../utils/validator';
 
 export interface PostFormModalOptions {
   api: ApiClient;
@@ -32,12 +33,33 @@ interface ContentBlock {
   value: string;
   file: File | null;
   existingUrl?: string;
+  kind?: string;                // 'image' | 'video' | 'document'
 }
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
-const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+const MAX_FILE_SIZE = 10 * 1024 * 1024;   // 10 MB (как требует бэк)
+const MAX_BLOCKS = 100;
+
+/**
+ * Проверяет, разрешён ли MIME-тип файла
+ */
+function isAllowedMimeType(file: File): boolean {
+  if (file.type === 'video/mp4') return true;
+  if (file.type === 'application/pdf') return true;
+  if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') return true;
+  return false;
+}
+
+/**
+ * Извлекает имя файла из URL (для отображения в превью документов)
+ */
+function extractFileName(url: string): string {
+  try {
+    const parts = url.split('/');
+    return parts[parts.length - 1] || 'file';
+  } catch {
+    return 'file';
+  }
+}
 
 export async function openPostFormModal({
   api,
@@ -67,6 +89,8 @@ export async function openPostFormModal({
   let selectedTierId: number | null = null;
   let selectedSportTypeId: number | null = null;
 
+  const validator = new Validator();
+
   // ========== ЗАГРУЖАЕМ СУЩЕСТВУЮЩИЙ ПОСТ (если редактирование) ==========
   if (mode === 'edit' && postId != null) {
     try {
@@ -84,12 +108,14 @@ export async function openPostFormModal({
             });
           }
           if (block.file_url) {
+            const blockKind = block.kind || 'image';
             blocks.push({
               id: `block-${++blockCounter}`,
               type: 'media',
               value: block.file_url,
               file: null,
-              existingUrl: block.file_url
+              existingUrl: block.file_url,
+              kind: blockKind
             });
           }
         });
@@ -222,8 +248,8 @@ export async function openPostFormModal({
 
   // ========== ФУНКЦИИ ДЛЯ БЛОКОВ ==========
   function validateFile(file: File): string | null {
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return 'Неподдерживаемый формат файла. Разрешены: JPEG, PNG, GIF, WebP, MP4, WebM, MOV';
+    if (!isAllowedMimeType(file)) {
+      return 'Неподдерживаемый формат. Разрешены: изображения (кроме SVG), MP4-видео, PDF-документы';
     }
     if (file.size > MAX_FILE_SIZE) {
       return `Файл слишком большой. Максимальный размер: ${MAX_FILE_SIZE / 1024 / 1024} МБ`;
@@ -244,11 +270,32 @@ export async function openPostFormModal({
     const url = URL.createObjectURL(file);
     block.value = url;
 
+    // Определяем kind
+    if (file.type === 'application/pdf') {
+      block.kind = 'document';
+    } else if (file.type.startsWith('video/')) {
+      block.kind = 'video';
+    } else {
+      block.kind = 'image';
+    }
+
     mediaContainer.innerHTML = '';
-    if (file.type.startsWith('video/')) {
+    if (block.kind === 'video') {
       const video = document.createElement('video');
       video.controls = true; video.src = url; video.style.cssText = 'max-width:100%;max-height:300px;';
       mediaContainer.appendChild(video);
+    } else if (block.kind === 'document') {
+      // Показываем иконку документа и имя файла
+      mediaContainer.innerHTML = `
+        <div class="post-form__block-media-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+          <span>${file.name}</span>
+        </div>`;
     } else {
       const img = document.createElement('img');
       img.src = url; img.alt = 'Медиа'; img.style.cssText = 'max-width:100%;max-height:300px;object-fit:contain;';
@@ -257,6 +304,11 @@ export async function openPostFormModal({
   }
 
   function addBlock(type: 'text' | 'media'): void {
+    if (blocks.length >= MAX_BLOCKS) {
+      globalErr.textContent = `Достигнут лимит в ${MAX_BLOCKS} блоков`;
+      globalErr.hidden = false;
+      return;
+    }
     blocks.push({ id: `block-${++blockCounter}`, type, value: '', file: null });
     renderBlocks();
   }
@@ -274,19 +326,44 @@ export async function openPostFormModal({
 
   function createMediaPreview(block: ContentBlock, container: HTMLElement): void {
     if (block.existingUrl && !block.file) {
-      container.innerHTML = block.existingUrl.toLowerCase().includes('.mp4') ||
-                          block.existingUrl.toLowerCase().includes('.webm') ||
-                          block.existingUrl.toLowerCase().includes('.mov')
-        ? `<video controls src="${block.existingUrl}" style="max-width:100%;max-height:300px;"></video>`
-        : `<img src="${block.existingUrl}" alt="Медиа" style="max-width:100%;max-height:300px;object-fit:contain;">`;
+      const kind = block.kind || 'image';
+      if (kind === 'video') {
+        container.innerHTML = `<video controls src="${block.existingUrl}" style="max-width:100%;max-height:300px;"></video>`;
+      } else if (kind === 'document') {
+        const fileName = extractFileName(block.existingUrl || 'file');
+        container.innerHTML = `
+          <div class="post-form__block-media-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span>${fileName}</span>
+          </div>`;
+      } else {
+        container.innerHTML = `<img src="${block.existingUrl}" alt="Медиа" style="max-width:100%;max-height:300px;object-fit:contain;">`;
+      }
       return;
     }
+
     if (block.value && block.file) {
-      const isVideo = block.file.type.startsWith('video/');
-      if (isVideo) {
+      const kind = block.kind || 'image';
+      if (kind === 'video') {
         const video = document.createElement('video');
         video.controls = true; video.src = block.value; video.style.cssText = 'max-width:100%;max-height:300px;';
         container.appendChild(video);
+      } else if (kind === 'document') {
+        container.innerHTML = `
+          <div class="post-form__block-media-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span>${block.file!.name}</span>
+          </div>`;
       } else {
         const img = document.createElement('img');
         img.src = block.value; img.alt = 'Медиа'; img.style.cssText = 'max-width:100%;max-height:300px;object-fit:contain;';
@@ -335,7 +412,8 @@ export async function openPostFormModal({
 
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
-        fileInput.accept = ALLOWED_TYPES.join(',');
+        // accept согласно разрешённым типам
+        fileInput.accept = 'image/*,.mp4,.pdf';
         fileInput.style.display = 'none';
         fileInput.addEventListener('change', () => {
           const file = fileInput.files?.[0];
@@ -344,7 +422,9 @@ export async function openPostFormModal({
 
         mediaContainer.addEventListener('click', (e) => {
           const target = e.target as HTMLElement;
-          if (target.tagName === 'VIDEO' || target.tagName === 'IMG') return;
+          if (target.tagName === 'VIDEO' || target.tagName === 'IMG' || target.closest('.post-form__block-media-placeholder')) {
+            return;
+          }
           fileInput.click();
         });
         mediaContainer.addEventListener('dragover', (e) => { e.preventDefault(); mediaContainer.classList.add('post-form__block-media--dragover'); });
@@ -392,13 +472,19 @@ export async function openPostFormModal({
     e.preventDefault();
     globalErr.hidden = true; globalErr.textContent = '';
 
-    const title = titleApi.getValue();
-    if (!title.trim()) {
-      titleApi.setError('Заголовок обязателен');
+    const title = titleApi.getValue().trim();
+    // Валидация заголовка через validator
+    validator.reset();
+    validator.validateField(title, 'title', validator.rules.post_title);
+    if (validator.hasErrors()) {
+      titleApi.setError(validator.getErrors()[0].message);
       return;
     }
-    if (blocks.length === 0) {
-      globalErr.textContent = 'Добавьте хотя бы один блок контента';
+
+    if (blocks.length === 0 || blocks.length > MAX_BLOCKS) {
+      globalErr.textContent = blocks.length === 0
+        ? 'Добавьте хотя бы один блок контента'
+        : `Максимальное количество блоков — ${MAX_BLOCKS}`;
       globalErr.hidden = false;
       return;
     }
@@ -411,14 +497,15 @@ export async function openPostFormModal({
         if (block.type === 'media' && block.file) {
           try {
             const uploadResult = await api.uploadPostMedia(block.file);
-            return { file_url: uploadResult.file_url, kind: block.file.type.startsWith('video/') ? 'video' : 'image' };
+            const kind = block.kind || (block.file.type.startsWith('video/') ? 'video' : 'image');
+            return { file_url: uploadResult.file_url, kind };
           } catch {
             globalErr.textContent = 'Не удалось загрузить файл. Будет пропущен.';
             globalErr.hidden = false;
             return null;
           }
         } else if (block.type === 'media' && block.existingUrl) {
-          return { file_url: block.existingUrl, kind: 'image' };
+          return { file_url: block.existingUrl, kind: block.kind || 'image' };
         } else if (block.type === 'text' && block.value.trim()) {
           return { text_content: block.value.trim(), kind: 'text' };
         }
@@ -435,7 +522,7 @@ export async function openPostFormModal({
         sport_type_id?: number;
         replace_blocks?: boolean;
       } = {
-        title: title.trim(),
+        title,
         blocks: validBlocks as Array<{ text_content?: string; file_url?: string; kind?: string }>
       };
 

@@ -76,6 +76,11 @@ export async function openProfileEditModal({
   const avatarPlaceholder = modal.querySelector('.profile-edit-modal__avatar-placeholder') as HTMLElement;
   const removeAvatarBtn = modal.querySelector('#profile-avatar-remove') as HTMLButtonElement;
 
+  // Установить ограничения для аватара
+  if (avatarInput) {
+    avatarInput.setAttribute('accept', 'image/*');
+  }
+
   let avatarFile: File | null = null;
   let avatarRemoved: boolean = false;
   const becomingTrainer: boolean = false;
@@ -94,7 +99,8 @@ export async function openProfileEditModal({
 
   const trainerFields: FieldConfig[] = [
     { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS as InputType, required: false, maxlength: 255, placeholder: 'Введите образование' },
-    { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 10, placeholder: 'ГГГГ-ММ-ДД' },
+    // Теперь дата необязательна
+    { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS as InputType, required: false, maxlength: 10, placeholder: 'ГГГГ-ММ-ДД' },
     { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 100, placeholder: 'Выберите виды спорта' }
   ];
 
@@ -150,21 +156,20 @@ export async function openProfileEditModal({
       }
       result = { isValid: !validator.hasErrors(), errors: validator.getErrors() };
       break;
-    case 'career_since_date':
-      if (!value || typeof value !== 'string') {
-        result = {
-          isValid: false,
-          errors: [{ field: 'career_since_date', message: 'Дата начала деятельности обязательна' }]
-        };
-      } else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    case 'career_since_date': {
+      const dateStr = (value as string).trim();
+      if (!dateStr) {
+        // поле необязательное
         result = { isValid: true, errors: [] };
+      } else if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        result = { isValid: false, errors: [{ field: 'career_since_date', message: 'Формат ГГГГ-ММ-ДД' }] };
+      } else if (Validator.isFutureDate(dateStr)) {
+        result = { isValid: false, errors: [{ field: 'career_since_date', message: 'Дата не может быть в будущем' }] };
       } else {
-        result = {
-          isValid: false,
-          errors: [{ field: 'career_since_date', message: 'Формат ГГГГ-ММ-ДД' }]
-        };
+        result = { isValid: true, errors: [] };
       }
       break;
+    }
     case 'sport_discipline':
       result = Array.isArray(value) && value.length > 0
         ? { isValid: true, errors: [] }
@@ -307,6 +312,14 @@ export async function openProfileEditModal({
   avatarInput.addEventListener('change', (e: Event) => {
     const target = e.target as HTMLInputElement;
     const file = target.files?.[0] || null;
+    if (file && !file.type.startsWith('image/')) {
+      // Ошибка: не изображение
+      alert('Пожалуйста, выберите изображение (JPG, PNG, GIF и т.д.).');
+      target.value = ''; // сброс
+      avatarFile = null;
+      avatarRemoved = false;
+      return;
+    }
     avatarFile = file;
     avatarRemoved = false;
     updateAvatarPreview();
@@ -375,24 +388,23 @@ export async function openProfileEditModal({
     saveBtn.setDisabled(true);
 
     try {
+      // Триммируем все строковые поля перед отправкой
       const updatePayload: Record<string, unknown> = {
-        username: getFieldValue('username') as string,
-        first_name: getFieldValue('first_name') as string,
-        last_name: getFieldValue('last_name') as string,
-        bio: (getFieldValue('bio') as string) || ''
+        username: (getFieldValue('username') as string).trim(),
+        first_name: (getFieldValue('first_name') as string).trim(),
+        last_name: (getFieldValue('last_name') as string).trim(),
+        bio: ((getFieldValue('bio') as string) || '').trim()
       };
 
       if (originalIsTrainer || becomingTrainer) {
-        const careerDateStr = getFieldValue('career_since_date') as string;
-        const careerDate = new Date(careerDateStr);
-        const today = new Date();
-        let experienceYears = today.getFullYear() - careerDate.getFullYear();
-
-        const monthDiff = today.getMonth() - careerDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < careerDate.getDate())) {
-          experienceYears--;
+        const careerDateStr = (getFieldValue('career_since_date') as string).trim();
+        // Если дата пустая, не передаём её (она опциональна)
+        const trainerDetailsPayload: Record<string, unknown> = {
+          education_degree: ((getFieldValue('education_degree') as string) || '').trim()
+        };
+        if (careerDateStr) {
+          trainerDetailsPayload.career_since_date = careerDateStr;
         }
-        if (experienceYears < 0) experienceYears = 0;
 
         const selectedSportTypes = getFieldValue('sport_discipline') as number[];
         const existingSports = user.trainer_details?.sports || [];
@@ -400,18 +412,28 @@ export async function openProfileEditModal({
           existingSports.map(sport => [Number(sport.sport_type_id), sport])
         );
 
-        updatePayload.trainer_details = {
-          education_degree: (getFieldValue('education_degree') as string) || '',
-          career_since_date: careerDateStr,
-          sports: selectedSportTypes.map(sportTypeId => {
-            const existingSport = existingSportsById.get(Number(sportTypeId));
-            return {
-              sport_type_id: Number(sportTypeId),
-              experience_years: experienceYears,
-              ...(existingSport?.sports_rank ? { sports_rank: existingSport.sports_rank } : {})
-            };
-          })
-        };
+        trainerDetailsPayload.sports = selectedSportTypes.map(sportTypeId => {
+          const existingSport = existingSportsById.get(Number(sportTypeId));
+          // Рассчитываем опыт от даты (если она есть)
+          let experienceYears = 0;
+          if (careerDateStr) {
+            const careerDate = new Date(careerDateStr);
+            const today = new Date();
+            experienceYears = today.getFullYear() - careerDate.getFullYear();
+            const monthDiff = today.getMonth() - careerDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < careerDate.getDate())) {
+              experienceYears--;
+            }
+            if (experienceYears < 0) experienceYears = 0;
+          }
+          return {
+            sport_type_id: Number(sportTypeId),
+            experience_years: experienceYears,
+            ...(existingSport?.sports_rank ? { sports_rank: existingSport.sports_rank } : {})
+          };
+        });
+
+        updatePayload.trainer_details = trainerDetailsPayload;
       }
 
       await api.request('/v1/profiles/me', {

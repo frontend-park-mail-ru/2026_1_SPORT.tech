@@ -367,12 +367,13 @@ export async function renderAuthForm(
           placeholder: 'Введите образование',
           required: false
         },
+        // ← career_since_date теперь опционально
         {
           type: INPUT_TYPES.WITHOUTS as InputType,
           name: 'career_since_date',
           label: 'Дата начала профессиональной деятельности',
           placeholder: 'Выберите дату',
-          required: true
+          required: false   // было true
         },
         {
           type: INPUT_TYPES.WITHOUTS as InputType,
@@ -456,21 +457,26 @@ export async function renderAuthForm(
       result = validationResult;
       break;
     }
-    case 'career_since_date':
-      if (!value || typeof value !== 'string') {
-        result = {
-          isValid: false,
-          errors: [{ field: 'career_since_date', message: 'Дата начала деятельности обязательна' }]
-        };
-      } else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    case 'career_since_date': {
+      const dateStr = (value as string).trim();
+      if (!dateStr) {
+        // теперь поле опционально
         result = { isValid: true, errors: [] };
-      } else {
+      } else if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
         result = {
           isValid: false,
           errors: [{ field: 'career_since_date', message: 'Дата должна быть в формате ГГГГ-ММ-ДД' }]
         };
+      } else if (Validator.isFutureDate(dateStr)) {
+        result = {
+          isValid: false,
+          errors: [{ field: 'career_since_date', message: 'Дата не может быть в будущем' }]
+        };
+      } else {
+        result = { isValid: true, errors: [] };
       }
       break;
+    }
     case 'sport_discipline':
       result = Array.isArray(value) && value.length > 0
         ? { isValid: true, errors: [] }
@@ -608,14 +614,29 @@ export async function renderAuthForm(
 
     if (mode === AUTH_MODES.REGISTER_TRAINER) {
       const selectedSportTypes = Array.isArray(data.sport_discipline) ? data.sport_discipline as number[] : [];
-      data.trainer_details = {
-        education_degree: (data.education_degree as string) || '',
-        career_since_date: data.career_since_date,
+      const careerDate = (data.career_since_date as string || '').trim();
+      const trainerDetails: Record<string, unknown> = {
+        education_degree: (data.education_degree as string).trim(),
+        ...(careerDate ? { career_since_date: careerDate } : {}),
         sports: selectedSportTypes.map(sportTypeId => ({
           sport_type_id: Number(sportTypeId),
           experience_years: 0
         }))
       };
+      data.trainer_details = trainerDetails;
+      // Триммируем основные поля
+      data.username = (data.username as string).trim();
+      data.first_name = (data.first_name as string).trim();
+      data.last_name = (data.last_name as string).trim();
+      data.bio = (data.bio as string).trim();
+      data.email = (data.email as string).trim().toLowerCase();
+    } else {
+      // Для логина и регистрации клиента
+      if (data.email) data.email = (data.email as string).trim().toLowerCase();
+      if (data.username) data.username = (data.username as string).trim();
+      if (data.first_name) data.first_name = (data.first_name as string).trim();
+      if (data.last_name) data.last_name = (data.last_name as string).trim();
+      if (data.bio) data.bio = (data.bio as string).trim();
     }
 
     return data;
@@ -721,4 +742,4 @@ export async function renderAuthForm(
     clearGlobalError,
     inputs: inputsApi
   };
-}
+} 

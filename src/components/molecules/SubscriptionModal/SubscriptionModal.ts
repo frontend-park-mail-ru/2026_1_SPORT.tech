@@ -16,6 +16,17 @@ export async function openSubscriptionModal({
   existingSubscription,
   onSubscribed
 }: SubscriptionModalOptions): Promise<void> {
+  // Проверка: нельзя подписаться на самого себя
+  try {
+    const currentUser = await api.getCurrentUser();
+    if (currentUser?.user?.user_id === trainerId) {
+      alert('Нельзя подписаться на себя');
+      return;
+    }
+  } catch {
+    // если не удалось получить текущего пользователя – продолжаем, бэкенд сам отклонит запрос
+  }
+
   try {
     const response = await api.getTrainerTiers(trainerId);
     const tiers: Tier[] = response?.tiers || [];

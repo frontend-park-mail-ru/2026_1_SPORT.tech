@@ -6,6 +6,7 @@
 import type { ApiClient } from '../../utils/api';
 import type { AuthFormAPI } from '../../components/organisms/AuthForm/AuthForm';
 import { AUTH_MODES, renderAuthForm } from '../../components/organisms/AuthForm/AuthForm';
+import { Validator } from '../../utils/validator';
 
 interface LoginData {
   email: string;
@@ -35,10 +36,11 @@ export async function renderAuthPage(
   api: ApiClient
 ): Promise<void> {
   let currentMode: string = AUTH_MODES.LOGIN;
-  let _form: AuthFormAPI | null = null; // ← Исправлено: убран any
+  let _form: AuthFormAPI | null = null;
 
   async function handleLogin(data: LoginData): Promise<void> {
-    const response = await api.login(data.email, data.password);
+    const email = data.email.trim().toLowerCase();
+    const response = await api.login(email, data.password);
 
     if (response?.user) {
       localStorage.setItem('user', JSON.stringify(response.user));
@@ -49,13 +51,14 @@ export async function renderAuthPage(
   }
 
   async function handleClientRegister(data: RegisterData): Promise<void> {
+    const email = data.email.trim().toLowerCase();
     const response = await api.registerClient({
-      username: data.username,
-      email: data.email,
+      username: data.username.trim(),
+      email,
       password: data.password,
       password_repeat: data.password_repeat,
-      first_name: data.first_name,
-      last_name: data.last_name
+      first_name: data.first_name.trim(),
+      last_name: data.last_name.trim()
     });
 
     if (response?.user) {
@@ -67,31 +70,43 @@ export async function renderAuthPage(
   }
 
   async function handleTrainerRegister(data: RegisterData): Promise<void> {
+    const email = data.email.trim().toLowerCase();
     const careerDate = data.trainer_details?.career_since_date?.trim() || '';
-    const sports = Array.isArray(data.trainer_details?.sports) ? data.trainer_details.sports : [];
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(careerDate)) {
-      alert('Введите дату в формате ГГГГ-ММ-ДД (например, 2020-01-01)');
-      return;
+    // Дата теперь опциональна, проверяем только если не пусто
+    if (careerDate !== '') {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(careerDate)) {
+        alert('Дата должна быть в формате ГГГГ-ММ-ДД (например, 2020-01-01)');
+        return;
+      }
+      if (Validator.isFutureDate(careerDate)) {
+        alert('Дата не может быть в будущем');
+        return;
+      }
     }
 
+    const sports = Array.isArray(data.trainer_details?.sports) ? data.trainer_details.sports : [];
     if (sports.length === 0) {
       alert('Выберите хотя бы один вид спорта');
       return;
     }
 
+    const trainerDetails: Record<string, unknown> = {
+      education_degree: (data.trainer_details?.education_degree || '').trim(),
+      sports
+    };
+    if (careerDate) {
+      trainerDetails.career_since_date = careerDate;
+    }
+
     const response = await api.registerTrainer({
-      username: data.username,
-      email: data.email,
+      username: data.username.trim(),
+      email,
       password: data.password,
       password_repeat: data.password_repeat,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      trainer_details: {
-        education_degree: data.trainer_details?.education_degree || '',
-        career_since_date: careerDate,
-        sports
-      }
+      first_name: data.first_name.trim(),
+      last_name: data.last_name.trim(),
+      trainer_details: trainerDetails as any
     });
 
     if (response?.user) {

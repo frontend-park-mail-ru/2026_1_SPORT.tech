@@ -24,6 +24,7 @@ interface Rules {
   post_title: ValidationRule;
   post_body: ValidationRule;
   receipt_email: ValidationRule;
+  donation_message: ValidationRule;          // <-- новое правило
 }
 
 const rules: Rules = {
@@ -133,6 +134,11 @@ const rules: Rules = {
       required: 'Укажите почту для чека',
       pattern: 'Неверный формат email'
     }
+  },
+  donation_message: {
+    required: false,
+    max: 500,
+    messages: { max: 'Максимум 500 символов' }
   }
 };
 
@@ -167,7 +173,7 @@ interface TrainerSportInput {
 }
 
 interface TrainerDetailsInput {
-  career_since_date: string;
+  career_since_date?: string | null;               // теперь опционально
   education_degree?: string | null;
   sports: TrainerSportInput[];
 }
@@ -211,34 +217,51 @@ export class Validator {
     this.errors.push({ field, message });
   }
 
+  /**
+   * Проверяет, является ли дата в будущем (строго после сегодняшнего дня)
+   */
+  public static isFutureDate(dateStr: string): boolean {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return d > today;
+  }
+
   validateField(
     value: unknown,
     fieldName: string,
     fieldRules: ValidationRule,
     nullable: boolean = false
   ): boolean {
+    // Триммируем строки, кроме паролей и подтверждения пароля
+    let val = value;
+    if (typeof val === 'string' && !['password', 'password_repeat'].includes(fieldName)) {
+      val = val.trim();
+    }
+
     const { required, min, max, pattern, messages = {} } = fieldRules;
 
-    if (nullable && value === null) {
+    if (nullable && val === null) {
       return true;
     }
 
-    if (required && !checks.required(value)) {
+    if (required && !checks.required(val)) {
       this.addError(fieldName, (messages.required as string) || `Поле ${fieldName} обязательно`);
       return false;
     }
 
-    if (!value && !required) return true;
+    if (!val && !required) return true;
 
-    if (min !== undefined && typeof value === 'string' && !checks.minLength(value, min)) {
+    if (min !== undefined && typeof val === 'string' && !checks.minLength(val, min)) {
       this.addError(fieldName, (messages.min as string) || `Минимум ${min} символов`);
     }
 
-    if (max !== undefined && typeof value === 'string' && !checks.maxLength(value, max)) {
+    if (max !== undefined && typeof val === 'string' && !checks.maxLength(val, max)) {
       this.addError(fieldName, (messages.max as string) || `Максимум ${max} символов`);
     }
 
-    if (pattern && typeof value === 'string' && !checks.pattern(value, pattern)) {
+    if (pattern && typeof val === 'string' && !checks.pattern(val, pattern)) {
       this.addError(fieldName, (messages.pattern as string) || 'Недопустимый формат');
     }
 
@@ -373,16 +396,20 @@ export class Validator {
   private validateTrainerDetails(details: TrainerDetailsInput): ValidationError[] {
     const errors: ValidationError[] = [];
 
-    if (!details.career_since_date) {
-      errors.push({
-        field: 'career_since_date',
-        message: 'Дата начала карьеры обязательна'
-      });
-    } else if (!checks.dateFormat(details.career_since_date)) {
-      errors.push({
-        field: 'career_since_date',
-        message: 'Дата должна быть в формате ГГГГ-ММ-ДД'
-      });
+    // career_since_date теперь опционально, но если задано – проверяем формат и не в будущем
+    const careerDate = details.career_since_date?.trim() || '';
+    if (careerDate !== '') {
+      if (!checks.dateFormat(careerDate)) {
+        errors.push({
+          field: 'career_since_date',
+          message: 'Дата должна быть в формате ГГГГ-ММ-ДД'
+        });
+      } else if (Validator.isFutureDate(careerDate)) {
+        errors.push({
+          field: 'career_since_date',
+          message: 'Дата не может быть в будущем'
+        });
+      }
     }
 
     if (details.education_degree !== undefined && details.education_degree !== null && details.education_degree !== '') {
@@ -482,10 +509,11 @@ export class Validator {
     return Number.isFinite(n) ? n : null;
   }
 
-  validateDonationForm(data: { amount: string; email: string }): DonationValidationResult {
+  validateDonationForm(data: { amount: string; email: string; message?: string }): DonationValidationResult {
     this.reset();
     const amountNum = Validator.parseDonationAmount(data?.amount);
     const email = data?.email ?? '';
+    const message = data?.message?.trim() ?? '';
 
     if (amountNum === null) {
       this.addError('amount', 'Введите корректную сумму');
@@ -496,6 +524,11 @@ export class Validator {
     }
 
     this.validateField(email, 'email', rules.receipt_email);
+
+    // Проверка длины сообщения (опционально)
+    if (message.length > 500) {
+      this.addError('message', 'Максимум 500 символов');
+    }
 
     return {
       isValid: !this.hasErrors(),

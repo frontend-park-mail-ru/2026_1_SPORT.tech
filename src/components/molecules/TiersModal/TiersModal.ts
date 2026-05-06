@@ -70,11 +70,27 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
     });
   }
 
+  /**
+   * Применяет ограничения длины к полям ввода
+   */
+  function applyInputConstraints(): void {
+    const allInputs = container.querySelectorAll('.tier-input') as NodeListOf<HTMLInputElement>;
+    allInputs.forEach(input => {
+      const field = input.dataset.field;
+      if (field === 'name') {
+        input.setAttribute('maxlength', '80');
+      } else if (field === 'description') {
+        input.setAttribute('maxlength', '500');
+      }
+    });
+  }
+
   // Генерация HTML без повторной привязки событий
   function render(): void {
     updateIndices();
     const html = template({ tiers });
     container.innerHTML = html;
+    applyInputConstraints();
   }
 
   // ========== ДЕЛЕГИРОВАННЫЕ СОБЫТИЯ (назначаются один раз) ==========
@@ -146,6 +162,20 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
     if (validTiers.length === 0) {
       showError('Добавьте хотя бы один уровень с названием и ценой');
       return;
+    }
+
+    // Валидация длины полей
+    for (const tier of validTiers) {
+      const name = tier.name.trim();
+      if (name.length < 1 || name.length > 80) {
+        showError('Название уровня должно быть от 1 до 80 символов');
+        return;
+      }
+      const desc = (tier.description || '').trim();
+      if (desc.length > 500) {
+        showError('Описание уровня не должно превышать 500 символов');
+        return;
+      }
     }
 
     saveBtn.disabled = true;
@@ -242,4 +272,5 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
   document.addEventListener('keydown', onKey);
   render(); // Первичный рендер с пустым списком
   void loadTiers(); // Загружаем данные с бэкенда
+  applyInputConstraints(); // на случай, если loadTiers ещё не отработал, но это необязательно
 }
