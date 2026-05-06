@@ -234,7 +234,7 @@ export async function openPostFormModal({
     }
   }
 
-  // Заголовок
+  // Заголовок с живой валидацией
   const titleApi: InputAPI = await renderInput(titleHost, {
     type: INPUT_TYPES.WITHOUTS,
     label: 'Заголовок',
@@ -243,7 +243,15 @@ export async function openPostFormModal({
     value: initial.title || '',
     required: true,
     maxlength: 200,
-    onChange: () => titleApi.setNormal()
+    onChange: (value: string) => {
+      validator.reset();
+      validator.validateField(value, 'title', validator.rules.post_title);
+      if (validator.hasErrors()) {
+        titleApi.setError(validator.getErrors()[0].message);
+      } else {
+        titleApi.setNormal();
+      }
+    }
   });
 
   // ========== ФУНКЦИИ ДЛЯ БЛОКОВ ==========
@@ -473,7 +481,7 @@ export async function openPostFormModal({
     globalErr.hidden = true; globalErr.textContent = '';
 
     const title = titleApi.getValue().trim();
-    // Валидация заголовка через validator
+    // Финальная валидация заголовка
     validator.reset();
     validator.validateField(title, 'title', validator.rules.post_title);
     if (validator.hasErrors()) {

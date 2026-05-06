@@ -50,7 +50,15 @@ export async function openDonationModal({
     placeholder: 'Введите сумму',
     name: 'amount',
     required: true,
-    onChange: () => amountApi.setNormal()
+    onChange: (value: string) => {
+      // Живая валидация суммы
+      const parsed = Validator.parseDonationAmount(value);
+      if (value.trim() !== '' && (parsed === null || parsed <= 0)) {
+        amountApi.setError('Введите корректную сумму больше нуля');
+      } else {
+        amountApi.setNormal();
+      }
+    }
   });
 
   const emailApi: InputAPI = await renderInput(emailHost, {
@@ -60,7 +68,16 @@ export async function openDonationModal({
     name: 'email',
     required: true,
     autocomplete: 'email',
-    onChange: () => emailApi.setNormal()
+    onChange: (value: string) => {
+      // Живая валидация email
+      validator.reset();
+      validator.validateField(value, 'email', validator.rules.receipt_email);
+      if (validator.hasErrors()) {
+        emailApi.setError(validator.getErrors()[0].message);
+      } else {
+        emailApi.setNormal();
+      }
+    }
   });
 
   // Поле «Сообщение» (опционально)
@@ -77,7 +94,14 @@ export async function openDonationModal({
     name: 'message',
     required: false,
     maxlength: 500,
-    onChange: () => messageApi.setNormal()
+    onChange: (value: string) => {
+      // Живая проверка длины
+      if (value.length > 500) {
+        messageApi.setError('Максимум 500 символов');
+      } else {
+        messageApi.setNormal();
+      }
+    }
   });
 
   const close = (): void => {
@@ -101,12 +125,6 @@ export async function openDonationModal({
     const amountStr = amountApi.getValue();
     const email = emailApi.getValue().trim();
     const message = messageApi.getValue().trim();
-
-    // Валидация длины сообщения
-    if (message.length > 500) {
-      messageApi.setError('Максимум 500 символов');
-      return;
-    }
 
     const result = validator.validateDonationForm({
       amount: amountStr,
