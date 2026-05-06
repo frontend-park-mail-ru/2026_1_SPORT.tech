@@ -24,7 +24,7 @@ interface Rules {
   post_title: ValidationRule;
   post_body: ValidationRule;
   receipt_email: ValidationRule;
-  donation_message: ValidationRule;          // <-- новое правило
+  donation_message: ValidationRule;
 }
 
 const rules: Rules = {
@@ -52,10 +52,12 @@ const rules: Rules = {
   password: {
     required: true,
     min: 8,
+    max: 128,
     pattern: /^[A-Za-z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]*$/,
     messages: {
       required: 'Пароль обязателен',
       min: 'Минимум 8 символов',
+      max: 'Максимум 128 символов',
       pattern: 'Пароль может содержать только латинские буквы, цифры и спецсимволы'
     }
   },
@@ -173,7 +175,7 @@ interface TrainerSportInput {
 }
 
 interface TrainerDetailsInput {
-  career_since_date?: string | null;               // теперь опционально
+  career_since_date?: string | null;
   education_degree?: string | null;
   sports: TrainerSportInput[];
 }
@@ -234,7 +236,6 @@ export class Validator {
     fieldRules: ValidationRule,
     nullable: boolean = false
   ): boolean {
-    // Триммируем строки, кроме паролей и подтверждения пароля
     let val = value;
     if (typeof val === 'string' && !['password', 'password_repeat'].includes(fieldName)) {
       val = val.trim();
@@ -283,6 +284,15 @@ export class Validator {
   validatePassword(password: string): ValidationResult {
     this.reset();
     this.validateField(password, 'password', rules.password);
+    // дополнительные проверки сложности
+    if (typeof password === 'string' && password.length > 0) {
+      if (!/[A-Za-z]/.test(password)) {
+        this.addError('password', 'Пароль должен содержать хотя бы одну букву');
+      }
+      if (!/[0-9]/.test(password)) {
+        this.addError('password', 'Пароль должен содержать хотя бы одну цифру');
+      }
+    }
     return { isValid: !this.hasErrors(), errors: this.getErrors() };
   }
 
@@ -290,6 +300,15 @@ export class Validator {
     this.reset();
 
     this.validateField(password, 'password', rules.password);
+    // проверки сложности
+    if (typeof password === 'string' && password.length > 0) {
+      if (!/[A-Za-z]/.test(password)) {
+        this.addError('password', 'Пароль должен содержать хотя бы одну букву');
+      }
+      if (!/[0-9]/.test(password)) {
+        this.addError('password', 'Пароль должен содержать хотя бы одну цифру');
+      }
+    }
 
     if (!checks.required(passwordRepeat)) {
       this.addError('password_repeat', 'Подтверждение пароля обязательно');
@@ -396,7 +415,6 @@ export class Validator {
   private validateTrainerDetails(details: TrainerDetailsInput): ValidationError[] {
     const errors: ValidationError[] = [];
 
-    // career_since_date теперь опционально, но если задано – проверяем формат и не в будущем
     const careerDate = details.career_since_date?.trim() || '';
     if (careerDate !== '') {
       if (!checks.dateFormat(careerDate)) {
@@ -525,7 +543,6 @@ export class Validator {
 
     this.validateField(email, 'email', rules.receipt_email);
 
-    // Проверка длины сообщения (опционально)
     if (message.length > 500) {
       this.addError('message', 'Максимум 500 символов');
     }
