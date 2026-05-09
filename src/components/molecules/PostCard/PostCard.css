@@ -280,12 +280,7 @@
 
 /* Контейнер комментариев внутри поста */
 .post-card__comments {
-  max-height: 320px;        /* ограничение по высоте */
-  overflow-y: auto;         /* вертикальная прокрутка */
-  margin-top: 16px;
-  padding-right: 4px;       /* место для полосы прокрутки */
-  scrollbar-width: thin;
-  scrollbar-color: #e85a2b #ffe8e3;
+  margin-top: 16px;         /* только отступ сверху */
 }
 
 .post-card__comments::-webkit-scrollbar {
