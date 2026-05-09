@@ -140,3 +140,23 @@ export interface Subscription {
 export interface UpdateSubscriptionPayload {
   tier_id: number;
 }
+
+
+export interface Comment {
+  comment_id: number;
+  post_id: number;
+  author_id: number;
+  author_username: string;
+  author_avatar_url: string | null;
+  text: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommentListResponse {
+  comments: Comment[];
+}
+
+export interface CreateCommentRequest {
+  text: string;
+}

@@ -1,0 +1,18 @@
+<div class="comment-section">
+  <div class="comment-section__list" id="comments-{{postId}}">
+    {{#each comments}}
+      <div class="comment-section__item">
+        <img class="comment-section__avatar" src="{{author_avatar_url}}" alt="" onerror="this.style.display='none'">
+        <div class="comment-section__body">
+          <div class="comment-section__author">{{author_username}}</div>
+          <div class="comment-section__text">{{text}}</div>
+          <div class="comment-section__time">{{created_at}}</div>
+        </div>
+      </div>
+    {{/each}}
+  </div>
+  <form class="comment-section__form" data-comment-form>
+    <input type="text" name="comment-text" class="comment-section__input" placeholder="Написать комментарий..." autocomplete="off">
+    <button type="submit" class="comment-section__submit">Отправить</button>
+  </form>
+</div>

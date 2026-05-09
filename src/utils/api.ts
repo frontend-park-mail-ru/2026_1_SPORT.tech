@@ -14,7 +14,9 @@ import type {
   DonationResponse,
   CSRFTokenResponse,
   Tier,
-  Subscription
+  Subscription,
+  Comment,
+  CommentListResponse,
 } from '../types/api.types';
 
 export interface ApiResponse<T = unknown> {
@@ -534,5 +536,42 @@ export class ApiClient {
   async cancelSubscription(subscriptionId: number): Promise<void> {
     await this.ensureCsrfToken();
     await this.request(`/v1/subscriptions/${subscriptionId}`, { method: 'DELETE' });
+  }
+  // Временно моковый список (для тестирования UI)
+  private mockComments: Record<number, Comment[]> = {};
+
+  async getPostComments(postId: number): Promise<CommentListResponse> {
+  // Реальная реализация: this.request<CommentListResponse>(`/v1/posts/${postId}/comments`);
+  // Пока возвращаем сохранённые комментарии
+    return { comments: this.mockComments[postId] || [] };
+  }
+
+  async createComment(postId: number, text: string): Promise<Comment> {
+  // Реальная реализация:
+  // return this.request<Comment>(`/v1/posts/${postId}/comments`, {
+  //   method: 'POST',
+  //   body: JSON.stringify({ text })
+  // });
+  // Временно создаём локальный комментарий
+    const newComment: Comment = {
+      comment_id: Date.now(),
+      post_id: postId,
+      author_id: 0, // нужно подставить реального пользователя
+      author_username: 'Вы',
+      author_avatar_url: null,
+      text,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (!this.mockComments[postId]) this.mockComments[postId] = [];
+    this.mockComments[postId].push(newComment);
+    return newComment;
+  }
+
+  async deleteComment(postId: number, commentId: number): Promise<void> {
+  // await this.request(`/v1/posts/${postId}/comments/${commentId}`, { method: 'DELETE' });
+    if (this.mockComments[postId]) {
+      this.mockComments[postId] = this.mockComments[postId].filter(c => c.comment_id !== commentId);
+    }
   }
 }

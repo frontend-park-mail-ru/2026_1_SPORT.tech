@@ -1,6 +1,7 @@
 import type { ApiClient } from '../../../utils/api';
 import type { ContentBlockForPost } from '../../../types/post.types';
 import { openPostFormModal } from '../PostFormModal/PostFormModal';
+import { renderCommentSection } from '../CommentSection/CommentSection';
 
 export interface PostCardData {
   post_id: number;
@@ -115,13 +116,45 @@ export async function renderPostCard(
   const shortBody = postCard.querySelector('.post-card__body--short') as HTMLElement | null;
   const fullBody = postCard.querySelector('.post-card__body--full') as HTMLElement | null;
 
+  // Элементы для комментариев
+  const commentsBtn = postCard.querySelector('[data-post-comments]') as HTMLButtonElement | null;
+  const commentsCountEl = postCard.querySelector('[data-comments-count]') as HTMLElement | null;
+  const commentsContainer = postCard.querySelector('[data-post-comments-container]') as HTMLElement | null;
+
+
+
+  // Обработчик раскрытия/скрытия комментариев
+  if (commentsBtn && commentsContainer && api) {
+    commentsBtn.addEventListener('click', async (e: Event) => {
+      e.stopPropagation();
+      const isHidden = commentsContainer.style.display === 'none';
+      if (!isHidden) {
+        commentsContainer.style.display = 'none';
+        return;
+      }
+      commentsContainer.style.display = 'block';
+      // Загружаем и отображаем комментарии
+      await renderCommentSection(commentsContainer, {
+        postId,
+        api,
+        onCommentsChanged: (newTotal: number) => {
+          currentComments = newTotal;
+          if (commentsCountEl) commentsCountEl.textContent = String(newTotal);
+        }
+      });
+    });
+  }
+
+  // Разворачивание поста при клике на тело
   postCard.addEventListener('click', (e: Event) => {
     const target = e.target as HTMLElement;
     if (target.closest('[data-post-like]') ||
         target.closest('[data-post-edit]') ||
         target.closest('[data-post-delete]') ||
         target.closest('[data-post-share]') ||
-        target.closest('[data-post-collapse]')) return;
+        target.closest('[data-post-collapse]') ||
+        target.closest('[data-post-comments]') ||
+        target.closest('[data-post-comments-container]')) return;
     if (shortBody && fullBody) {
       shortBody.style.display = 'none';
       fullBody.style.display = 'block';

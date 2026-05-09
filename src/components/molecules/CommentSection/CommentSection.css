@@ -1,0 +1,188 @@
+/* Блок комментариев */
+.comment-section {
+  margin-top: 16px;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #edf2f7;
+}
+
+/* Список комментариев */
+.comment-section__list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #e85a2b #ffe8e3;
+}
+
+.comment-section__list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.comment-section__list::-webkit-scrollbar-track {
+  background: #ffe8e3;
+}
+
+.comment-section__list::-webkit-scrollbar-thumb {
+  background: #e85a2b;
+  border-radius: 4px;
+}
+
+/* Один комментарий */
+.comment-section__item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.comment-section__item:last-child {
+  border-bottom: none;
+}
+
+/* Аватар */
+.comment-section__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #e85a2b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.comment-section__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Тело комментария */
+.comment-section__body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Имя автора */
+.comment-section__author {
+  font-weight: 600;
+  font-size: 13px;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+/* Текст комментария */
+.comment-section__text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #4a5568;
+  word-break: break-word;
+}
+
+/* Время */
+.comment-section__time {
+  font-size: 11px;
+  color: #999;
+  margin-top: 6px;
+}
+
+/* Форма отправки */
+.comment-section__form {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+/* Поле ввода */
+.comment-section__input {
+  flex: 1;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #f8fafc;
+  color: #1a1a1a;
+}
+
+.comment-section__input:focus {
+  border-color: #e85a2b;
+  box-shadow: 0 0 0 3px rgba(232, 90, 43, 0.1);
+  background: #fff;
+}
+
+.comment-section__input::placeholder {
+  color: #999;
+}
+
+/* Кнопка отправки */
+.comment-section__submit {
+  padding: 0 18px;
+  height: 40px;
+  background: #e85a2b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.comment-section__submit:hover {
+  background: #cc4125;
+}
+
+.comment-section__submit:active {
+  transform: scale(0.97);
+}
+
+.comment-section__submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .comment-section {
+    padding: 14px;
+    margin-top: 12px;
+    border-radius: 10px;
+  }
+
+  .comment-section__item {
+    gap: 10px;
+  }
+
+  .comment-section__avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .comment-section__form {
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .comment-section__input {
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .comment-section__submit {
+    height: 38px;
+    font-size: 13px;
+    padding: 0 14px;
+  }
+}
