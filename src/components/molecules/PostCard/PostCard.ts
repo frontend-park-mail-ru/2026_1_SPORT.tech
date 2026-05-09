@@ -121,8 +121,6 @@ export async function renderPostCard(
   const commentsCountEl = postCard.querySelector('[data-comments-count]') as HTMLElement | null;
   const commentsContainer = postCard.querySelector('[data-post-comments-container]') as HTMLElement | null;
 
-
-
   // Обработчик раскрытия/скрытия комментариев
   if (commentsBtn && commentsContainer && api) {
     commentsBtn.addEventListener('click', async (e: Event) => {
@@ -138,7 +136,6 @@ export async function renderPostCard(
         postId,
         api,
         onCommentsChanged: (newTotal: number) => {
-          currentComments = newTotal;
           if (commentsCountEl) commentsCountEl.textContent = String(newTotal);
         }
       });
