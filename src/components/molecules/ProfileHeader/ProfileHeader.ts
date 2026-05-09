@@ -4,6 +4,7 @@ import type { ApiClient } from '../../../utils/api';
 import { renderButton } from '../../atoms/Button/Button';
 import type { ButtonAPI } from '../../atoms/Button/Button';
 import { openProfileEditModal } from '../ProfileEditModal/ProfileEditModal';
+import { openStatisticsModal } from '../StatisticsModal/StatisticsModal';
 
 export interface ProfileHeaderConfig {
   name: string;
@@ -16,6 +17,7 @@ export interface ProfileHeaderConfig {
   showDonate?: boolean;
   onDonate?: (() => void) | null;
   onSubscribed?: (() => Promise<void>) | null;
+  isTrainer?: boolean;   // <-- добавлено
 }
 
 export async function renderProfileHeader(
@@ -25,7 +27,8 @@ export async function renderProfileHeader(
   const {
     name, role, avatar = null, isOwnProfile = false, api,
     viewedUserId, showDonate = false, onDonate = null,
-    onSubscribed = null
+    onSubscribed = null,
+    isTrainer = false   // <-- деструктурируем
   } = config;
 
   const template = (window as any).Handlebars.templates['ProfileHeader.hbs'];
@@ -118,11 +121,23 @@ export async function renderProfileHeader(
     });
   }
 
+  // Обработчик кнопки «Статистика»
   const statBtn = element.querySelector(`#stat-btn-${id}`) as HTMLElement | null;
-  if (statBtn) statBtn.addEventListener('click', () => {
-    statBtn.classList.add('button--active');
-    setTimeout(() => statBtn.classList.remove('button--active'), 100);
-  });
+  if (statBtn) {
+    statBtn.addEventListener('click', async () => {
+      let userId = viewedUserId;
+      if (!userId) {
+        // Для собственного профиля получаем id текущего пользователя
+        try {
+          const me = await api.getCurrentUser();
+          userId = me?.user?.user_id;
+        } catch {}
+      }
+      if (userId) {
+        void openStatisticsModal(api, userId, isTrainer);
+      }
+    });
+  }
 
   const subsBtn = element.querySelector(`#subscriptions-btn-${id}`) as HTMLElement | null;
   if (subsBtn) subsBtn.addEventListener('click', () => {
