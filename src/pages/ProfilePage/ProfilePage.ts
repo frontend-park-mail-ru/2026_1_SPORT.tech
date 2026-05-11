@@ -74,7 +74,8 @@ export async function renderProfilePage(
       api,
       viewedUserId,
       onDonate: () => openDonationModal({ api, recipientUserId: viewedUserId }),
-      onSubscribed: reloadAllData
+      onSubscribed: reloadAllData,
+      isTrainer: profile.isTrainer   // ← добавлена передача роли
     }),
     renderProfileContent(contentContainer, {
       activeTab,
