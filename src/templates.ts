@@ -19,6 +19,7 @@ import HomePageTemplate from './pages/HomePage/HomePage.hbs';
 import ProfileEditModalTemplate from './components/molecules/ProfileEditModal/ProfileEditModal.hbs';
 import CommentSectionTemplate from './components/molecules/CommentSection/CommentSection.hbs';
 import StatisticsModalTemplate from './components/molecules/StatisticsModal/StatisticsModal.hbs';
+import NotificationsPageTemplate from './pages/NotificationsPage/NotificationsPage.hbs';
 
 const templates: Record<string, Handlebars.TemplateDelegate> = {
   'Button.hbs': Handlebars.compile(ButtonTemplate),
@@ -39,6 +40,7 @@ const templates: Record<string, Handlebars.TemplateDelegate> = {
   'ProfileEditModal.hbs': Handlebars.compile(ProfileEditModalTemplate),
   'CommentSection.hbs': Handlebars.compile(CommentSectionTemplate),
   'StatisticsModal.hbs': Handlebars.compile(StatisticsModalTemplate),
+  'NotificationsPage.hbs': Handlebars.compile(NotificationsPageTemplate),
 };
 
 export default templates;

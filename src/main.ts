@@ -1,7 +1,7 @@
 import Handlebars from 'handlebars';
 import { API_BASE_URL } from './config/constants';
 import { ApiClient } from './utils/api';
-import { loadProfilePageData } from './utils/profilePageData';
+import { loadProfilePageData, getFullName, getUserRoleLabel } from './utils/profilePageData';
 import type { AuthResponse } from './types/auth.types';
 import type { Router } from './types/router.types';
 import './styles/index.css';
@@ -170,6 +170,28 @@ function createRouter(api: ApiClient): Router {
     }
   }
 
+  async function showNotificationsPage(currentUser: AuthResponse | null): Promise<void> {
+    const app = document.getElementById('app');
+    if (!app) return;
+    document.body.classList.remove('auth-page');
+    try {
+      const { renderNotificationsPage } = await import('./pages/NotificationsPage/NotificationsPage');
+      await renderNotificationsPage(api, app, {
+        currentUser: currentUser?.user ? {
+          id: currentUser.user.user_id,
+          name: getFullName(currentUser.user),
+          role: getUserRoleLabel(currentUser.user.is_trainer),
+          avatar: currentUser.user.avatar_url || null
+        } : null,
+        onLogout: createLogoutHandler(api, setCurrentUser, navigateTo),
+        api  // передаём api, хотя он уже используется, но для ясности
+      });
+    } catch (error: unknown) {
+      const err = error as Error;
+      app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+    }
+  }
+
   async function handleRouting(): Promise<void> {
     const currentUser = await getCurrentUser();
     const isAuthenticated = !!currentUser;
@@ -193,6 +215,11 @@ function createRouter(api: ApiClient): Router {
     if (path === '/profile') {
       if (!isAuthenticated) navigateTo('/auth');
       else await showProfilePage(currentUser);
+      return;
+    }
+    if (path === '/notifications') {
+      if (!isAuthenticated) navigateTo('/auth');
+      else await showNotificationsPage(currentUser);
       return;
     }
     if (viewedProfileMatch) {

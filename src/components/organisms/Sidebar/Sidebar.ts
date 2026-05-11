@@ -109,7 +109,8 @@ export async function renderSidebar(
   const urls: Record<string, string> = {
     'profile': '/profile',
     'home': '/',
-    'auth': '/auth'
+    'auth': '/auth',
+    'notifications': '/notifications'   // добавлено
   };
 
   element.querySelectorAll('.sidebar__nav-item').forEach((item: Element) => {

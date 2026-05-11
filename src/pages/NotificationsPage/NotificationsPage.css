@@ -1,0 +1,164 @@
+.notifications-page {
+  display: flex;
+  min-height: 100vh;
+  background: #e8f4f8;
+}
+
+.notifications-page__sidebar {
+  flex-shrink: 0;
+  width: 240px;
+}
+
+.notifications-page__main {
+  flex: 1;
+  padding: 24px;
+  max-width: 800px;
+}
+
+.notifications-page__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.notifications-page__title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a2b3c;
+}
+
+.notifications-page__mark-read {
+  background: none;
+  border: 1px solid #e85a2b;
+  color: #e85a2b;
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.notifications-page__mark-read:hover {
+  background: #fff5f0;
+}
+
+/* Список уведомлений */
+.notifications-page__list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.notification-item {
+  background: white;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s;
+}
+
+.notification-item:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.notification-item--unread {
+  border-left: 4px solid #e85a2b;
+}
+
+.notification-item__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notification-item__icon--like {
+  background: #ffe8e3;
+  color: #e85a2b;
+}
+
+.notification-item__icon--comment {
+  background: #e3f2fd;
+  color: #1e88e5;
+}
+
+.notification-item__icon--subscription {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.notification-item__icon--payment {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.notification-item__icon--warning {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.notification-item__content {
+  flex: 1;
+}
+
+.notification-item__text {
+  font-size: 15px;
+  color: #333;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.notification-item__time {
+  font-size: 12px;
+  color: #999;
+}
+
+.notification-item__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.notification-item__action-btn {
+  background: none;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  color: #e85a2b;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.notification-item__action-btn:hover {
+  background: #ffe8e3;
+}
+
+/* Пустое состояние */
+.notifications-page__empty {
+  text-align: center;
+  padding: 80px 24px;
+  color: #999;
+}
+
+@media (max-width: 768px) {
+  .notifications-page {
+    flex-direction: column;
+  }
+  .notifications-page__sidebar {
+    width: 100%;
+  }
+  .notifications-page__main {
+    padding: 16px;
+  }
+  .notifications-page__title {
+    font-size: 24px;
+  }
+}
