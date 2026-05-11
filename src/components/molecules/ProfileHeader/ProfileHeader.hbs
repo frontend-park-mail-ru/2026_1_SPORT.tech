@@ -2,7 +2,7 @@
   <div class="profile-header__cover">
     <div class="profile-header__cover-pattern"></div>
   </div>
-  
+
   <div class="profile-header__info">
     <div class="profile-header__avatar-wrapper">
       <div class="profile-header__avatar">
@@ -21,19 +21,20 @@
       </button>
       {{/if}}
     </div>
-    
+
     <div class="profile-header__details">
       <h1 class="profile-header__name">{{name}}</h1>
       <p class="profile-header__role">{{role}}</p>
     </div>
-    
+
     <div class="profile-header__actions">
       <span class="profile-header__actions-slot" id="profile-donate-{{id}}"></span>
       <span class="profile-header__actions-slot" id="profile-actions-{{id}}"></span>
     </div>
   </div>
-  
+
   <div class="profile-header__stats">
+    {{#if isOwnProfile}}
     <button class="profile-header__stat" id="stat-btn-{{id}}" data-action="statistics">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M3 3v18h18"/>
@@ -43,6 +44,7 @@
       </svg>
       <span>Статистика</span>
     </button>
+    {{/if}}
     <button class="profile-header__stat" id="subscriptions-btn-{{id}}" data-action="subscriptions">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
