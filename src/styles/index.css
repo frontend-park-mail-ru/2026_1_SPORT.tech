@@ -15,6 +15,7 @@
 @import '../components/molecules/ProfileEditModal/ProfileEditModal.css';
 @import '../components/molecules/SubscriptionModal/SubscriptionModal.css';
 @import '../components/molecules/CommentSection/CommentSection.css';
+@import '../components/molecules/StatisticsModal/StatisticsModal.css';
 
 /* Организмы */
 @import '../components/organisms/AuthForm/AuthForm.css';
