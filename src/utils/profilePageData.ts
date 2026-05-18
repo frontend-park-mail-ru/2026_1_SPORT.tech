@@ -77,8 +77,12 @@ export async function loadProfilePageData(
             tierNameById.set(tier.tier_id, tier.name);
             tierPriceById.set(tier.tier_id, tier.price);
           });
+        } else {
+          console.warn(`No tiers returned for trainer ${resolvedUserId}`);
         }
-      } catch {}
+      } catch (error) {
+        console.error(`Failed to load tiers for trainer ${resolvedUserId}:`, error);
+      }
     }
 
     const sportNamesById = new Map<number, string>(
