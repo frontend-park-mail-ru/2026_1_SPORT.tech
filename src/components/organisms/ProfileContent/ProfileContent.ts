@@ -310,7 +310,8 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
   }
 }
 
-function renderTiersSettings(container: HTMLElement, api: ApiClient): void {
+// ИЗМЕНЁННАЯ ФУНКЦИЯ: добавлен параметр onTiersUpdated
+function renderTiersSettings(container: HTMLElement, api: ApiClient, onTiersUpdated?: () => void): void {
   container.innerHTML = '';
   const wrapper = document.createElement('div');
   wrapper.className = 'tiers-settings';
@@ -324,7 +325,12 @@ function renderTiersSettings(container: HTMLElement, api: ApiClient): void {
   button.style.cssText = 'width:100%;max-width:300px;margin:0 auto;display:block;';
   button.textContent = 'Настроить уровни';
   button.addEventListener('click', () => {
-    openTiersModal({ api, onSaved: () => {} });
+    openTiersModal({
+      api,
+      onSaved: () => {
+        if (onTiersUpdated) onTiersUpdated();
+      }
+    });
   });
   wrapper.appendChild(button);
   container.appendChild(wrapper);
@@ -345,8 +351,8 @@ export async function renderProfileContent(
     viewedUserId,
     isTrainer = true,
     isOwnProfile = false,
-    trainerDetails,   // <-- извлекаем
-    profileBio        // <-- извлекаем
+    trainerDetails,
+    profileBio
   } = params;
 
   const HandlebarsGlobal = (window as unknown as { Handlebars: { templates: Record<string, (context: Record<string, unknown>) => string> } }).Handlebars;
@@ -480,6 +486,18 @@ export async function renderProfileContent(
     refreshVisiblePosts();
   }
 
+  // Функция для обновления постов после изменения уровней подписки
+  const refreshPostsAfterTiersUpdate = async () => {
+    try {
+      const freshData = await import('../../../utils/profilePageData').then(m => m.loadProfilePageData(api, viewedUserId));
+      allPosts = freshData.posts;
+      refreshVisiblePosts();
+      if (onPostsUpdated) await onPostsUpdated();
+    } catch (e) {
+      console.error('Failed to refresh posts after tiers update', e);
+    }
+  };
+
   if (searchInput) {
     searchInput.addEventListener('input', () => {
       searchQuery = searchInput.value;
@@ -605,7 +623,8 @@ export async function renderProfileContent(
           sectionTitleEl.textContent = 'Подписки';
           if (subsContainer) {
             subsContainer.style.display = 'block';
-            renderTiersSettings(subsContainer, api);
+            // Передаём колбэк для обновления постов после изменения уровней
+            renderTiersSettings(subsContainer, api, refreshPostsAfterTiersUpdate);
           }
         } else if (!isTrainer) {
           toggleSidebarVisibility(false);
