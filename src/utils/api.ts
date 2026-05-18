@@ -45,6 +45,9 @@ export function translateErrorMessage(message: string): string {
   }
   if (lower.includes('invalid credentials')) return 'Неверный email или пароль';
   if (lower.includes('password')) return 'Неверный пароль';
+  if (lower.includes('tier') && (lower.includes('used') || lower.includes('post') || lower.includes('публикаци') || lower.includes('ссылается'))) {
+    return 'Этот уровень подписки используется в публикациях. Сначала измените уровень доступа у этих публикаций.';
+  }
   return message;
 }
 
