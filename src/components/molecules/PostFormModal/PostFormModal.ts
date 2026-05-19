@@ -500,9 +500,11 @@ export async function openPostFormModal({
 
         mediaContainer.addEventListener('click', (e) => {
           const target = e.target as HTMLElement;
-          if (target.tagName === 'VIDEO' || target.tagName === 'IMG' || target.closest('.post-form__block-media-placeholder')) {
+          // Если клик по видео или изображению (уже загруженное медиа) — не открываем диалог
+          if (target.tagName === 'VIDEO' || target.tagName === 'IMG') {
             return;
           }
+          // Для всего остального (включая иконку, текст, пустую область) открываем выбор файла
           fileInput.click();
         });
         mediaContainer.addEventListener('dragover', (e) => { e.preventDefault(); mediaContainer.classList.add('post-form__block-media--dragover'); });
