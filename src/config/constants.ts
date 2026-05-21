@@ -6,10 +6,5 @@
  * @module src/config/constants
  */
 
-/**
- * Базовый URL для API запросов.
- * На проде используем same-origin nginx proxy, чтобы CSRF/session cookies
- * выставлялись на домен фронта и отправлялись обратно с мутациями.
- */
-
+/** Базовый URL для API запросов. */
 export const API_BASE_URL = '/api';
