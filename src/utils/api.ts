@@ -25,31 +25,65 @@ export interface ApiResponse<T = unknown> {
 export class ApiClient {
   private baseURL: string;
   private csrfToken: string | null = null;
+  private csrfTokenRequest: Promise<string | null> | null = null;
 
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL;
   }
 
-  async fetchCsrfToken(): Promise<string | null> {
-    try {
-      const response = await fetch(`${this.baseURL}/v1/auth/csrf`, {
-        method: 'GET',
-        credentials: 'include'
-      });
-      if (response.ok) {
-        const data = await response.json() as CSRFTokenResponse;
-        this.csrfToken = data.csrf_token;
-        return this.csrfToken;
-      }
-    } catch (error) {
-      console.error('Failed to fetch CSRF token:', error);
+  private getCookie(name: string): string | null {
+    if (typeof document === 'undefined') {
+      return null;
     }
-    return null;
+
+    const prefix = `${name}=`;
+    const cookie = document.cookie
+      .split(';')
+      .map(part => part.trim())
+      .find(part => part.startsWith(prefix));
+
+    return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
+  }
+
+  async fetchCsrfToken(): Promise<string | null> {
+    if (this.csrfTokenRequest) {
+      return this.csrfTokenRequest;
+    }
+
+    this.csrfTokenRequest = (async () => {
+      try {
+        const response = await fetch(`${this.baseURL}/v1/auth/csrf`, {
+          method: 'GET',
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const data = await response.json() as CSRFTokenResponse;
+          this.csrfToken = data.csrf_token;
+          return this.csrfToken;
+        }
+      } catch (error) {
+        console.error('Failed to fetch CSRF token:', error);
+      } finally {
+        this.csrfTokenRequest = null;
+      }
+      return null;
+    })();
+
+    return this.csrfTokenRequest;
   }
 
   async ensureCsrfToken(): Promise<string | null> {
-    await this.fetchCsrfToken();
-    return this.csrfToken;
+    const cookieToken = this.getCookie('csrf_token');
+    if (cookieToken) {
+      this.csrfToken = cookieToken;
+      return this.csrfToken;
+    }
+
+    if (this.csrfToken) {
+      return this.csrfToken;
+    }
+
+    return this.fetchCsrfToken();
   }
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

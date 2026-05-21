@@ -7,9 +7,9 @@
  */
 
 /**
- * Базовый URL для API запросов
- * @constant {string}
- * @default 'http://212.233.99.79:8080/api'
+ * Базовый URL для API запросов.
+ * На проде используем same-origin nginx proxy, чтобы CSRF/session cookies
+ * выставлялись на домен фронта и отправлялись обратно с мутациями.
  */
 
-export const API_BASE_URL = 'http://212.233.98.238:8080/api';
+export const API_BASE_URL = '/api';
