@@ -18,6 +18,7 @@ interface ProfileContentParams {
   onPostsUpdated?: (() => Promise<void>) | null;
   viewedUserId: number;
   isTrainer?: boolean;
+  isOwnProfile?: boolean;
 }
 
 interface FillPostsParams {
@@ -161,6 +162,16 @@ async function showTrainerAbout(
   api: ApiClient,
   userId: number
 ): Promise<void> {
+  setPostsContainerMessageState(container, false);
+  container.innerHTML = `
+    <div style="padding:4px 0;">
+      <div class="page-skeleton__block" style="height:16px;width:40%;margin-bottom:20px;border-radius:6px;"></div>
+      <div class="page-skeleton__block" style="height:48px;margin-bottom:14px;border-radius:8px;"></div>
+      <div class="page-skeleton__block" style="height:48px;margin-bottom:14px;border-radius:8px;"></div>
+      <div class="page-skeleton__block" style="height:48px;margin-bottom:14px;border-radius:8px;"></div>
+      <div class="page-skeleton__block" style="height:80px;border-radius:8px;"></div>
+    </div>
+  `;
   try {
     const [profile, sportTypesResponse] = await Promise.all([
       api.getProfile(userId),
@@ -318,38 +329,95 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
   }
 }
 
-function renderTiersSection(container: HTMLElement, api: ApiClient, isTrainer: boolean): void {
-  container.innerHTML = '';
+function showPostsSkeleton(container: HTMLElement): void {
+  const card = `
+    <div class="post-skeleton">
+      <div class="post-skeleton__header">
+        <div class="page-skeleton__block post-skeleton__avatar"></div>
+        <div class="post-skeleton__meta">
+          <div class="page-skeleton__block post-skeleton__name"></div>
+          <div class="page-skeleton__block post-skeleton__role"></div>
+        </div>
+      </div>
+      <div class="page-skeleton__block post-skeleton__title"></div>
+      <div class="page-skeleton__block post-skeleton__line"></div>
+      <div class="page-skeleton__block post-skeleton__line post-skeleton__line--short"></div>
+    </div>
+  `;
+  container.innerHTML = card + card + card;
+}
 
+async function renderSubscriptionsSection(
+  container: HTMLElement,
+  api: ApiClient,
+  isTrainer: boolean,
+  isOwnProfile: boolean
+): Promise<void> {
+  container.innerHTML = '';
   const wrapper = document.createElement('div');
   wrapper.className = 'tiers-settings';
-  wrapper.innerHTML = `
-    <h3 style="margin-bottom:16px;">Уровни подписки</h3>
-    <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
-  `;
 
-  container.appendChild(wrapper);
-
-  if (isTrainer) {
+  if (isOwnProfile && isTrainer) {
+    wrapper.innerHTML = `
+      <h3 style="margin-bottom:16px;">Уровни подписки</h3>
+      <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
+    `;
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'button button--primary-orange button--medium';
     button.style.cssText = 'width:100%;max-width:300px;margin:0 auto;display:block;';
     button.textContent = 'Настроить уровни';
-
-    button.addEventListener('click', () => {
-      openTiersModal({
-        api,
-        onSaved: () => {}
-      });
-    });
-
+    button.addEventListener('click', () => openTiersModal({ api, onSaved: () => {} }));
     wrapper.appendChild(button);
+    container.appendChild(wrapper);
+  } else if (!isOwnProfile && isTrainer) {
+    wrapper.innerHTML = `
+      <h3 style="margin-bottom:16px;">Подписки</h3>
+      <p style="color:#666;">Для оформления или изменения подписки воспользуйтесь кнопкой в шапке профиля тренера.</p>
+    `;
+    container.appendChild(wrapper);
   } else {
-    const message = document.createElement('p');
-    message.style.cssText = 'color:#999;text-align:center;padding:20px;';
-    message.textContent = 'У вас нет доступа к настройке уровней подписки';
-    wrapper.appendChild(message);
+    wrapper.innerHTML = `<h3 style="margin-bottom:16px;">Мои подписки</h3>`;
+    const skeletonEl = document.createElement('div');
+    skeletonEl.innerHTML = `
+      <div class="page-skeleton__block" style="height:76px;border-radius:12px;margin-bottom:12px;"></div>
+      <div class="page-skeleton__block" style="height:76px;border-radius:12px;"></div>
+    `;
+    wrapper.appendChild(skeletonEl);
+    container.appendChild(wrapper);
+
+    try {
+      const subs = await api.getMySubscriptions();
+      skeletonEl.remove();
+      const activeSubs = subs.subscriptions.filter(s => s.active);
+
+      if (activeSubs.length === 0) {
+        const empty = document.createElement('p');
+        empty.style.cssText = 'color:#999;text-align:center;padding:20px;';
+        empty.textContent = 'У вас пока нет активных подписок';
+        wrapper.appendChild(empty);
+      } else {
+        activeSubs.forEach(sub => {
+          const card = document.createElement('div');
+          card.style.cssText = 'border:1px solid #eee;border-radius:12px;padding:16px;margin-bottom:12px;';
+          const expiresDate = sub.expires_at ? new Date(sub.expires_at).toLocaleDateString('ru-RU') : 'Не указано';
+          card.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <strong>${escapeHtml(sub.tier_name)}</strong>
+              <span style="color:#FF6B4A;font-weight:600;">${sub.price} ₽/мес</span>
+            </div>
+            <div style="color:#666;font-size:13px;">Истекает: ${expiresDate}</div>
+          `;
+          wrapper.appendChild(card);
+        });
+      }
+    } catch {
+      skeletonEl.remove();
+      const errorEl = document.createElement('p');
+      errorEl.style.cssText = 'color:#999;';
+      errorEl.textContent = 'Не удалось загрузить подписки';
+      wrapper.appendChild(errorEl);
+    }
   }
 }
 
@@ -366,24 +434,15 @@ export async function renderProfileContent(
     canManagePosts = false,
     onPostsUpdated = null,
     viewedUserId,
-    isTrainer = true
+    isTrainer = false,
+    isOwnProfile = false
   } = params;
 
   const HandlebarsGlobal = (window as unknown as { Handlebars: { templates: Record<string, (context: Record<string, unknown>) => string> } }).Handlebars;
   const template = HandlebarsGlobal.templates['ProfileContent.hbs'];
 
   let tierNameMap: Map<number, string> | undefined;
-let tierPriceMap: Map<number, number> | undefined;
-// Загружаем уровни подписки, если просматриваем тренера (своего или чужого)
-if (isTrainer) {
-  try {
-    const tiersResp = await api.getTrainerTiers(viewedUserId);
-    if (tiersResp?.tiers) {
-      tierNameMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.name]));
-      tierPriceMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.price]));
-    }
-  } catch {}
-}
+  let tierPriceMap: Map<number, number> | undefined;
 
   const tabs = isTrainer
     ? [
@@ -606,10 +665,12 @@ if (isTrainer) {
         sectionTitleEl.textContent = isTrainer ? 'О тренере' : 'О себе';
         if (postsContainer) postsContainer.style.display = 'block';
         if (isTrainer) {
-          await showTrainerAbout(postsContainer, api, viewedUserId);
+          void showTrainerAbout(postsContainer, api, viewedUserId);
         } else {
-          const profile = await api.getProfile(viewedUserId);
-          showClientAbout(postsContainer, profile);
+          void api.getProfile(viewedUserId).then(p => showClientAbout(postsContainer, p)).catch(() => {
+            setPostsContainerMessageState(postsContainer, true);
+            postsContainer.innerHTML = '<div class="profile-content__empty"><p>Не удалось загрузить профиль</p></div>';
+          });
         }
       } else if (tabId === 'subscriptions') {
         toggleSidebarVisibility(false);
@@ -618,7 +679,7 @@ if (isTrainer) {
         sectionTitleEl.textContent = 'Подписки';
         if (subsContainer) {
           subsContainer.style.display = 'block';
-          renderTiersSection(subsContainer, api, isTrainer);
+          void renderSubscriptionsSection(subsContainer, api, isTrainer, isOwnProfile);
         }
       } else if (tabId === 'publications' && !isTrainer) {
         if (filtersElement) filtersElement.style.display = 'none';
@@ -626,8 +687,8 @@ if (isTrainer) {
         sectionTitleEl.textContent = 'Понравившиеся';
         if (postsContainer) postsContainer.style.display = 'block';
         toggleSearchVisibility(true);
-        const likedPosts = await loadLikedPosts(api, viewedUserId);
-        allPosts = likedPosts as PostWithAuthor[];
+        showPostsSkeleton(postsContainer);
+        allPosts = (await loadLikedPosts(api, viewedUserId)) as PostWithAuthor[];
         refreshVisiblePosts();
       } else {
         if (filtersElement) {
@@ -640,6 +701,7 @@ if (isTrainer) {
         if (postsContainer) postsContainer.style.display = 'block';
         toggleSearchVisibility(true);
         if (tabId === 'main' || tabId === 'publications') {
+          showPostsSkeleton(postsContainer);
           await reloadAllPosts();
         } else {
           refreshVisiblePosts();
@@ -671,33 +733,50 @@ if (isTrainer) {
     }
   }
 
+  // Добавляем элемент в DOM сразу — данные грузятся асинхронно
+  container.appendChild(element);
+
   if (currentTab === 'about') {
     toggleSidebarVisibility(false);
     if (postsContainer) postsContainer.style.display = 'block';
     if (isTrainer) {
-      await showTrainerAbout(postsContainer, api, viewedUserId);
+      void showTrainerAbout(postsContainer, api, viewedUserId);
     } else {
-      const profile = await api.getProfile(viewedUserId);
-      showClientAbout(postsContainer, profile);
+      void api.getProfile(viewedUserId).then(p => showClientAbout(postsContainer, p)).catch(() => {
+        setPostsContainerMessageState(postsContainer, true);
+        postsContainer.innerHTML = '<div class="profile-content__empty"><p>Не удалось загрузить профиль</p></div>';
+      });
     }
   } else if (currentTab === 'subscriptions') {
     toggleSidebarVisibility(false);
     if (subsContainer) {
       subsContainer.style.display = 'block';
-      renderTiersSection(subsContainer, api, isTrainer);
+      void renderSubscriptionsSection(subsContainer, api, isTrainer, isOwnProfile);
     }
   } else {
     if (postsContainer) postsContainer.style.display = 'block';
     toggleSearchVisibility(true);
-    if (currentTab === 'publications' && !isTrainer) {
-      const likedPosts = await loadLikedPosts(api, viewedUserId);
-      allPosts = likedPosts as PostWithAuthor[];
-    } else {
-      await reloadAllPosts();
-    }
-    refreshVisiblePosts();
+    showPostsSkeleton(postsContainer);
+
+    void (async () => {
+      if (currentTab === 'publications' && !isTrainer) {
+        allPosts = (await loadLikedPosts(api, viewedUserId)) as PostWithAuthor[];
+        refreshVisiblePosts();
+      } else {
+        // Загружаем тиры и посты вместе
+        if (isTrainer) {
+          try {
+            const tiersResp = await api.getTrainerTiers(viewedUserId);
+            if (tiersResp?.tiers) {
+              tierNameMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.name]));
+              tierPriceMap = new Map(tiersResp.tiers.map(t => [t.tier_id, t.price]));
+            }
+          } catch {}
+        }
+        await reloadAllPosts();
+      }
+    })();
   }
 
-  container.appendChild(element);
   return element;
 }

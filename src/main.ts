@@ -1,7 +1,7 @@
 import Handlebars from 'handlebars';
 import { API_BASE_URL } from './config/constants';
 import { ApiClient } from './utils/api';
-import { loadProfilePageData } from './utils/profilePageData';
+import { mapProfileData } from './utils/profilePageData';
 import type { AuthResponse } from './types/auth.types';
 import type { Router } from './types/router.types';
 import './styles/index.css';
@@ -150,17 +150,19 @@ function createRouter(api: ApiClient): Router {
       return;
     }
     try {
-      const data = await loadProfilePageData(api, userId, currentUser);
+      // Загружаем только профиль (быстро) — посты загрузятся внутри страницы
+      const profileData = await api.getProfile(userId);
+      const mappedData = mapProfileData(profileData, currentUser);
 
       const { renderProfilePage } = await import('./pages/ProfilePage/ProfilePage');
       await renderProfilePage(api, app, {
-        profile: data.profile,
-        currentUser: data.currentUser,
+        profile: mappedData.profile,
+        currentUser: mappedData.currentUser,
         subscriptions: [],
-        posts: data.posts,
+        posts: [],
         activeTab: 'publications',
         popularPosts: [],
-        viewedUserId: data.viewedUserId,
+        viewedUserId: userId,
         onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
       });
     } catch (error: unknown) {

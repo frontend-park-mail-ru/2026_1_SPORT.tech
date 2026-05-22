@@ -319,6 +319,64 @@ h6 { font-size: var(--font-size-md); }
     }
 }
 
+/* ===== СКЕЛЕТОН КАРТОЧКИ ПОСТА ===== */
+.post-skeleton {
+    background: rgba(255, 255, 255, 0.76);
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(36, 67, 103, 0.06);
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.post-skeleton__header {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.post-skeleton__avatar {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    flex-shrink: 0;
+    margin-bottom: 0 !important;
+}
+
+.post-skeleton__meta {
+    flex: 1;
+}
+
+.post-skeleton__name {
+    height: 14px;
+    width: 55%;
+    margin-bottom: 8px !important;
+}
+
+.post-skeleton__role {
+    height: 12px;
+    width: 35%;
+    margin-bottom: 0 !important;
+}
+
+.post-skeleton__title {
+    height: 20px;
+    width: 75%;
+    margin-bottom: 12px;
+}
+
+.post-skeleton__line {
+    height: 13px;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.post-skeleton__line--short {
+    width: 65%;
+    margin-bottom: 0;
+}
+
 @media (max-width: 768px) {
     :root {
         --font-size-4xl: 32px;

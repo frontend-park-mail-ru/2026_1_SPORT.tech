@@ -84,7 +84,8 @@ export async function renderProfilePage(
       canManagePosts: profile.isOwnProfile && profile.isTrainer,
       onPostsUpdated: reloadAllData,
       viewedUserId,
-      isTrainer: profile.isTrainer
+      isTrainer: profile.isTrainer,
+      isOwnProfile: profile.isOwnProfile
     })
   ]);
 
