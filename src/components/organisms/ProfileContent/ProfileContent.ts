@@ -413,7 +413,7 @@ async function renderSubscriptionsSection(
     wrapper.appendChild(button);
     container.appendChild(wrapper);
   } else if (!isOwnProfile && isTrainer) {
-    wrapper.innerHTML = `<h3 style="margin-bottom:16px;">Уровни подписки</h3>`;
+    wrapper.innerHTML = '<h3 style="margin-bottom:16px;">Уровни подписки</h3>';
     const skeletonEl = document.createElement('div');
     skeletonEl.innerHTML = `
       <div class="page-skeleton__block" style="height:76px;border-radius:12px;margin-bottom:12px;"></div>
@@ -568,7 +568,7 @@ export async function renderProfileContent(
     ? [
       { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
       { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
-      ...(isOwnProfile ? [{ id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' }] : []),
+      ...(isOwnProfile ? [{ id: 'subscriptions', label: 'Уровни подписки', active: activeTab === 'subscriptions' }] : []),
       { id: 'about', label: 'О тренере', active: activeTab === 'about' }
     ]
     : [
@@ -579,7 +579,7 @@ export async function renderProfileContent(
   const sectionTitles: Record<string, string> = {
     main: 'Недавние публикации',
     publications: isTrainer ? 'Все публикации' : 'Понравившиеся',
-    subscriptions: 'Подписки',
+    subscriptions: 'Уровни подписки',
     about: isTrainer ? 'О тренере' : 'О себе'
   };
 
@@ -804,7 +804,7 @@ export async function renderProfileContent(
         toggleSidebarVisibility(false);
         if (filtersElement) filtersElement.style.display = 'none';
         if (addButtonContainer) addButtonContainer.style.display = 'none';
-        sectionTitleEl.textContent = 'Подписки';
+        sectionTitleEl.textContent = 'Уровни подписки';
         if (subsContainer) {
           subsContainer.style.display = 'block';
           void renderSubscriptionsSection(subsContainer, api, isTrainer, isOwnProfile, viewedUserId);
