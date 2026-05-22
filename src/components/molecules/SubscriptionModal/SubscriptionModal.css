@@ -95,3 +95,31 @@
   background: #FFF5F0;
   border-radius: 8px;
 }
+
+.subscription-modal__redirect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.subscription-modal__redirect-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f0f0f0;
+  border-top-color: #E85A2B;
+  border-radius: 50%;
+  animation: sub-spin 0.8s linear infinite;
+}
+
+@keyframes sub-spin {
+  to { transform: rotate(360deg); }
+}
+
+.subscription-modal__redirect-text {
+  color: #4a5568;
+  font-size: 15px;
+  margin: 0;
+}

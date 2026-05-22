@@ -7,7 +7,8 @@
   position: fixed;
   left: 0;
   top: 0;
-  overflow: hidden; /* Скрываем скролл у корневого элемента */
+  overflow: hidden;
+  z-index: 10;
 }
 
 /* Скроллируемый контейнер для всего содержимого */

@@ -550,6 +550,8 @@ export class ApiClient {
     amount_value: number;
     currency: string;
     message: string;
+    return_url: string;
+    cancel_url: string;
   }): Promise<PaymentResponse> {
     await this.ensureCsrfToken();
     return this.request<PaymentResponse>('/v1/payments/donations', {
@@ -558,7 +560,20 @@ export class ApiClient {
     });
   }
 
-  async confirmDonationPayment(paymentId: number, confirmationToken: string): Promise<PaymentResponse> {
+  async createSubscriptionPayment(data: {
+    trainer_id: number;
+    tier_id: number;
+    return_url: string;
+    cancel_url: string;
+  }): Promise<PaymentResponse> {
+    await this.ensureCsrfToken();
+    return this.request<PaymentResponse>('/v1/payments/subscriptions', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async confirmPayment(paymentId: number, confirmationToken: string): Promise<PaymentResponse> {
     await this.ensureCsrfToken();
     return this.request<PaymentResponse>(`/v1/payments/${paymentId}/confirm`, {
       method: 'POST',

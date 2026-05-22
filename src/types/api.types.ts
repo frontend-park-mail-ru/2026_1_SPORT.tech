@@ -197,6 +197,7 @@ export interface PaymentResponse {
   confirmation_token: string;
   status: string;
   donation: PaymentDonation | null;
+  subscription: Subscription | null;
   amount_value: number;
   currency: string;
   message: string;

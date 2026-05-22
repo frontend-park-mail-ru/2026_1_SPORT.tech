@@ -117,8 +117,8 @@
   transition: opacity 0.2s;
 }
 
-.post-card__body--short.post-card__body--hidden::after {
-  opacity: 0;
+.post-card__body--short.post-card__body--hidden {
+  display: none;
 }
 
 /* Кнопка Подробнее */

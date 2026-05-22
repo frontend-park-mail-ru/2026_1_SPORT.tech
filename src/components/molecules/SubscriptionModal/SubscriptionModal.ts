@@ -65,7 +65,7 @@ export async function openSubscriptionModal({
 
     modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => modal.remove()));
 
-    // Обработка выбора уровня (подписка или смена)
+    // Выбор уровня → оплата через провайдер
     modal.querySelectorAll('[data-subscribe]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const tierId = Number((e.currentTarget as HTMLElement).dataset.subscribe);
@@ -73,16 +73,33 @@ export async function openSubscriptionModal({
         const originalText = button.textContent || '';
 
         button.disabled = true;
-        button.textContent = 'Обработка...';
+        button.textContent = 'Перенаправление...';
 
         try {
-          if (currentSubscription) {
-            await api.updateSubscription(currentSubscription.subscription_id, tierId);
-          } else {
-            await api.subscribeToTrainer(trainerId, tierId);
+          const origin = window.location.origin;
+          const payment = await api.createSubscriptionPayment({
+            trainer_id: trainerId,
+            tier_id: tierId,
+            return_url: `${origin}/payment/return`,
+            cancel_url: `${origin}/payment/cancel`
+          });
+
+          if (payment.confirmation_url) {
+            // Показываем индикатор и редиректим
+            modal.querySelector('.subscription-modal__panel')!.innerHTML = `
+              <div class="subscription-modal__redirect">
+                <div class="subscription-modal__redirect-spinner"></div>
+                <p class="subscription-modal__redirect-text">Перенаправляем на страницу оплаты&hellip;</p>
+              </div>
+            `;
+            setTimeout(() => {
+              window.location.href = payment.confirmation_url;
+            }, 600);
+            return;
           }
+
+          // Без confirmation_url — тестовый режим, считаем успехом
           modal.remove();
-          // Колбэк для обновления UI
           if (onSubscribed) onSubscribed();
         } catch {
           button.disabled = false;
@@ -91,7 +108,7 @@ export async function openSubscriptionModal({
       });
     });
 
-    // Отписка
+    // Отписка остаётся прямой (не через платёжного провайдера)
     const unsubscribeBtn = modal.querySelector('[data-unsubscribe]');
     if (unsubscribeBtn && currentSubscription) {
       unsubscribeBtn.addEventListener('click', async () => {

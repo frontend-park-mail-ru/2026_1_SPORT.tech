@@ -100,6 +100,35 @@
   margin-bottom: 32px;
 }
 
+.payment-result__sub-info {
+  background: #F7F9FC;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 12px 0 24px;
+  text-align: left;
+}
+
+.payment-result__sub-info p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #444;
+}
+
+.payment-result__sub-tier strong {
+  color: #1A1A1A;
+}
+
+.payment-result__sub-price {
+  font-size: 18px !important;
+  font-weight: 700;
+  color: #E85A2B !important;
+}
+
+.payment-result__sub-expires {
+  color: #666 !important;
+  font-size: 13px !important;
+}
+
 .payment-result__actions {
   display: flex;
   flex-direction: column;

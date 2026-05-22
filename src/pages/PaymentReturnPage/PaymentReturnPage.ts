@@ -25,23 +25,48 @@ function renderProcessing(el: HTMLElement): void {
 }
 
 function renderSuccess(el: HTMLElement, payment: PaymentResponse, navigateTo: (p: string) => void): void {
-  const amountStr = formatAmount(payment.amount_value, payment.currency || 'RUB');
+  const isSubscription = !!payment.subscription;
+  const trainerId = isSubscription
+    ? payment.subscription!.trainer_id
+    : payment.recipient_user_id;
+
+  let details = '';
+  if (isSubscription) {
+    const sub = payment.subscription!;
+    const price = (sub.price / 100).toLocaleString('ru-RU');
+    const expires = sub.expires_at
+      ? new Date(sub.expires_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+      : '';
+    details = `
+      <div class="payment-result__sub-info">
+        <p class="payment-result__sub-tier">Тариф: <strong>${sub.tier_name}</strong></p>
+        <p class="payment-result__sub-price">${price} ₽/мес</p>
+        ${expires ? `<p class="payment-result__sub-expires">Активна до: ${expires}</p>` : ''}
+      </div>
+    `;
+  } else {
+    const amountStr = formatAmount(payment.amount_value, payment.currency || 'RUB');
+    details = `
+      <div class="payment-result__amount">${amountStr}</div>
+      <p class="payment-result__message">${payment.message || 'Спасибо за поддержку!'}</p>
+    `;
+  }
+
   el.innerHTML = `
     <div class="payment-result">
       <div class="payment-result__icon payment-result__icon--success">✓</div>
-      <h1 class="payment-result__title">Оплата прошла!</h1>
-      <div class="payment-result__amount">${amountStr}</div>
-      <p class="payment-result__message">${payment.message || 'Спасибо за поддержку!'}</p>
+      <h1 class="payment-result__title">${isSubscription ? 'Подписка оформлена!' : 'Оплата прошла!'}</h1>
+      ${details}
       <div class="payment-result__actions">
         <button class="payment-result__btn payment-result__btn--primary" id="btn-home">На главную</button>
-        ${payment.recipient_user_id ? `<button class="payment-result__btn payment-result__btn--secondary" id="btn-profile">Профиль тренера</button>` : ''}
+        ${trainerId ? `<button class="payment-result__btn payment-result__btn--secondary" id="btn-profile">Профиль тренера</button>` : ''}
       </div>
     </div>
   `;
   el.querySelector('#btn-home')?.addEventListener('click', () => navigateTo('/'));
-  if (payment.recipient_user_id) {
+  if (trainerId) {
     el.querySelector('#btn-profile')?.addEventListener('click', () =>
-      navigateTo(`/profile/${payment.recipient_user_id}`)
+      navigateTo(`/profile/${trainerId}`)
     );
   }
 }
@@ -113,7 +138,7 @@ export async function renderPaymentReturnPage(
   }
 
   try {
-    const payment = await api.confirmDonationPayment(paymentId, confirmationToken);
+    const payment = await api.confirmPayment(paymentId, confirmationToken);
     renderSuccess(resultEl, payment, navigateTo);
   } catch (error: unknown) {
     const err = error as { message?: string; data?: { error?: { message?: string } } };

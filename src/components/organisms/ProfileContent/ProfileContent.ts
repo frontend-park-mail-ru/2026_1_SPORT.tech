@@ -392,7 +392,8 @@ async function renderSubscriptionsSection(
   container: HTMLElement,
   api: ApiClient,
   isTrainer: boolean,
-  isOwnProfile: boolean
+  isOwnProfile: boolean,
+  viewedUserId: number
 ): Promise<void> {
   container.innerHTML = '';
   const wrapper = document.createElement('div');
@@ -412,11 +413,58 @@ async function renderSubscriptionsSection(
     wrapper.appendChild(button);
     container.appendChild(wrapper);
   } else if (!isOwnProfile && isTrainer) {
-    wrapper.innerHTML = `
-      <h3 style="margin-bottom:16px;">Подписки</h3>
-      <p style="color:#666;">Для оформления или изменения подписки воспользуйтесь кнопкой в шапке профиля тренера.</p>
+    wrapper.innerHTML = `<h3 style="margin-bottom:16px;">Уровни подписки</h3>`;
+    const skeletonEl = document.createElement('div');
+    skeletonEl.innerHTML = `
+      <div class="page-skeleton__block" style="height:76px;border-radius:12px;margin-bottom:12px;"></div>
+      <div class="page-skeleton__block" style="height:76px;border-radius:12px;"></div>
     `;
+    wrapper.appendChild(skeletonEl);
     container.appendChild(wrapper);
+
+    try {
+      const tiersData = await (api as any).getTrainerTiers(viewedUserId);
+      skeletonEl.remove();
+      const tiers: Array<{ tier_id: number; name: string; price: number; description?: string }> =
+        tiersData?.tiers ?? [];
+
+      if (tiers.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'tiers-empty';
+        empty.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40" style="color:#ccc;">
+            <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+          </svg>
+          <p style="margin:12px 0 4px;font-weight:600;color:#555;">Тренер не настроил уровни подписки</p>
+          <p style="color:#999;font-size:13px;">Возможно, они появятся позже</p>
+        `;
+        empty.style.cssText = 'text-align:center;padding:32px 16px;';
+        wrapper.appendChild(empty);
+      } else {
+        tiers.forEach(tier => {
+          const card = document.createElement('div');
+          card.style.cssText = 'border:1px solid #eee;border-radius:12px;padding:16px;margin-bottom:12px;background:#fff;';
+          card.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${tier.description ? '8px' : '0'};">
+              <strong style="font-size:15px;">${escapeHtml(tier.name)}</strong>
+              <span style="color:#E85A2B;font-weight:700;font-size:16px;">${tier.price === 0 ? 'Бесплатно' : `${tier.price} ₽/мес`}</span>
+            </div>
+            ${tier.description ? `<p style="color:#666;font-size:13px;margin:0;">${escapeHtml(tier.description)}</p>` : ''}
+          `;
+          wrapper.appendChild(card);
+        });
+        const hint = document.createElement('p');
+        hint.style.cssText = 'color:#999;font-size:13px;margin-top:12px;text-align:center;';
+        hint.textContent = 'Для оформления подписки используйте кнопку в шапке профиля';
+        wrapper.appendChild(hint);
+      }
+    } catch {
+      skeletonEl.remove();
+      const errorEl = document.createElement('p');
+      errorEl.style.cssText = 'color:#999;';
+      errorEl.textContent = 'Не удалось загрузить уровни подписки';
+      wrapper.appendChild(errorEl);
+    }
   } else {
     wrapper.innerHTML = `<h3 style="margin-bottom:16px;">Мои подписки</h3>`;
     const skeletonEl = document.createElement('div');
@@ -729,7 +777,7 @@ export async function renderProfileContent(
         sectionTitleEl.textContent = 'Подписки';
         if (subsContainer) {
           subsContainer.style.display = 'block';
-          void renderSubscriptionsSection(subsContainer, api, isTrainer, isOwnProfile);
+          void renderSubscriptionsSection(subsContainer, api, isTrainer, isOwnProfile, viewedUserId);
         }
       } else if (tabId === 'publications' && !isTrainer) {
         if (filtersElement) filtersElement.style.display = 'none';
@@ -806,7 +854,7 @@ export async function renderProfileContent(
     toggleSidebarVisibility(false);
     if (subsContainer) {
       subsContainer.style.display = 'block';
-      void renderSubscriptionsSection(subsContainer, api, isTrainer, isOwnProfile);
+      void renderSubscriptionsSection(subsContainer, api, isTrainer, isOwnProfile, viewedUserId);
     }
   } else {
     if (postsContainer) postsContainer.style.display = 'block';

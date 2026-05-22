@@ -72,23 +72,20 @@ export async function openDonationModal({
 
     submitBtn.disabled = true;
     const originalBtnHtml = submitBtn.innerHTML;
-    submitBtn.innerHTML = `
-      <span class="donation-modal__cta-text">Перенаправление...</span>
-      <span class="donation-modal__sbp" aria-hidden="true">
-        <span class="donation-modal__sbp-icon"></span>
-        <span class="donation-modal__sbp-label">сбп система быстрых платежей</span>
-      </span>
-    `;
+    submitBtn.textContent = 'Перенаправление...';
 
     try {
       const amountInKopecks = Math.round((result.amountNumber || 0) * 100);
       const message = messageApi.getValue().trim() || 'Пожертвование';
+      const origin = window.location.origin;
 
       const payment = await api.createDonationPayment({
         user_id: recipientUserId,
         amount_value: amountInKopecks,
         currency: 'RUB',
-        message
+        message,
+        return_url: `${origin}/payment/return`,
+        cancel_url: `${origin}/payment/cancel`
       });
 
       if (payment.confirmation_url) {

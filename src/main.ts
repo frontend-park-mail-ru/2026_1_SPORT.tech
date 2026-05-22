@@ -247,6 +247,10 @@ function createRouter(api: ApiClient): Router {
       else await showPaymentReturnPage(currentUser);
       return;
     }
+    if (path === '/payment/cancel') {
+      navigateTo(isAuthenticated ? '/' : '/auth');
+      return;
+    }
     navigateTo(isAuthenticated ? '/' : '/auth');
   }
 
