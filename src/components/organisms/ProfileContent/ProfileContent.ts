@@ -388,6 +388,157 @@ function showPostsSkeleton(container: HTMLElement): void {
   container.innerHTML = card + card + card;
 }
 
+function appendSubsSkeleton(wrapper: HTMLElement): HTMLElement {
+  const skeletonEl = document.createElement('div');
+  skeletonEl.innerHTML = `
+    <div class="page-skeleton__block" style="height:76px;border-radius:12px;margin-bottom:12px;"></div>
+    <div class="page-skeleton__block" style="height:76px;border-radius:12px;"></div>
+  `;
+  wrapper.appendChild(skeletonEl);
+  return skeletonEl;
+}
+
+function buildPersonCard(opts: {
+  name: string;
+  avatarUrl?: string | null;
+  roleLabel: string;
+  tierName: string;
+  price: number;
+  expiresAt: string;
+  navigateToUserId: number;
+}): HTMLElement {
+  const avatarHtml = opts.avatarUrl
+    ? `<img src="${opts.avatarUrl}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+    : `<div style="width:36px;height:36px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#888;flex-shrink:0;">${opts.name.charAt(0).toUpperCase()}</div>`;
+  const expiresDate = opts.expiresAt ? new Date(opts.expiresAt).toLocaleDateString('ru-RU') : 'Не указано';
+
+  const card = document.createElement('div');
+  card.style.cssText = 'border:1px solid #eee;border-radius:12px;padding:16px;margin-bottom:12px;background:#fff;cursor:pointer;transition:box-shadow 0.2s;';
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+      ${avatarHtml}
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:15px;color:#1a2b3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(opts.name)}</div>
+        <div style="font-size:12px;color:#999;">${escapeHtml(opts.roleLabel)}</div>
+      </div>
+      <span style="color:#E85A2B;font-weight:700;font-size:15px;flex-shrink:0;">${opts.price} ₽/мес</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f0f0f0;">
+      <div>
+        <div style="font-size:13px;color:#555;font-weight:500;">${escapeHtml(opts.tierName)}</div>
+        <div style="font-size:12px;color:#999;margin-top:2px;">Истекает: ${expiresDate}</div>
+      </div>
+      <span style="font-size:12px;color:#E85A2B;font-weight:600;">Перейти →</span>
+    </div>
+  `;
+  card.addEventListener('mouseenter', () => { card.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'; });
+  card.addEventListener('mouseleave', () => { card.style.boxShadow = 'none'; });
+  card.addEventListener('click', () => {
+    window.router.navigateTo(`/profile/${opts.navigateToUserId}`);
+  });
+  return card;
+}
+
+async function appendMySubscriptions(wrapper: HTMLElement, api: ApiClient, heading?: string): Promise<void> {
+  if (heading) {
+    const headingEl = document.createElement('h3');
+    headingEl.style.cssText = 'margin:24px 0 16px;';
+    headingEl.textContent = heading;
+    wrapper.appendChild(headingEl);
+  }
+  const skeletonEl = appendSubsSkeleton(wrapper);
+
+  try {
+    const subs = await api.getMySubscriptions();
+    skeletonEl.remove();
+    const activeSubs = subs.subscriptions.filter(s => s.active);
+
+    if (activeSubs.length === 0) {
+      const empty = document.createElement('p');
+      empty.style.cssText = 'color:#999;text-align:center;padding:20px;';
+      empty.textContent = 'У вас пока нет активных подписок';
+      wrapper.appendChild(empty);
+      return;
+    }
+
+    const trainerProfiles = await Promise.all(
+      activeSubs.map(sub => api.getProfile(sub.trainer_id).catch(() => null))
+    );
+
+    activeSubs.forEach((sub, idx) => {
+      const trainer = trainerProfiles[idx];
+      const trainerName = trainer
+        ? `${trainer.first_name} ${trainer.last_name}`.trim() || trainer.username
+        : `Тренер #${sub.trainer_id}`;
+      wrapper.appendChild(buildPersonCard({
+        name: trainerName,
+        avatarUrl: trainer?.avatar_url,
+        roleLabel: 'Тренер',
+        tierName: sub.tier_name,
+        price: sub.price,
+        expiresAt: sub.expires_at,
+        navigateToUserId: sub.trainer_id
+      }));
+    });
+  } catch {
+    skeletonEl.remove();
+    const errorEl = document.createElement('p');
+    errorEl.style.cssText = 'color:#999;';
+    errorEl.textContent = 'Не удалось загрузить подписки';
+    wrapper.appendChild(errorEl);
+  }
+}
+
+async function appendMySubscribers(wrapper: HTMLElement, api: ApiClient): Promise<void> {
+  const headingEl = document.createElement('h3');
+  headingEl.style.cssText = 'margin:24px 0 16px;';
+  headingEl.textContent = 'Мои подписчики';
+  wrapper.appendChild(headingEl);
+  const skeletonEl = appendSubsSkeleton(wrapper);
+
+  try {
+    const data = await api.getMySubscribers({ limit: 100 });
+    skeletonEl.remove();
+    const activeSubscribers = (data.subscribers || []).filter(s => s.active);
+
+    if (activeSubscribers.length === 0) {
+      const empty = document.createElement('p');
+      empty.style.cssText = 'color:#999;text-align:center;padding:20px;';
+      empty.textContent = 'У вас пока нет подписчиков';
+      wrapper.appendChild(empty);
+      return;
+    }
+
+    headingEl.textContent = `Мои подписчики (${activeSubscribers.length})`;
+
+    const clientProfiles = await Promise.all(
+      activeSubscribers.map(sub => api.getProfile(sub.client_id).catch(() => null))
+    );
+
+    activeSubscribers.forEach((sub, idx) => {
+      const client = clientProfiles[idx];
+      const clientName = client
+        ? `${client.first_name} ${client.last_name}`.trim() || client.username
+        : `Пользователь #${sub.client_id}`;
+      wrapper.appendChild(buildPersonCard({
+        name: clientName,
+        avatarUrl: client?.avatar_url,
+        roleLabel: 'Подписчик',
+        tierName: sub.tier_name,
+        price: sub.price,
+        expiresAt: sub.expires_at,
+        navigateToUserId: sub.client_id
+      }));
+    });
+  } catch {
+    skeletonEl.remove();
+    const errorEl = document.createElement('p');
+    errorEl.style.cssText = 'color:#999;';
+    errorEl.textContent = 'Не удалось загрузить подписчиков';
+    wrapper.appendChild(errorEl);
+  }
+}
+
 async function renderSubscriptionsSection(
   container: HTMLElement,
   api: ApiClient,
@@ -400,20 +551,25 @@ async function renderSubscriptionsSection(
   wrapper.className = 'tiers-settings';
 
   if (isOwnProfile && isTrainer) {
-    wrapper.innerHTML = `
+    const tiersHeader = document.createElement('div');
+    tiersHeader.innerHTML = `
       <h3 style="margin-bottom:16px;">Уровни подписки</h3>
       <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
     `;
+    wrapper.appendChild(tiersHeader);
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'button button--primary-orange button--medium';
-    button.style.cssText = 'width:100%;max-width:300px;margin:0 auto;display:block;';
+    button.style.cssText = 'width:100%;max-width:300px;margin:0 auto 8px;display:block;';
     button.textContent = 'Настроить уровни';
     button.addEventListener('click', () => openTiersModal({ api, onSaved: () => {} }));
     wrapper.appendChild(button);
     container.appendChild(wrapper);
+
+    await appendMySubscribers(wrapper, api);
+    await appendMySubscriptions(wrapper, api, 'Мои подписки');
   } else if (!isOwnProfile && isTrainer) {
-    wrapper.innerHTML = `<h3 style="margin-bottom:16px;">Уровни подписки</h3>`;
+    wrapper.innerHTML = '<h3 style="margin-bottom:16px;">Уровни подписки</h3>';
     const skeletonEl = document.createElement('div');
     skeletonEl.innerHTML = `
       <div class="page-skeleton__block" style="height:76px;border-radius:12px;margin-bottom:12px;"></div>
@@ -466,78 +622,8 @@ async function renderSubscriptionsSection(
       wrapper.appendChild(errorEl);
     }
   } else {
-    const skeletonEl = document.createElement('div');
-    skeletonEl.innerHTML = `
-      <div class="page-skeleton__block" style="height:76px;border-radius:12px;margin-bottom:12px;"></div>
-      <div class="page-skeleton__block" style="height:76px;border-radius:12px;"></div>
-    `;
-    wrapper.appendChild(skeletonEl);
     container.appendChild(wrapper);
-
-    try {
-      const subs = await api.getMySubscriptions();
-      skeletonEl.remove();
-      const activeSubs = subs.subscriptions.filter(s => s.active);
-
-      if (activeSubs.length === 0) {
-        const empty = document.createElement('p');
-        empty.style.cssText = 'color:#999;text-align:center;padding:20px;';
-        empty.textContent = 'У вас пока нет активных подписок';
-        wrapper.appendChild(empty);
-      } else {
-        // Загружаем профили тренеров параллельно
-        const trainerProfiles = await Promise.all(
-          activeSubs.map(sub =>
-            api.getProfile(sub.trainer_id).catch(() => null)
-          )
-        );
-
-        activeSubs.forEach((sub, idx) => {
-          const trainer = trainerProfiles[idx];
-          const trainerName = trainer
-            ? `${trainer.first_name} ${trainer.last_name}`.trim() || trainer.username
-            : `Тренер #${sub.trainer_id}`;
-          const avatarUrl = trainer?.avatar_url;
-          const avatarHtml = avatarUrl
-            ? `<img src="${avatarUrl}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
-            : `<div style="width:36px;height:36px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#888;flex-shrink:0;">${trainerName.charAt(0).toUpperCase()}</div>`;
-
-          const expiresDate = sub.expires_at ? new Date(sub.expires_at).toLocaleDateString('ru-RU') : 'Не указано';
-
-          const card = document.createElement('div');
-          card.style.cssText = 'border:1px solid #eee;border-radius:12px;padding:16px;margin-bottom:12px;background:#fff;cursor:pointer;transition:box-shadow 0.2s;';
-          card.innerHTML = `
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-              ${avatarHtml}
-              <div style="flex:1;min-width:0;">
-                <div style="font-weight:600;font-size:15px;color:#1a2b3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(trainerName)}</div>
-                <div style="font-size:12px;color:#999;">Тренер</div>
-              </div>
-              <span style="color:#E85A2B;font-weight:700;font-size:15px;flex-shrink:0;">${sub.price} ₽/мес</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f0f0f0;">
-              <div>
-                <div style="font-size:13px;color:#555;font-weight:500;">${escapeHtml(sub.tier_name)}</div>
-                <div style="font-size:12px;color:#999;margin-top:2px;">Истекает: ${expiresDate}</div>
-              </div>
-              <span style="font-size:12px;color:#E85A2B;font-weight:600;">Перейти →</span>
-            </div>
-          `;
-          card.addEventListener('mouseenter', () => { card.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'; });
-          card.addEventListener('mouseleave', () => { card.style.boxShadow = 'none'; });
-          card.addEventListener('click', () => {
-            window.router.navigateTo(`/profile/${sub.trainer_id}`);
-          });
-          wrapper.appendChild(card);
-        });
-      }
-    } catch {
-      skeletonEl.remove();
-      const errorEl = document.createElement('p');
-      errorEl.style.cssText = 'color:#999;';
-      errorEl.textContent = 'Не удалось загрузить подписки';
-      wrapper.appendChild(errorEl);
-    }
+    await appendMySubscriptions(wrapper, api);
   }
 }
 

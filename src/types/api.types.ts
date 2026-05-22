@@ -141,6 +141,18 @@ export interface UpdateSubscriptionPayload {
   tier_id: number;
 }
 
+export interface Subscriber {
+  subscription_id: number;
+  client_id: number;
+  tier_id: number;
+  tier_name: string;
+  price: number;
+  active: boolean;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Comment {
   comment_id: number;
   post_id: number;

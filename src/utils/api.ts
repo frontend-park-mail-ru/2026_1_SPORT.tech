@@ -19,7 +19,8 @@ import type {
   StatisticsResponse,
   BalanceResponse,
   Notification,
-  PaymentResponse
+  PaymentResponse,
+  Subscriber
 } from '../types/api.types';
 
 export interface ApiResponse<T = unknown> {
@@ -495,6 +496,14 @@ export class ApiClient {
 
   async getMySubscriptions(): Promise<{ subscriptions: Subscription[] }> {
     return this.request<{ subscriptions: Subscription[] }>('/v1/subscriptions/me');
+  }
+
+  async getMySubscribers(params?: { limit?: number; offset?: number }): Promise<{ subscribers: Subscriber[] }> {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    const qs = query.toString();
+    return this.request<{ subscribers: Subscriber[] }>(`/v1/subscribers/me${qs ? `?${qs}` : ''}`);
   }
 
   async cancelSubscription(subscriptionId: number): Promise<void> {

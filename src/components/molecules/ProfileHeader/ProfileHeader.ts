@@ -71,9 +71,10 @@ export async function renderProfileHeader(
     const handleClick = async () => {
       if (!viewedUserId) return;
 
+      // Подписываться может любой авторизованный пользователь (клиент или тренер),
+      // кроме как на самого себя.
       const currentUser = await api.getCurrentUser();
-      const isClient = currentUser?.user && !currentUser.user.is_trainer;
-      if (!isClient) return;
+      if (!currentUser?.user || currentUser.user.user_id === viewedUserId) return;
 
       // Свежая активная подписка перед открытием
       let existingSubscription = null;
