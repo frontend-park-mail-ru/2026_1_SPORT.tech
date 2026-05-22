@@ -108,6 +108,8 @@ export async function renderPostCard(
 
   const likeBtn = postCard.querySelector('[data-post-like]') as HTMLButtonElement | null;
   const likeCountEl = postCard.querySelector('[data-post-like-count]') as HTMLElement | null;
+  const commentBtn = postCard.querySelector('[data-post-comment]') as HTMLButtonElement | null;
+  const commentCountEl = postCard.querySelector('[data-post-comment-count]') as HTMLElement | null;
   const editBtn = postCard.querySelector('[data-post-edit]') as HTMLButtonElement | null;
   const deleteBtn = postCard.querySelector('[data-post-delete]') as HTMLButtonElement | null;
   const shareBtn = postCard.querySelector('[data-post-share]') as HTMLButtonElement | null;
@@ -194,6 +196,105 @@ export async function renderPostCard(
     });
   }
 
+  if (commentBtn && api) {
+    let commentsLoaded = false;
+    let commentsOpen = false;
+
+    const commentsSection = document.createElement('div');
+    commentsSection.className = 'post-card__comments';
+    commentsSection.style.display = 'none';
+    postCard.appendChild(commentsSection);
+
+    const renderComments = async (): Promise<void> => {
+      if (!commentsLoaded) {
+        commentsSection.innerHTML = `
+          <div class="post-card__comments-loading">
+            <div class="page-skeleton__block" style="height:40px;border-radius:8px;margin-bottom:8px;"></div>
+            <div class="page-skeleton__block" style="height:40px;border-radius:8px;"></div>
+          </div>
+        `;
+        try {
+          const data = await api.getComments(postId);
+          commentsLoaded = true;
+          renderCommentsList(data.comments);
+        } catch {
+          commentsSection.innerHTML = '<p class="post-card__comments-error">Не удалось загрузить комментарии</p>';
+        }
+      }
+    };
+
+    const renderCommentsList = (commentsList: Array<{ comment_id: number; author_user_id: number; body: string; created_at: string }>): void => {
+      const listHtml = commentsList.length > 0
+        ? commentsList.map(c => `
+            <div class="post-card__comment">
+              <div class="post-card__comment-author">Пользователь #${c.author_user_id}</div>
+              <div class="post-card__comment-body">${escapeHtml(c.body)}</div>
+            </div>
+          `).join('')
+        : '<p class="post-card__comments-empty">Комментариев пока нет</p>';
+
+      commentsSection.innerHTML = `
+        <div class="post-card__comments-list">${listHtml}</div>
+        ${finalCanView ? `
+          <div class="post-card__comment-form">
+            <input type="text" class="post-card__comment-input" placeholder="Написать комментарий...">
+            <button type="button" class="post-card__comment-submit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        ` : ''}
+      `;
+
+      const input = commentsSection.querySelector('.post-card__comment-input') as HTMLInputElement | null;
+      const submitBtn = commentsSection.querySelector('.post-card__comment-submit') as HTMLButtonElement | null;
+
+      const sendComment = async (): Promise<void> => {
+        if (!input || !input.value.trim() || !submitBtn) return;
+        const body = input.value.trim();
+        submitBtn.disabled = true;
+        try {
+          const resp = await api.createComment(postId, body);
+          input.value = '';
+          commentsList.push(resp.comment);
+          if (commentCountEl) commentCountEl.textContent = String(commentsList.length);
+          renderCommentsList(commentsList);
+        } catch {
+          // ignore
+        } finally {
+          submitBtn.disabled = false;
+        }
+      };
+
+      submitBtn?.addEventListener('click', (e: Event) => { e.stopPropagation(); void sendComment(); });
+      input?.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendComment(); }
+      });
+      input?.addEventListener('click', (e: Event) => e.stopPropagation());
+    };
+
+    commentBtn.addEventListener('click', async (e: Event) => {
+      e.stopPropagation();
+      commentsOpen = !commentsOpen;
+      commentsSection.style.display = commentsOpen ? 'block' : 'none';
+      commentBtn.classList.toggle('post-card__action--active', commentsOpen);
+      if (commentsOpen) {
+        postCard.classList.add('post-card--expanded');
+        if (shortBody) shortBody.style.display = 'none';
+        if (fullBody) fullBody.style.display = 'block';
+        await renderComments();
+      }
+    });
+  }
+
   container.appendChild(postCard);
   return postCard;
+}
+
+function escapeHtml(str: string): string {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

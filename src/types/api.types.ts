@@ -140,3 +140,27 @@ export interface Subscription {
 export interface UpdateSubscriptionPayload {
   tier_id: number;
 }
+
+export interface Comment {
+  comment_id: number;
+  post_id: number;
+  author_user_id: number;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StatisticsResponse {
+  trainer_id: number;
+  posts_count: number;
+  monthly_revenue: number;
+  total_revenue: number;
+  donations_count: number;
+  currency: string;
+}
+
+export interface BalanceResponse {
+  trainer_id: number;
+  amount_value: number;
+  currency: string;
+}

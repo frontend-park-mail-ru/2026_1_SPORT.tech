@@ -14,7 +14,10 @@ import type {
   DonationResponse,
   CSRFTokenResponse,
   Tier,
-  Subscription
+  Subscription,
+  Comment,
+  StatisticsResponse,
+  BalanceResponse
 } from '../types/api.types';
 
 export interface ApiResponse<T = unknown> {
@@ -495,5 +498,29 @@ export class ApiClient {
   async cancelSubscription(subscriptionId: number): Promise<void> {
     await this.ensureCsrfToken();
     await this.request(`/v1/subscriptions/${subscriptionId}`, { method: 'DELETE' });
+  }
+
+  // ========== COMMENTS ==========
+
+  async getComments(postId: number): Promise<{ comments: Comment[] }> {
+    return this.request<{ comments: Comment[] }>(`/v1/posts/${postId}/comments`);
+  }
+
+  async createComment(postId: number, body: string): Promise<{ comment: Comment }> {
+    await this.ensureCsrfToken();
+    return this.request<{ comment: Comment }>(`/v1/posts/${postId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body })
+    });
+  }
+
+  // ========== STATISTICS ==========
+
+  async getMyStatistics(): Promise<StatisticsResponse> {
+    return this.request<StatisticsResponse>('/v1/statistics/me');
+  }
+
+  async getMyBalance(): Promise<BalanceResponse> {
+    return this.request<BalanceResponse>('/v1/balance');
   }
 }
