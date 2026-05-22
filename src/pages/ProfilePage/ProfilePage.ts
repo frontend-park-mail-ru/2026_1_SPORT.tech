@@ -69,6 +69,7 @@ export async function renderProfilePage(
       role: profile.role,
       avatar: profile.avatar,
       isOwnProfile: profile.isOwnProfile,
+      isTrainer: profile.isTrainer,
       showDonate: profile.isTrainer,
       api,
       viewedUserId,

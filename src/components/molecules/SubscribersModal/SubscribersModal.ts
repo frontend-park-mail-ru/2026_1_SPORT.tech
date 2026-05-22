@@ -1,0 +1,85 @@
+// src/components/molecules/SubscribersModal/SubscribersModal.ts
+
+import type { ApiClient } from '../../../utils/api';
+
+export interface SubscribersModalOptions {
+  api: ApiClient;
+}
+
+function escapeHtml(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export async function openSubscribersModal({ api }: SubscribersModalOptions): Promise<void> {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div data-close style="position:absolute;inset:0;background:rgba(0,0,0,0.5);"></div>
+    <div style="position:relative;background:#fff;border-radius:16px;padding:24px;width:min(480px,92vw);max-height:80vh;overflow:auto;box-shadow:0 12px 48px rgba(0,0,0,0.2);">
+      <button data-close style="position:absolute;top:12px;right:16px;border:none;background:none;font-size:24px;line-height:1;cursor:pointer;color:#999;">&times;</button>
+      <h2 style="margin:0 0 16px;font-size:20px;color:#1a2b3c;">Мои подписчики</h2>
+      <div id="subscribers-modal-list"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => modal.remove()));
+
+  const listEl = modal.querySelector('#subscribers-modal-list') as HTMLElement;
+  listEl.innerHTML = `
+    <div class="page-skeleton__block" style="height:64px;border-radius:12px;margin-bottom:12px;"></div>
+    <div class="page-skeleton__block" style="height:64px;border-radius:12px;"></div>
+  `;
+
+  try {
+    const data = await api.getMySubscribers({ limit: 100 });
+    const active = (data.subscribers || []).filter(sub => sub.active);
+
+    if (active.length === 0) {
+      listEl.innerHTML = '<p style="color:#999;text-align:center;padding:24px;margin:0;">У вас пока нет подписчиков</p>';
+      return;
+    }
+
+    const profiles = await Promise.all(
+      active.map(sub => api.getProfile(sub.client_id).catch(() => null))
+    );
+
+    listEl.innerHTML = '';
+    active.forEach((sub, idx) => {
+      const client = profiles[idx];
+      const name = client
+        ? `${client.first_name} ${client.last_name}`.trim() || client.username
+        : `Пользователь #${sub.client_id}`;
+      const avatarUrl = client?.avatar_url;
+      const avatarHtml = avatarUrl
+        ? `<img src="${avatarUrl}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+        : `<div style="width:40px;height:40px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#888;flex-shrink:0;">${name.charAt(0).toUpperCase()}</div>`;
+      const expiresDate = sub.expires_at ? new Date(sub.expires_at).toLocaleDateString('ru-RU') : '—';
+
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #eee;border-radius:12px;margin-bottom:10px;cursor:pointer;transition:box-shadow 0.2s;';
+      row.innerHTML = `
+        ${avatarHtml}
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:14px;color:#1a2b3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
+          <div style="font-size:12px;color:#999;">${escapeHtml(sub.tier_name)} · до ${expiresDate}</div>
+        </div>
+        <span style="color:#E85A2B;font-weight:700;font-size:14px;flex-shrink:0;">${sub.price} ₽/мес</span>
+      `;
+      row.addEventListener('mouseenter', () => { row.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'; });
+      row.addEventListener('mouseleave', () => { row.style.boxShadow = 'none'; });
+      row.addEventListener('click', () => {
+        modal.remove();
+        window.router.navigateTo(`/profile/${sub.client_id}`);
+      });
+      listEl.appendChild(row);
+    });
+  } catch {
+    listEl.innerHTML = '<p style="color:#999;text-align:center;padding:24px;margin:0;">Не удалось загрузить подписчиков</p>';
+  }
+}
