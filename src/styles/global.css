@@ -108,18 +108,6 @@ body {
     overflow-x: hidden;
 }
 
-/* Постоянная оранжевая полоса за сайдбаром — убирает мерцание при навигации */
-body:not(.auth-page)::before {
-    content: '';
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 240px;
-    height: 100vh;
-    background: #E85A2B;
-    z-index: 0;
-    pointer-events: none;
-}
 
 img {
     max-width: 100%;

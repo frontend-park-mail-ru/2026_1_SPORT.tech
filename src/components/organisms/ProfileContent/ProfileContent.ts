@@ -466,7 +466,6 @@ async function renderSubscriptionsSection(
       wrapper.appendChild(errorEl);
     }
   } else {
-    wrapper.innerHTML = `<h3 style="margin-bottom:16px;">Мои подписки</h3>`;
     const skeletonEl = document.createElement('div');
     skeletonEl.innerHTML = `
       <div class="page-skeleton__block" style="height:76px;border-radius:12px;margin-bottom:12px;"></div>

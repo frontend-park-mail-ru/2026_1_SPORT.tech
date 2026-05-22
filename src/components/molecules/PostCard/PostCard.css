@@ -150,15 +150,12 @@
   transition: transform 0.3s ease;
 }
 
-/* Анимация полного тела через grid-template-rows */
 .post-card__body--full {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.35s ease;
+  display: none;
 }
 
 .post-card__body--full.post-card__body--open {
-  grid-template-rows: 1fr;
+  display: block;
 }
 
 .post-card__body-inner {
