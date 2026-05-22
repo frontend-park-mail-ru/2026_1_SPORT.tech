@@ -89,6 +89,10 @@ export async function openDonationModal({
       });
 
       if (payment.confirmation_url) {
+        localStorage.setItem('sporteon_pending_payment', JSON.stringify({
+          payment_id: payment.payment_id,
+          confirmation_token: payment.confirmation_token
+        }));
         // Показываем сообщение об уходе на страницу оплаты
         form.innerHTML = `
           <div class="donation-modal__redirect">

@@ -486,17 +486,49 @@ async function renderSubscriptionsSection(
         empty.textContent = 'У вас пока нет активных подписок';
         wrapper.appendChild(empty);
       } else {
-        activeSubs.forEach(sub => {
-          const card = document.createElement('div');
-          card.style.cssText = 'border:1px solid #eee;border-radius:12px;padding:16px;margin-bottom:12px;';
+        // Загружаем профили тренеров параллельно
+        const trainerProfiles = await Promise.all(
+          activeSubs.map(sub =>
+            api.getProfile(sub.trainer_id).catch(() => null)
+          )
+        );
+
+        activeSubs.forEach((sub, idx) => {
+          const trainer = trainerProfiles[idx];
+          const trainerName = trainer
+            ? `${trainer.first_name} ${trainer.last_name}`.trim() || trainer.username
+            : `Тренер #${sub.trainer_id}`;
+          const avatarUrl = trainer?.avatar_url;
+          const avatarHtml = avatarUrl
+            ? `<img src="${avatarUrl}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+            : `<div style="width:36px;height:36px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#888;flex-shrink:0;">${trainerName.charAt(0).toUpperCase()}</div>`;
+
           const expiresDate = sub.expires_at ? new Date(sub.expires_at).toLocaleDateString('ru-RU') : 'Не указано';
+
+          const card = document.createElement('div');
+          card.style.cssText = 'border:1px solid #eee;border-radius:12px;padding:16px;margin-bottom:12px;background:#fff;cursor:pointer;transition:box-shadow 0.2s;';
           card.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-              <strong>${escapeHtml(sub.tier_name)}</strong>
-              <span style="color:#FF6B4A;font-weight:600;">${sub.price} ₽/мес</span>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+              ${avatarHtml}
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:15px;color:#1a2b3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(trainerName)}</div>
+                <div style="font-size:12px;color:#999;">Тренер</div>
+              </div>
+              <span style="color:#E85A2B;font-weight:700;font-size:15px;flex-shrink:0;">${sub.price} ₽/мес</span>
             </div>
-            <div style="color:#666;font-size:13px;">Истекает: ${expiresDate}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f0f0f0;">
+              <div>
+                <div style="font-size:13px;color:#555;font-weight:500;">${escapeHtml(sub.tier_name)}</div>
+                <div style="font-size:12px;color:#999;margin-top:2px;">Истекает: ${expiresDate}</div>
+              </div>
+              <span style="font-size:12px;color:#E85A2B;font-weight:600;">Перейти →</span>
+            </div>
           `;
+          card.addEventListener('mouseenter', () => { card.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'; });
+          card.addEventListener('mouseleave', () => { card.style.boxShadow = 'none'; });
+          card.addEventListener('click', () => {
+            window.router.navigateTo(`/profile/${sub.trainer_id}`);
+          });
           wrapper.appendChild(card);
         });
       }

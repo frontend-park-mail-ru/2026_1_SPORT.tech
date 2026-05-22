@@ -121,13 +121,26 @@ export async function renderPaymentReturnPage(
 
   const navigateTo = (path: string): void => window.router.navigateTo(path);
 
-  // Парсим параметры из URL
+  // Сначала пробуем URL-параметры, иначе берём из localStorage
   const urlParams = new URLSearchParams(window.location.search);
-  const paymentIdStr = urlParams.get('payment_id');
-  const confirmationToken = urlParams.get('confirmation_token');
+  let paymentIdStr = urlParams.get('payment_id');
+  let confirmationToken = urlParams.get('confirmation_token');
 
   if (!paymentIdStr || !confirmationToken) {
-    renderError(resultEl, 'Неверная ссылка возврата. Параметры оплаты не найдены.', navigateTo);
+    try {
+      const stored = localStorage.getItem('sporteon_pending_payment');
+      if (stored) {
+        const parsed = JSON.parse(stored) as { payment_id?: number; confirmation_token?: string };
+        if (parsed.payment_id) paymentIdStr = String(parsed.payment_id);
+        if (parsed.confirmation_token) confirmationToken = parsed.confirmation_token;
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+
+  if (!paymentIdStr || !confirmationToken) {
+    renderError(resultEl, 'Параметры оплаты не найдены. Попробуйте снова или обратитесь в поддержку.', navigateTo);
     return;
   }
 
@@ -139,6 +152,7 @@ export async function renderPaymentReturnPage(
 
   try {
     const payment = await api.confirmPayment(paymentId, confirmationToken);
+    localStorage.removeItem('sporteon_pending_payment');
     renderSuccess(resultEl, payment, navigateTo);
   } catch (error: unknown) {
     const err = error as { message?: string; data?: { error?: { message?: string } } };

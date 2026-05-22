@@ -85,7 +85,10 @@ export async function openSubscriptionModal({
           });
 
           if (payment.confirmation_url) {
-            // Показываем индикатор и редиректим
+            localStorage.setItem('sporteon_pending_payment', JSON.stringify({
+              payment_id: payment.payment_id,
+              confirmation_token: payment.confirmation_token
+            }));
             modal.querySelector('.subscription-modal__panel')!.innerHTML = `
               <div class="subscription-modal__redirect">
                 <div class="subscription-modal__redirect-spinner"></div>
