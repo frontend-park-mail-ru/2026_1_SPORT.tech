@@ -172,6 +172,41 @@ function createRouter(api: ApiClient): Router {
     }
   }
 
+  async function showPaymentReturnPage(currentUser: AuthResponse | null): Promise<void> {
+    const app = document.getElementById('app');
+    if (!app) return;
+    renderProfileShell(app);
+    document.body.classList.remove('auth-page');
+    try {
+      const { renderPaymentReturnPage } = await import('./pages/PaymentReturnPage/PaymentReturnPage');
+      await renderPaymentReturnPage(api, app, {
+        currentUser,
+        onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
+      });
+    } catch (error: unknown) {
+      const err = error as Error;
+      app.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+    }
+  }
+
+  async function showNotificationsPage(currentUser: AuthResponse | null): Promise<void> {
+    const app = document.getElementById('app');
+    if (!app) return;
+    renderProfileShell(app);
+    document.body.classList.remove('auth-page');
+    try {
+      const { renderNotificationsPage } = await import('./pages/NotificationsPage/NotificationsPage');
+      await renderNotificationsPage(api, app, {
+        currentUser,
+        onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
+      });
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Failed to load NotificationsPage:', err);
+      app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+    }
+  }
+
   async function handleRouting(): Promise<void> {
     const currentUser = await getCurrentUser();
     const isAuthenticated = !!currentUser;
@@ -200,6 +235,16 @@ function createRouter(api: ApiClient): Router {
     if (viewedProfileMatch) {
       if (!isAuthenticated) navigateTo('/auth');
       else await showProfilePage(currentUser, Number(viewedProfileMatch[1]));
+      return;
+    }
+    if (path === '/notifications') {
+      if (!isAuthenticated) navigateTo('/auth');
+      else await showNotificationsPage(currentUser);
+      return;
+    }
+    if (path === '/payment/return') {
+      if (!isAuthenticated) navigateTo('/auth');
+      else await showPaymentReturnPage(currentUser);
       return;
     }
     navigateTo(isAuthenticated ? '/' : '/auth');

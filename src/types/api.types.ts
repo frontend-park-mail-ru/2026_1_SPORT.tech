@@ -164,3 +164,46 @@ export interface BalanceResponse {
   amount_value: number;
   currency: string;
 }
+
+export interface Notification {
+  notification_id: number;
+  user_id: number;
+  type: string;
+  title: string;
+  body: string;
+  is_read: boolean;
+  actor_user_id: number | null;
+  post_id: number | null;
+  comment_id: number | null;
+  donation_id: number | null;
+  subscription_id: number | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface PaymentDonation {
+  donation_id: number;
+  sender_user_id: number;
+  recipient_user_id: number;
+  amount_value: number;
+  currency: string;
+  message: string;
+  created_at: string;
+}
+
+export interface PaymentResponse {
+  payment_id: number;
+  confirmation_url: string;
+  confirmation_token: string;
+  status: string;
+  donation: PaymentDonation | null;
+  amount_value: number;
+  currency: string;
+  message: string;
+  recipient_user_id: number;
+  sender_user_id: number;
+  provider_payment_id: string;
+  confirmed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}

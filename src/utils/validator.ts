@@ -482,6 +482,19 @@ export class Validator {
     return Number.isFinite(n) ? n : null;
   }
 
+  validateDonationPaymentForm(data: { amount: string }): DonationValidationResult {
+    this.reset();
+    const amountNum = Validator.parseDonationAmount(data?.amount);
+    if (amountNum === null) {
+      this.addError('amount', 'Введите корректную сумму');
+    } else if (amountNum <= 0) {
+      this.addError('amount', 'Сумма должна быть больше нуля');
+    } else if (amountNum > 1_000_000_000) {
+      this.addError('amount', 'Сумма слишком велика');
+    }
+    return { isValid: !this.hasErrors(), errors: this.getErrors(), amountNumber: amountNum };
+  }
+
   validateDonationForm(data: { amount: string; email: string }): DonationValidationResult {
     this.reset();
     const amountNum = Validator.parseDonationAmount(data?.amount);

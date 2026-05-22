@@ -17,7 +17,9 @@ import type {
   Subscription,
   Comment,
   StatisticsResponse,
-  BalanceResponse
+  BalanceResponse,
+  Notification,
+  PaymentResponse
 } from '../types/api.types';
 
 export interface ApiResponse<T = unknown> {
@@ -522,5 +524,45 @@ export class ApiClient {
 
   async getMyBalance(): Promise<BalanceResponse> {
     return this.request<BalanceResponse>('/v1/balance');
+  }
+
+  // ========== NOTIFICATIONS ==========
+
+  async getNotifications(params?: { limit?: number; offset?: number }): Promise<{ notifications: Notification[] }> {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    const qs = query.toString();
+    return this.request<{ notifications: Notification[] }>(`/v1/notifications${qs ? `?${qs}` : ''}`);
+  }
+
+  async markNotificationRead(notificationId: number): Promise<{ notification: Notification }> {
+    await this.ensureCsrfToken();
+    return this.request<{ notification: Notification }>(`/v1/notifications/${notificationId}/read`, {
+      method: 'PATCH'
+    });
+  }
+
+  // ========== PAYMENTS ==========
+
+  async createDonationPayment(data: {
+    user_id: number;
+    amount_value: number;
+    currency: string;
+    message: string;
+  }): Promise<PaymentResponse> {
+    await this.ensureCsrfToken();
+    return this.request<PaymentResponse>('/v1/payments/donations', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async confirmDonationPayment(paymentId: number, confirmationToken: string): Promise<PaymentResponse> {
+    await this.ensureCsrfToken();
+    return this.request<PaymentResponse>(`/v1/payments/${paymentId}/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ confirmation_token: confirmationToken })
+    });
   }
 }

@@ -34,11 +34,15 @@
     <div class="post-card__content">
       <div class="post-card__text-block">{{{content}}}</div>
     </div>
+    <button type="button" class="post-card__expand-btn" data-post-expand-btn>
+      Подробнее
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
   </div>
 
-  <!-- Полная версия -->
-  <div class="post-card__body post-card__body--full" style="display:none;">
-    <div class="post-card__content">
+  <!-- Полная версия (анимированная) -->
+  <div class="post-card__body post-card__body--full">
+    <div class="post-card__body-inner">
       {{#each contentBlocks}}
         {{#if content}}
           <div class="post-card__text-block">{{{content}}}</div>
@@ -49,11 +53,11 @@
           </div>
         {{/if}}
       {{/each}}
+      <button type="button" class="post-card__collapse-btn" data-post-collapse>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="18 15 12 9 6 15"/></svg>
+        Свернуть
+      </button>
     </div>
-    <button type="button" class="post-card__collapse-btn" data-post-collapse>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="18 15 12 9 6 15"/></svg>
-      Свернуть
-    </button>
   </div>
 
   <div class="post-card__footer">

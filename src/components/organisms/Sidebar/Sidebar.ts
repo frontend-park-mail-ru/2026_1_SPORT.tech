@@ -28,7 +28,7 @@ export async function renderSidebar(
     activePage = 'home',
     currentUser = null,
     users = [],
-    api: _api,
+    api,
     onLogout = null
   } = params;
 
@@ -75,7 +75,8 @@ export async function renderSidebar(
       label: 'Уведомления',
       url: '/notifications',
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
-      active: activePage === 'notifications'
+      active: activePage === 'notifications',
+      badge: 0
     },
     {
       id: 'settings',
@@ -109,7 +110,12 @@ export async function renderSidebar(
   const urls: Record<string, string> = {
     'profile': '/profile',
     'home': '/',
-    'auth': '/auth'
+    'auth': '/auth',
+    'notifications': '/notifications',
+    'feed': '/feed',
+    'workouts': '/workouts',
+    'messenger': '/messenger',
+    'settings': '/settings'
   };
 
   element.querySelectorAll('.sidebar__nav-item').forEach((item: Element) => {
@@ -124,10 +130,20 @@ export async function renderSidebar(
 
   element.querySelectorAll('.sidebar__user-item').forEach((item: Element) => {
     item.addEventListener('click', () => {
-      const _userId = (item as HTMLElement).dataset.userId;
-      // TODO: Переход на профиль другого пользователя
+      const userId = (item as HTMLElement).dataset.userId;
+      if (userId) window.router.navigateTo(`/profile/${userId}`);
     });
   });
+
+  const currentUserEl = element.querySelector('.sidebar__current-user') as HTMLElement | null;
+  if (currentUserEl) {
+    currentUserEl.style.cursor = 'pointer';
+    currentUserEl.addEventListener('click', (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.sidebar__logout-btn')) return;
+      window.router.navigateTo('/profile');
+    });
+  }
 
   const logoutBtn = element.querySelector('.sidebar__logout-option') as HTMLElement;
   if (logoutBtn && onLogout) {
@@ -138,5 +154,28 @@ export async function renderSidebar(
   }
 
   container.appendChild(element);
+
+  // Load unread notification count
+  if (currentUser) {
+    void (async () => {
+      try {
+        const data = await api.getNotifications({ limit: 50 });
+        const unreadCount = (data.notifications || []).filter(n => !n.is_read).length;
+        if (unreadCount > 0) {
+          const notifLink = element.querySelector('[data-page="notifications"]');
+          if (notifLink) {
+            let badge = notifLink.querySelector('.sidebar__nav-badge') as HTMLElement | null;
+            if (!badge) {
+              badge = document.createElement('span');
+              badge.className = 'sidebar__nav-badge';
+              notifLink.appendChild(badge);
+            }
+            badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+          }
+        }
+      } catch { /* ignore */ }
+    })();
+  }
+
   return element;
 }

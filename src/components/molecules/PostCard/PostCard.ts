@@ -114,29 +114,35 @@ export async function renderPostCard(
   const deleteBtn = postCard.querySelector('[data-post-delete]') as HTMLButtonElement | null;
   const shareBtn = postCard.querySelector('[data-post-share]') as HTMLButtonElement | null;
   const collapseBtn = postCard.querySelector('[data-post-collapse]') as HTMLButtonElement | null;
+  const expandBtn = postCard.querySelector('[data-post-expand-btn]') as HTMLButtonElement | null;
   const shortBody = postCard.querySelector('.post-card__body--short') as HTMLElement | null;
   const fullBody = postCard.querySelector('.post-card__body--full') as HTMLElement | null;
 
-  postCard.addEventListener('click', (e: Event) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('[data-post-like]') ||
-        target.closest('[data-post-edit]') ||
-        target.closest('[data-post-delete]') ||
-        target.closest('[data-post-share]') ||
-        target.closest('[data-post-collapse]')) return;
-    if (shortBody && fullBody) {
-      shortBody.style.display = 'none';
-      fullBody.style.display = 'block';
-      postCard.classList.add('post-card--expanded');
-    }
-  });
+  const expandPost = (): void => {
+    if (!shortBody || !fullBody) return;
+    shortBody.classList.add('post-card__body--hidden');
+    fullBody.classList.add('post-card__body--open');
+    postCard.classList.add('post-card--expanded');
+  };
 
-  if (collapseBtn && shortBody && fullBody) {
+  const collapsePost = (): void => {
+    if (!shortBody || !fullBody) return;
+    shortBody.classList.remove('post-card__body--hidden');
+    fullBody.classList.remove('post-card__body--open');
+    postCard.classList.remove('post-card--expanded');
+  };
+
+  if (expandBtn) {
+    expandBtn.addEventListener('click', (e: Event) => {
+      e.stopPropagation();
+      expandPost();
+    });
+  }
+
+  if (collapseBtn) {
     collapseBtn.addEventListener('click', (e: Event) => {
       e.stopPropagation();
-      shortBody.style.display = 'block';
-      fullBody.style.display = 'none';
-      postCard.classList.remove('post-card--expanded');
+      collapsePost();
     });
   }
 
@@ -278,9 +284,7 @@ export async function renderPostCard(
       commentsSection.style.display = commentsOpen ? 'block' : 'none';
       commentBtn.classList.toggle('post-card__action--active', commentsOpen);
       if (commentsOpen) {
-        postCard.classList.add('post-card--expanded');
-        if (shortBody) shortBody.style.display = 'none';
-        if (fullBody) fullBody.style.display = 'block';
+        expandPost();
         await renderComments();
       }
     });

@@ -1,0 +1,142 @@
+.payment-return-page {
+  display: flex;
+  min-height: 100vh;
+  background: #F7F9FC;
+}
+
+.payment-return-page__sidebar {
+  width: 260px;
+  flex-shrink: 0;
+}
+
+.payment-return-page__main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+}
+
+.payment-return-page__container {
+  width: 100%;
+  max-width: 480px;
+}
+
+/* Processing state */
+.payment-result {
+  background: white;
+  border-radius: 16px;
+  padding: 48px 32px;
+  text-align: center;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+}
+
+.payment-result__spinner {
+  width: 56px;
+  height: 56px;
+  border: 4px solid #f0f0f0;
+  border-top-color: #E85A2B;
+  border-radius: 50%;
+  animation: pr-spin 0.9s linear infinite;
+  margin: 0 auto 24px;
+}
+
+@keyframes pr-spin {
+  to { transform: rotate(360deg); }
+}
+
+.payment-result__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin-bottom: 8px;
+}
+
+.payment-result__subtitle {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 0;
+}
+
+/* Success state */
+.payment-result__icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  margin: 0 auto 24px;
+  animation: pr-pop 0.35s ease;
+}
+
+@keyframes pr-pop {
+  0% { transform: scale(0); opacity: 0; }
+  80% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.payment-result__icon--success {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.payment-result__icon--error {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+.payment-result__amount {
+  font-size: 32px;
+  font-weight: 800;
+  color: #E85A2B;
+  margin: 8px 0 4px;
+}
+
+.payment-result__message {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 32px;
+}
+
+.payment-result__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.payment-result__btn {
+  padding: 12px 24px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.payment-result__btn--primary {
+  background: #E85A2B;
+  color: white;
+}
+
+.payment-result__btn--primary:hover {
+  background: #d44e22;
+}
+
+.payment-result__btn--secondary {
+  background: transparent;
+  border: 1px solid #ddd;
+  color: #444;
+}
+
+.payment-result__btn--secondary:hover {
+  background: #f5f5f5;
+}
+
+@media (max-width: 768px) {
+  .payment-return-page__sidebar { display: none; }
+  .payment-return-page__main { padding: 20px 16px; }
+  .payment-result { padding: 36px 24px; }
+}

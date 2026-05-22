@@ -108,16 +108,61 @@
 .post-card__body--short::after {
   content: '';
   position: absolute;
-  bottom: 0;
+  bottom: 28px; /* чуть выше кнопки "Подробнее" */
   left: 0;
   right: 0;
   height: 40px;
   background: linear-gradient(transparent, #f0f7ff);
   pointer-events: none;
+  transition: opacity 0.2s;
 }
 
+.post-card__body--short.post-card__body--hidden::after {
+  opacity: 0;
+}
+
+/* Кнопка Подробнее */
+.post-card__expand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  background: #FFF5F0;
+  border: 1px solid #FFD4CC;
+  border-radius: 20px;
+  color: #E85A2B;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 6px;
+  position: relative;
+  z-index: 2;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.post-card__expand-btn:hover {
+  background: #E85A2B;
+  color: white;
+  border-color: #E85A2B;
+}
+
+.post-card__expand-btn svg {
+  transition: transform 0.3s ease;
+}
+
+/* Анимация полного тела через grid-template-rows */
 .post-card__body--full {
-  display: none;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s ease;
+}
+
+.post-card__body--full.post-card__body--open {
+  grid-template-rows: 1fr;
+}
+
+.post-card__body-inner {
+  overflow: hidden;
 }
 
 /* Текстовый блок */
