@@ -368,6 +368,7 @@ export class ApiClient {
     only_available?: boolean;
     limit?: number;
     offset?: number;
+    sort?: string;
   }): Promise<{ posts: PostListItem[] }> {
     await this.ensureCsrfToken();
     return this.request<{ posts: PostListItem[] }>('/v1/posts:search', {

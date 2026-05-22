@@ -81,6 +81,10 @@ function createLogoutHandler(
   };
 }
 
+function setPageTitle(suffix?: string | null): void {
+  document.title = suffix ? `Sporteon — ${suffix}` : 'Sporteon';
+}
+
 function createRouter(api: ApiClient): Router {
   let currentUserPromise: Promise<AuthResponse | null> | null = null;
 
@@ -109,6 +113,7 @@ function createRouter(api: ApiClient): Router {
   async function showAuthPage(): Promise<void> {
     const app = document.getElementById('app');
     if (!app) return;
+    setPageTitle('Вход');
     renderBootScreen(app, 'Загружаем страницу входа');
     document.body.classList.add('auth-page');
     try {
@@ -124,6 +129,7 @@ function createRouter(api: ApiClient): Router {
   async function showHomePage(currentUser: AuthResponse | null): Promise<void> {
     const app = document.getElementById('app');
     if (!app) return;
+    setPageTitle('Главная');
     renderProfileShell(app);
     document.body.classList.remove('auth-page');
     try {
@@ -153,6 +159,7 @@ function createRouter(api: ApiClient): Router {
       // Загружаем только профиль (быстро) — посты загрузятся внутри страницы
       const profileData = await api.getProfile(userId);
       const mappedData = mapProfileData(profileData, currentUser);
+      setPageTitle(mappedData.profile.isOwnProfile ? 'Мой профиль' : mappedData.profile.name);
 
       const { renderProfilePage } = await import('./pages/ProfilePage/ProfilePage');
       await renderProfilePage(api, app, {
@@ -175,6 +182,7 @@ function createRouter(api: ApiClient): Router {
   async function showPaymentReturnPage(currentUser: AuthResponse | null): Promise<void> {
     const app = document.getElementById('app');
     if (!app) return;
+    setPageTitle('Оплата');
     renderProfileShell(app);
     document.body.classList.remove('auth-page');
     try {
@@ -192,6 +200,7 @@ function createRouter(api: ApiClient): Router {
   async function showNotificationsPage(currentUser: AuthResponse | null): Promise<void> {
     const app = document.getElementById('app');
     if (!app) return;
+    setPageTitle('Уведомления');
     renderProfileShell(app);
     document.body.classList.remove('auth-page');
     try {

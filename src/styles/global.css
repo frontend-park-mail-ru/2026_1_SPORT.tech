@@ -304,6 +304,24 @@ h6 { font-size: var(--font-size-md); }
     height: 160px;
 }
 
+/* Во время загрузки страницы держим левый бар оранжевым (как настоящий сайдбар),
+   иначе при переходах он мерцает: оранжевый → серый скелетон → оранжевый. */
+.profile-page--loading .profile-page__sidebar {
+    background: #E85A2B;
+}
+
+.profile-page--loading .page-skeleton--sidebar {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+.profile-page--loading .page-skeleton--sidebar .page-skeleton__block {
+    background: rgba(255, 255, 255, 0.18);
+    animation: none;
+}
+
 @keyframes app-loader-spin {
     to {
         transform: rotate(360deg);

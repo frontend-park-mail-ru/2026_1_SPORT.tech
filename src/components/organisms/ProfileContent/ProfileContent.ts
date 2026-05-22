@@ -400,18 +400,67 @@ async function renderSubscriptionsSection(
   wrapper.className = 'tiers-settings';
 
   if (isOwnProfile && isTrainer) {
-    wrapper.innerHTML = `
+    const header = document.createElement('div');
+    header.innerHTML = `
       <h3 style="margin-bottom:16px;">Уровни подписки</h3>
       <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
     `;
+    wrapper.appendChild(header);
+
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'button button--primary-orange button--medium';
-    button.style.cssText = 'width:100%;max-width:300px;margin:0 auto;display:block;';
+    button.style.cssText = 'width:100%;max-width:300px;margin:0 auto 20px;display:block;';
     button.textContent = 'Настроить уровни';
-    button.addEventListener('click', () => openTiersModal({ api, onSaved: () => {} }));
     wrapper.appendChild(button);
+
+    const tiersList = document.createElement('div');
+    wrapper.appendChild(tiersList);
     container.appendChild(wrapper);
+
+    const loadOwnTiers = async (): Promise<void> => {
+      tiersList.innerHTML = `
+        <div class="page-skeleton__block" style="height:76px;border-radius:12px;margin-bottom:12px;"></div>
+        <div class="page-skeleton__block" style="height:76px;border-radius:12px;"></div>
+      `;
+      try {
+        const tiersData = await api.getTrainerTiers(viewedUserId);
+        const tiers = tiersData?.tiers ?? [];
+        tiersList.innerHTML = '';
+
+        if (tiers.length === 0) {
+          const empty = document.createElement('div');
+          empty.style.cssText = 'text-align:center;padding:32px 16px;';
+          empty.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40" style="color:#ccc;">
+              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+            <p style="margin:12px 0 4px;font-weight:600;color:#555;">Вы ещё не настроили уровни подписки</p>
+            <p style="color:#999;font-size:13px;">Нажмите «Настроить уровни», чтобы добавить.</p>
+          `;
+          tiersList.appendChild(empty);
+          return;
+        }
+
+        tiers.forEach(tier => {
+          const card = document.createElement('div');
+          card.style.cssText = 'border:1px solid #eee;border-radius:12px;padding:16px;margin-bottom:12px;background:#fff;';
+          card.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${tier.description ? '8px' : '0'};">
+              <strong style="font-size:15px;">${escapeHtml(tier.name)}</strong>
+              <span style="color:#E85A2B;font-weight:700;font-size:16px;">${tier.price === 0 ? 'Бесплатно' : `${tier.price} ₽/мес`}</span>
+            </div>
+            ${tier.description ? `<p style="color:#666;font-size:13px;margin:0;">${escapeHtml(tier.description)}</p>` : ''}
+          `;
+          tiersList.appendChild(card);
+        });
+      } catch {
+        tiersList.innerHTML = '<p style="color:#999;">Не удалось загрузить уровни подписки</p>';
+      }
+    };
+
+    button.addEventListener('click', () => openTiersModal({ api, onSaved: () => { void loadOwnTiers(); } }));
+    void loadOwnTiers();
   } else if (!isOwnProfile && isTrainer) {
     wrapper.innerHTML = '<h3 style="margin-bottom:16px;">Уровни подписки</h3>';
     const skeletonEl = document.createElement('div');
@@ -541,6 +590,47 @@ async function renderSubscriptionsSection(
   }
 }
 
+async function loadPopularPosts(
+  element: HTMLElement,
+  api: ApiClient,
+  trainerId: number
+): Promise<void> {
+  const listEl = element.querySelector('.profile-content__popular-list') as HTMLElement | null;
+  if (!listEl) return;
+
+  try {
+    const response = await api.searchPosts({
+      trainer_ids: [trainerId],
+      sort: 'popular',
+      only_available: false,
+      limit: 5
+    });
+    const posts = response.posts || [];
+
+    if (posts.length === 0) {
+      listEl.innerHTML = '<p style="color:#999;font-size:13px;padding:8px 0;margin:0;">Пока нет публикаций</p>';
+      return;
+    }
+
+    listEl.innerHTML = posts.map((post, idx) => `
+      <div class="profile-content__popular-item" data-post-id="${post.post_id}">
+        <div class="profile-content__popular-rank">#${idx + 1}</div>
+        <div class="profile-content__popular-info">
+          <div class="profile-content__popular-title">${escapeHtml(post.title)}</div>
+          <div class="profile-content__popular-stats">
+            <span class="profile-content__popular-likes">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              ${post.likes_count}
+            </span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch {
+    // не критично — оставляем пустым
+  }
+}
+
 export async function renderProfileContent(
   container: HTMLElement,
   params: ProfileContentParams
@@ -564,23 +654,26 @@ export async function renderProfileContent(
   let tierNameMap: Map<number, string> | undefined;
   let tierPriceMap: Map<number, number> | undefined;
 
+  // «О себе» — для самого пользователя (свой профиль); «О тренере» — когда профиль тренера смотрит кто-то другой.
+  const aboutLabel = isOwnProfile ? 'О себе' : (isTrainer ? 'О тренере' : 'О себе');
+
   const tabs = isTrainer
     ? [
       { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
       { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
       ...(isOwnProfile ? [{ id: 'subscriptions', label: 'Уровни подписки', active: activeTab === 'subscriptions' }] : []),
-      { id: 'about', label: 'О тренере', active: activeTab === 'about' }
+      { id: 'about', label: aboutLabel, active: activeTab === 'about' }
     ]
     : [
       { id: 'publications', label: 'Понравившиеся', active: activeTab === 'publications' || activeTab === 'main' },
-      { id: 'about', label: 'О себе', active: activeTab === 'about' }
+      { id: 'about', label: aboutLabel, active: activeTab === 'about' }
     ];
 
   const sectionTitles: Record<string, string> = {
     main: 'Недавние публикации',
     publications: isTrainer ? 'Все публикации' : 'Понравившиеся',
     subscriptions: 'Уровни подписки',
-    about: isTrainer ? 'О тренере' : 'О себе'
+    about: aboutLabel
   };
 
   let currentTab = activeTab;
@@ -655,15 +748,10 @@ export async function renderProfileContent(
     }
   };
 
+  // Клиентская фильтрация загруженного набора по тексту поиска.
+  // Фильтр по видам спорта выполняется на бэкенде (см. applySportFilter).
   function refreshVisiblePosts(): void {
     let filteredPosts = allPosts;
-
-    if (activeFilters.size > 0) {
-      filteredPosts = filteredPosts.filter(p => {
-        const sportId = p.sport_type_id;
-        return sportId != null && activeFilters.has(String(sportId));
-      });
-    }
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -684,6 +772,24 @@ export async function renderProfileContent(
       tierNameMap,
       tierPriceMap
     });
+  }
+
+  // Фильтр по видам спорта у тренера выполняется запросом на бэкенд (searchPosts).
+  async function applySportFilter(): Promise<void> {
+    showPostsSkeleton(postsContainer);
+    try {
+      const dataModule = await import('../../../utils/profilePageData');
+      if (isTrainer && activeFilters.size > 0) {
+        allPosts = await dataModule.searchProfilePosts(api, viewedUserId, {
+          sportTypeIds: Array.from(activeFilters).map(Number)
+        });
+      } else {
+        allPosts = (await dataModule.loadProfilePageData(api, viewedUserId)).posts;
+      }
+    } catch {
+      allPosts = [];
+    }
+    refreshVisiblePosts();
   }
 
   async function reloadAllPosts(): Promise<void> {
@@ -746,7 +852,7 @@ export async function renderProfileContent(
             if (checkbox.checked) activeFilters.add(id);
             else activeFilters.delete(id);
             updateFilterLabel();
-            refreshVisiblePosts();
+            void applySportFilter();
           });
 
           const textSpan = document.createElement('span');
@@ -790,7 +896,7 @@ export async function renderProfileContent(
         toggleSidebarVisibility(false);
         if (filtersElement) filtersElement.style.display = 'none';
         if (addButtonContainer) addButtonContainer.style.display = 'none';
-        sectionTitleEl.textContent = isTrainer ? 'О тренере' : 'О себе';
+        sectionTitleEl.textContent = aboutLabel;
         if (postsContainer) postsContainer.style.display = 'block';
         if (isTrainer) {
           void showTrainerAbout(postsContainer, api, viewedUserId);
@@ -868,6 +974,11 @@ export async function renderProfileContent(
 
   // Добавляем элемент в DOM сразу — данные грузятся асинхронно
   container.appendChild(element);
+
+  // Популярные публикации тренера (сортировка по лайкам на бэке)
+  if (isTrainer) {
+    void loadPopularPosts(element, api, viewedUserId);
+  }
 
   if (currentTab === 'about') {
     toggleSidebarVisibility(false);
