@@ -33,7 +33,7 @@ function renderSuccess(el: HTMLElement, payment: PaymentResponse, navigateTo: (p
   let details = '';
   if (isSubscription) {
     const sub = payment.subscription!;
-    const price = (sub.price / 100).toLocaleString('ru-RU');
+    const price = sub.price.toLocaleString('ru-RU');
     const expires = sub.expires_at
       ? new Date(sub.expires_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
       : '';

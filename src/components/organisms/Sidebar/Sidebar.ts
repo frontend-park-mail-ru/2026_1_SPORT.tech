@@ -50,13 +50,6 @@ export async function renderSidebar(
       active: activePage === 'profile'
     },
     {
-      id: 'feed',
-      label: 'Лента',
-      url: '/feed',
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>',
-      active: activePage === 'feed'
-    },
-    {
       id: 'notifications',
       label: 'Уведомления',
       url: '/notifications',
@@ -90,8 +83,7 @@ export async function renderSidebar(
     'profile': '/profile',
     'home': '/',
     'auth': '/auth',
-    'notifications': '/notifications',
-    'feed': '/feed'
+    'notifications': '/notifications'
   };
 
   element.querySelectorAll('.sidebar__nav-item').forEach((item: Element) => {
@@ -131,8 +123,8 @@ export async function renderSidebar(
 
   container.appendChild(element);
 
-  // Load unread notification count
   if (currentUser) {
+    // Load unread notification badge
     void (async () => {
       try {
         const data = await api.getNotifications({ limit: 50 });
@@ -149,6 +141,54 @@ export async function renderSidebar(
             badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
           }
         }
+      } catch { /* ignore */ }
+    })();
+
+    // Load subscriptions into sidebar
+    void (async () => {
+      const listEl = element.querySelector('.sidebar__users-list') as HTMLElement | null;
+      if (!listEl) return;
+      try {
+        const subsData = await api.getMySubscriptions();
+        const activeSubs = (subsData.subscriptions || []).filter(s => s.active);
+
+        listEl.innerHTML = '';
+
+        if (activeSubs.length === 0) {
+          listEl.innerHTML = `<p style="color:rgba(255,255,255,0.5);font-size:12px;padding:8px;text-align:center;margin:0;">Вы пока ни на кого не подписаны</p>`;
+          return;
+        }
+
+        const profiles = await Promise.all(
+          activeSubs.map(s => api.getProfile(s.trainer_id).catch(() => null))
+        );
+
+        activeSubs.forEach((sub, idx) => {
+          const profile = profiles[idx];
+          const name = profile
+            ? `${profile.first_name} ${profile.last_name}`.trim() || profile.username
+            : `Тренер #${sub.trainer_id}`;
+          const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+
+          const item = document.createElement('div');
+          item.className = 'sidebar__user-item';
+          item.dataset.userId = String(sub.trainer_id);
+          item.innerHTML = `
+            <div class="sidebar__user-avatar">
+              ${profile?.avatar_url
+                ? `<img src="${profile.avatar_url}" alt="${name}">`
+                : initials}
+            </div>
+            <div class="sidebar__user-info">
+              <div class="sidebar__user-name">${name}</div>
+              <div class="sidebar__user-role">${sub.tier_name}</div>
+            </div>
+          `;
+          item.addEventListener('click', () => {
+            window.router.navigateTo(`/profile/${sub.trainer_id}`);
+          });
+          listEl.appendChild(item);
+        });
       } catch { /* ignore */ }
     })();
   }

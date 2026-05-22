@@ -568,12 +568,11 @@ export async function renderProfileContent(
     ? [
       { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
       { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
-      { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
+      ...(isOwnProfile ? [{ id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' }] : []),
       { id: 'about', label: 'О тренере', active: activeTab === 'about' }
     ]
     : [
       { id: 'publications', label: 'Понравившиеся', active: activeTab === 'publications' || activeTab === 'main' },
-      { id: 'subscriptions', label: 'Подписки', active: activeTab === 'subscriptions' },
       { id: 'about', label: 'О себе', active: activeTab === 'about' }
     ];
 
