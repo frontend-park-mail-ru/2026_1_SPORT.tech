@@ -46,7 +46,7 @@ export async function renderPostCard(
     likes = 0,
     liked = false,
     comments = 0,
-    can_view: canView = true,
+    can_view: canView = false,
     raw_text: rawText = '',
     isOwner = false,
     api,
@@ -205,7 +205,7 @@ export async function renderPostCard(
     });
   }
 
-  if (commentBtn && api) {
+  if (commentBtn && api && finalCanView) {
     let commentsLoaded = false;
     let commentsOpen = false;
 
@@ -261,14 +261,21 @@ export async function renderPostCard(
         if (!input || !input.value.trim() || !submitBtn) return;
         const body = input.value.trim();
         submitBtn.disabled = true;
+        const errorEl = commentsSection.querySelector('.post-card__comment-error') as HTMLElement | null;
+        if (errorEl) errorEl.remove();
         try {
           const resp = await api.createComment(postId, body);
+          if (!resp || !resp.comment) throw new Error('Пустой ответ от сервера');
           input.value = '';
           commentsList.push(resp.comment);
           if (commentCountEl) commentCountEl.textContent = String(commentsList.length);
           renderCommentsList(commentsList);
-        } catch {
-          // ignore
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : 'Не удалось отправить комментарий';
+          const errDiv = document.createElement('p');
+          errDiv.className = 'post-card__comment-error';
+          errDiv.textContent = msg;
+          commentsSection.querySelector('.post-card__comment-form')?.before(errDiv);
         } finally {
           submitBtn.disabled = false;
         }

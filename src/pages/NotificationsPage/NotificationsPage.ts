@@ -1,6 +1,6 @@
 import './NotificationsPage.css';
 import type { ApiClient } from '../../utils/api';
-import type { AuthResponse } from '../../types/api.types';
+import type { AuthResponse, Profile } from '../../types/api.types';
 import type { Notification } from '../../types/api.types';
 
 interface NotificationsPageParams {
@@ -18,6 +18,12 @@ function formatTime(iso: string): string {
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 }
 
+function getInitials(profile: Profile): string {
+  const f = (profile.first_name || '').trim();
+  const l = (profile.last_name || '').trim();
+  return ((f[0] || '') + (l[0] || '')).toUpperCase() || '?';
+}
+
 function renderSkeleton(): string {
   return Array.from({ length: 5 }, () => `
     <div class="notification-skeleton">
@@ -30,12 +36,29 @@ function renderSkeleton(): string {
   `).join('');
 }
 
+/**
+ * Иконка-эмодзи для типа уведомления
+ */
+function notifIcon(type: string): string {
+  switch (type) {
+  case 'subscription': return '🎫';
+  case 'donation':     return '💸';
+  case 'like':         return '❤️';
+  case 'comment':      return '💬';
+  case 'post':         return '📝';
+  default:             return '🔔';
+  }
+}
+
 function renderNotificationItem(n: Notification): HTMLElement {
   const item = document.createElement('div');
   item.className = `notification-item${n.is_read ? '' : ' notification-item--unread'}`;
   item.dataset.id = String(n.notification_id);
+
+  // Базовый вариант (без актора)
   item.innerHTML = `
     <div class="notification-item__dot"></div>
+    <div class="notification-item__icon">${notifIcon(n.type)}</div>
     <div class="notification-item__content">
       <div class="notification-item__title">${n.title}</div>
       <div class="notification-item__body">${n.body}</div>
@@ -43,6 +66,40 @@ function renderNotificationItem(n: Notification): HTMLElement {
     <div class="notification-item__time">${formatTime(n.created_at)}</div>
   `;
   return item;
+}
+
+/**
+ * Для уведомлений с actor_user_id — подгружаем профиль и добавляем аватар + ссылку.
+ */
+async function enrichWithActor(item: HTMLElement, api: ApiClient, actorUserId: number): Promise<void> {
+  try {
+    const profile = await api.getProfile(actorUserId);
+    const avatarHtml = profile.avatar_url
+      ? `<img src="${profile.avatar_url}" class="notification-item__avatar" alt="${profile.first_name}">`
+      : `<div class="notification-item__avatar notification-item__avatar--initials">${getInitials(profile)}</div>`;
+
+    const fullName = `${profile.first_name} ${profile.last_name}`.trim();
+
+    // Вставляем аватар перед content
+    const iconEl = item.querySelector('.notification-item__icon');
+    if (iconEl) iconEl.remove();
+
+    const contentEl = item.querySelector('.notification-item__content') as HTMLElement;
+    const avatarWrapper = document.createElement('a');
+    avatarWrapper.href = `/profile/${actorUserId}`;
+    avatarWrapper.className = 'notification-item__avatar-link';
+    avatarWrapper.innerHTML = avatarHtml;
+    contentEl.parentNode?.insertBefore(avatarWrapper, contentEl);
+
+    // Добавляем имя перед телом уведомления
+    const bodyEl = item.querySelector('.notification-item__body') as HTMLElement;
+    const nameEl = document.createElement('div');
+    nameEl.className = 'notification-item__actor-name';
+    nameEl.textContent = fullName;
+    bodyEl.parentNode?.insertBefore(nameEl, bodyEl);
+  } catch {
+    /* профиль недоступен — оставляем как есть */
+  }
 }
 
 export async function renderNotificationsPage(
@@ -79,6 +136,12 @@ export async function renderNotificationsPage(
     }
     notifications.forEach((n, idx) => {
       const item = renderNotificationItem(n);
+
+      // Асинхронно обогащаем актором для subscription/donation/comment/like
+      if (n.actor_user_id) {
+        void enrichWithActor(item, api, n.actor_user_id);
+      }
+
       if (!n.is_read) {
         item.addEventListener('click', async () => {
           if (item.classList.contains('notification-item--unread')) {

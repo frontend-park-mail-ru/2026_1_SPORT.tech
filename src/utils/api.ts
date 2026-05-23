@@ -585,6 +585,17 @@ export class ApiClient {
     await this.request(`/v1/measurements/${measurementId}`, { method: 'DELETE' });
   }
 
+  async getMeasurementSharing(): Promise<{ trainer_user_ids: number[] }> {
+    return this.request<{ trainer_user_ids: number[] }>('/v1/measurements/sharing');
+  }
+
+  async setMeasurementSharing(trainerUserIds: number[]): Promise<void> {
+    await this.request('/v1/measurements/sharing', {
+      method: 'PUT',
+      body: JSON.stringify({ trainer_user_ids: trainerUserIds }),
+    });
+  }
+
   // ========== PAYMENTS ==========
 
   async createDonationPayment(data: {

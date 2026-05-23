@@ -1,0 +1,127 @@
+.finance-tab {
+  padding: 8px 0;
+  width: 100%;
+}
+
+.finance-tab__loading {
+  padding: 40px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.finance-tab__header {
+  margin-bottom: 24px;
+}
+
+.finance-tab__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a2b3c;
+  margin: 0 0 6px;
+}
+
+.finance-tab__desc {
+  font-size: 14px;
+  color: #888;
+  margin: 0;
+}
+
+.finance-tab__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.finance-card {
+  background: #fff;
+  border: 1px solid #e8ecf0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: box-shadow 0.15s;
+}
+
+.finance-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
+}
+
+/* Первая карточка (баланс) — акцентная */
+.finance-card:first-child {
+  background: linear-gradient(135deg, #fff5f0, #fff);
+  border-color: #ffccbb;
+}
+
+.finance-card__value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a2b3c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.finance-card__label {
+  font-size: 13px;
+  color: #555;
+  font-weight: 500;
+}
+
+.finance-card__sub {
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 2px;
+}
+
+.finance-tab__disclaimer {
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #888;
+}
+
+.finance-tab__disclaimer p {
+  margin: 0;
+}
+
+/* ── Error state ── */
+.finance-tab__error {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.finance-tab__error-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+
+.finance-tab__error-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a2b3c;
+  margin: 0 0 8px;
+}
+
+.finance-tab__error-detail {
+  font-size: 12px;
+  color: #999;
+  margin: 0 0 20px;
+}
+
+.finance-tab__retry-btn {
+  padding: 10px 24px;
+  background: #ff5722;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.finance-tab__retry-btn:hover { opacity: 0.85; }

@@ -54,7 +54,14 @@ export async function openStatisticsModal({ api }: StatisticsModalOptions): Prom
         ${balanceCard}
       </div>
     `;
-  } catch {
-    bodyEl.innerHTML = '<p style="color:#999;text-align:center;padding:24px;margin:0;">Не удалось загрузить статистику</p>';
+  } catch (err: unknown) {
+    const msg = (err as Error).message || 'Неизвестная ошибка';
+    console.error('[StatisticsModal] failed to load statistics:', err);
+    bodyEl.innerHTML = `
+      <div style="text-align:center;padding:24px;">
+        <p style="color:#e53e3e;font-weight:600;margin:0 0 8px;">Не удалось загрузить статистику</p>
+        <p style="color:#999;font-size:12px;margin:0;">${msg}</p>
+      </div>
+    `;
   }
 }

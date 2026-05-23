@@ -135,7 +135,7 @@ async function buildPostsWithAuthor(
       likes: post.likes_count || 0,
       liked: post.is_liked,
       comments: post.comments_count ?? 0,
-      can_view: post.can_view,
+      can_view: post.can_view ?? false,
       created_at: post.created_at,
       min_tier_id: post.min_tier_id ?? null,
       sport_type_id: post.sport_type_id ?? null,

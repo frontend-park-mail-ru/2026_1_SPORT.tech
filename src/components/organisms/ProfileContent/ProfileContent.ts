@@ -686,6 +686,7 @@ export async function renderProfileContent(
       { id: 'main', label: 'Главная страница', active: activeTab === 'main' },
       { id: 'publications', label: 'Публикации', active: activeTab === 'publications' },
       ...(isOwnProfile ? [{ id: 'subscriptions', label: 'Уровни подписки', active: activeTab === 'subscriptions' }] : []),
+      ...(isOwnProfile ? [{ id: 'finance', label: '💰 Финансы', active: activeTab === 'finance' }] : []),
       { id: 'about', label: aboutLabel, active: activeTab === 'about' }
     ]
     : [
@@ -698,6 +699,7 @@ export async function renderProfileContent(
     main: 'Недавние публикации',
     publications: isTrainer ? 'Все публикации' : 'Понравившиеся',
     subscriptions: 'Уровни подписки',
+    finance: 'Финансы',
     progress: 'История замеров',
     about: aboutLabel
   };
@@ -962,6 +964,19 @@ export async function renderProfileContent(
         if (subsContainer) {
           subsContainer.style.display = 'block';
           void renderSubscriptionsSection(subsContainer, api, isTrainer, isOwnProfile, viewedUserId);
+        }
+      } else if (tabId === 'finance') {
+        toggleSidebarVisibility(false);
+        if (filtersElement) filtersElement.style.display = 'none';
+        if (addButtonContainer) addButtonContainer.style.display = 'none';
+        sectionTitleEl.textContent = 'Финансы';
+        if (postsContainer) {
+          postsContainer.style.display = 'block';
+          setPostsContainerMessageState(postsContainer, true);
+          postsContainer.innerHTML = '<div class="profile-content__finance-loading">Загрузка...</div>';
+          void import('../../molecules/FinanceTab/FinanceTab').then(({ renderFinanceTab }) => {
+            renderFinanceTab(postsContainer, { api });
+          });
         }
       } else if (tabId === 'publications' && !isTrainer) {
         if (filtersElement) filtersElement.style.display = 'none';

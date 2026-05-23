@@ -369,6 +369,12 @@
   padding: 8px 0 12px;
 }
 
+.post-card__comment-error {
+  color: #e85a2b;
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
 .post-card__comment-form {
   display: flex;
   gap: 8px;

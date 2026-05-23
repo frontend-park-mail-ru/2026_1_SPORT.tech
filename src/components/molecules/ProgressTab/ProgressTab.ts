@@ -9,7 +9,7 @@ import './ProgressTab.css';
 
 export interface ProgressTabOptions {
   api: ApiClient;
-  userId: number;       // чей прогресс смотрим
+  userId: number;        // чей прогресс смотрим
   isOwnProfile: boolean; // показывать ли форму добавления
 }
 
@@ -45,18 +45,27 @@ function renderMeasurementRow(m: Measurement): string {
   return `<tr class="progress-table__row" data-id="${m.measurement_id}">${cells}<td class="progress-table__cell progress-table__cell--actions"><button class="progress-tab__delete-btn" data-id="${m.measurement_id}" title="Удалить">✕</button></td></tr>`;
 }
 
-function renderEmptyState(): string {
+function renderEmptyState(isOwnProfile: boolean): string {
+  if (isOwnProfile) {
+    return `
+      <div class="progress-tab__empty">
+        <div class="progress-tab__empty-icon">📊</div>
+        <p class="progress-tab__empty-text">Нет замеров</p>
+        <p class="progress-tab__empty-hint">Добавьте первый замер, чтобы начать следить за прогрессом</p>
+      </div>
+    `;
+  }
   return `
     <div class="progress-tab__empty">
       <div class="progress-tab__empty-icon">📊</div>
-      <p class="progress-tab__empty-text">Нет замеров</p>
-      <p class="progress-tab__empty-hint">Добавьте первый замер, чтобы начать следить за прогрессом</p>
+      <p class="progress-tab__empty-text">Замеров пока нет</p>
+      <p class="progress-tab__empty-hint">Пользователь ещё не добавил ни одного замера</p>
     </div>
   `;
 }
 
 function renderTable(measurements: Measurement[], isOwnProfile: boolean): string {
-  if (measurements.length === 0) return renderEmptyState();
+  if (measurements.length === 0) return renderEmptyState(isOwnProfile);
 
   const headers = ['Дата', 'Вес', '% жира', 'Грудь', 'Талия', 'Бёдра', 'Заметки', ...(isOwnProfile ? [''] : [])];
   const thead = `<thead><tr>${headers.map(h => `<th class="progress-table__header">${h}</th>`).join('')}</tr></thead>`;
@@ -76,19 +85,44 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
   const root = container.querySelector('.progress-tab') as HTMLElement;
 
   let measurements: Measurement[] = [];
+  let accessDenied = false;
 
   const refresh = async (): Promise<void> => {
+    accessDenied = false;
     try {
       const resp = await api.getMeasurements(userId, { limit: 100 });
       measurements = resp.measurements ?? [];
-    } catch {
+    } catch (err: unknown) {
       measurements = [];
+      // 403 = тренер не в списке допуска
+      if ((err as Error & { data?: { error?: { code?: string } } })?.data?.error?.code === 'PERMISSION_DENIED'
+        || (err as Error).message?.toLowerCase().includes('permission')) {
+        accessDenied = true;
+      }
     }
     renderAll();
   };
 
   const renderAll = (): void => {
     root.innerHTML = '';
+
+    // Секция "Доступ тренеров" — только для собственного профиля клиента (не тренера)
+    if (isOwnProfile) {
+      const sharingSection = buildSharingSection();
+      if (sharingSection) root.appendChild(sharingSection);
+    }
+
+    if (accessDenied && !isOwnProfile) {
+      const denied = document.createElement('div');
+      denied.className = 'progress-tab__empty';
+      denied.innerHTML = `
+        <div class="progress-tab__empty-icon">🔒</div>
+        <p class="progress-tab__empty-text">Нет доступа к замерам</p>
+        <p class="progress-tab__empty-hint">Клиент не открыл вам доступ к своим данным</p>
+      `;
+      root.appendChild(denied);
+      return;
+    }
 
     if (isOwnProfile) {
       root.appendChild(buildForm());
@@ -205,6 +239,99 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
     });
 
     return form;
+  };
+
+  // Секция управления доступом тренеров к замерам (только для клиента на своём профиле)
+  const buildSharingSection = (): HTMLElement | null => {
+    const section = document.createElement('div');
+    section.className = 'progress-tab__sharing';
+    section.innerHTML = `
+      <details class="progress-tab__sharing-details">
+        <summary class="progress-tab__sharing-summary">
+          🔒 Доступ тренеров к замерам
+          <span class="progress-tab__sharing-hint">Выберите тренеров, которые могут видеть ваш прогресс</span>
+        </summary>
+        <div class="progress-tab__sharing-body">
+          <div class="progress-tab__sharing-loading">Загрузка подписок...</div>
+        </div>
+      </details>
+    `;
+
+    const body = section.querySelector('.progress-tab__sharing-body') as HTMLElement;
+
+    // Загружаем одновременно: подписки клиента + текущий список доступа
+    Promise.all([
+      api.getMySubscriptions().catch(() => ({ subscriptions: [] })),
+      api.getMeasurementSharing().catch(() => ({ trainer_user_ids: [] })),
+    ]).then(([subData, sharingData]) => {
+      const subscriptions = subData.subscriptions ?? [];
+      const allowedIds = new Set<number>((sharingData.trainer_user_ids ?? []).map(Number));
+
+      if (subscriptions.length === 0) {
+        body.innerHTML = '<p class="progress-tab__sharing-empty">Вы ни на кого не подписаны</p>';
+        return;
+      }
+
+      // Уникальные тренеры из подписок
+      const seen = new Set<number>();
+      const trainers = subscriptions.filter(s => {
+        if (seen.has(s.trainer_id)) return false;
+        seen.add(s.trainer_id);
+        return true;
+      });
+
+      body.innerHTML = '';
+
+      trainers.forEach(sub => {
+        const row = document.createElement('label');
+        row.className = 'progress-tab__sharing-row';
+        const checked = allowedIds.has(sub.trainer_id) ? 'checked' : '';
+        row.innerHTML = `
+          <input type="checkbox" class="progress-tab__sharing-checkbox" data-trainer-id="${sub.trainer_id}" ${checked}>
+          <span class="progress-tab__sharing-name">Тренер #${sub.trainer_id}</span>
+          <span class="progress-tab__sharing-tier">${sub.tier_name}</span>
+        `;
+        body.appendChild(row);
+      });
+
+      // Попытка загрузить профили тренеров для отображения имён
+      trainers.forEach(sub => {
+        api.getProfile(sub.trainer_id).then(profile => {
+          const nameEl = body.querySelector(`[data-trainer-id="${sub.trainer_id}"]`)?.nextElementSibling;
+          if (nameEl) {
+            nameEl.textContent = `${profile.first_name} ${profile.last_name}`;
+          }
+        }).catch(() => { /* имя недоступно */ });
+      });
+
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'progress-tab__sharing-save';
+      saveBtn.textContent = 'Сохранить доступ';
+      body.appendChild(saveBtn);
+
+      saveBtn.addEventListener('click', async () => {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Сохраняем...';
+        try {
+          const selected = Array.from(
+            body.querySelectorAll<HTMLInputElement>('.progress-tab__sharing-checkbox:checked')
+          ).map(cb => Number(cb.dataset.trainerId));
+          await api.setMeasurementSharing(selected);
+          saveBtn.textContent = '✓ Сохранено';
+          setTimeout(() => {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Сохранить доступ';
+          }, 2000);
+        } catch {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Ошибка, попробуйте снова';
+        }
+      });
+    }).catch(() => {
+      body.innerHTML = '<p class="progress-tab__sharing-empty">Не удалось загрузить данные</p>';
+    });
+
+    return section;
   };
 
   await refresh();

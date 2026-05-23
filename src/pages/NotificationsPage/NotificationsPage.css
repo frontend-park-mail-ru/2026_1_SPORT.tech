@@ -181,3 +181,45 @@
     padding: 20px 16px;
   }
 }
+
+/* ── Enriched notification with actor info ── */
+.notification-item__icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-item__avatar-link {
+  display: block;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.notification-item__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.notification-item__avatar--initials {
+  background: #ff5722;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.notification-item__actor-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a2b3c;
+  margin-bottom: 2px;
+}
