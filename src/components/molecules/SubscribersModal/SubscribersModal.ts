@@ -1,6 +1,7 @@
 // src/components/molecules/SubscribersModal/SubscribersModal.ts
 
 import type { ApiClient } from '../../../utils/api';
+import { formatMonthlyPrice } from '../../../utils/profilePageData';
 
 export interface SubscribersModalOptions {
   api: ApiClient;
@@ -69,7 +70,7 @@ export async function openSubscribersModal({ api }: SubscribersModalOptions): Pr
           <div style="font-weight:600;font-size:14px;color:#1a2b3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
           <div style="font-size:12px;color:#999;">${escapeHtml(sub.tier_name)} · до ${expiresDate}</div>
         </div>
-        <span style="color:#E85A2B;font-weight:700;font-size:14px;flex-shrink:0;">${sub.price} ₽/мес</span>
+        <span style="color:#E85A2B;font-weight:700;font-size:14px;flex-shrink:0;">${formatMonthlyPrice(sub.price)}</span>
       `;
       row.addEventListener('mouseenter', () => { row.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'; });
       row.addEventListener('mouseleave', () => { row.style.boxShadow = 'none'; });

@@ -159,7 +159,8 @@ export async function renderPostCard(
       likeBtn.disabled = true;
       try {
         const response = wasLiked ? await api.unlikePost(postId) : await api.likePost(postId);
-        setLikeUi(response.is_liked, response.likes_count);
+        // Бэк (proto3) не отдаёт нулевые поля, поэтому likes_count при 0 приходит undefined.
+        setLikeUi(!!response.is_liked, response.likes_count || 0);
         if (onPostsUpdated) await onPostsUpdated();
       } catch (error) { console.error('Like error:', error); }
       finally { likeBtn.disabled = false; }

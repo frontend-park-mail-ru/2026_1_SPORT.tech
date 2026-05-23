@@ -6,6 +6,7 @@ import { renderButton } from '../../atoms/Button/Button';
 import { renderPostCard } from '../../molecules/PostCard/PostCard';
 import { openPostFormModal } from '../../molecules/PostFormModal/PostFormModal';
 import { openTiersModal } from '../../molecules/TiersModal/TiersModal';
+import { formatMonthlyPrice } from '../../../utils/profilePageData';
 import type { Profile, TrainerDetails, PostListItem, PostBlock } from '../../../types/api.types';
 
 interface ProfileContentParams {
@@ -448,7 +449,7 @@ async function renderSubscriptionsSection(
           card.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${tier.description ? '8px' : '0'};">
               <strong style="font-size:15px;">${escapeHtml(tier.name)}</strong>
-              <span style="color:#E85A2B;font-weight:700;font-size:16px;">${tier.price === 0 ? 'Бесплатно' : `${tier.price} ₽/мес`}</span>
+              <span style="color:#E85A2B;font-weight:700;font-size:16px;">${formatMonthlyPrice(tier.price)}</span>
             </div>
             ${tier.description ? `<p style="color:#666;font-size:13px;margin:0;">${escapeHtml(tier.description)}</p>` : ''}
           `;
@@ -496,7 +497,7 @@ async function renderSubscriptionsSection(
           card.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${tier.description ? '8px' : '0'};">
               <strong style="font-size:15px;">${escapeHtml(tier.name)}</strong>
-              <span style="color:#E85A2B;font-weight:700;font-size:16px;">${tier.price === 0 ? 'Бесплатно' : `${tier.price} ₽/мес`}</span>
+              <span style="color:#E85A2B;font-weight:700;font-size:16px;">${formatMonthlyPrice(tier.price)}</span>
             </div>
             ${tier.description ? `<p style="color:#666;font-size:13px;margin:0;">${escapeHtml(tier.description)}</p>` : ''}
           `;
@@ -562,7 +563,7 @@ async function renderSubscriptionsSection(
                 <div style="font-weight:600;font-size:15px;color:#1a2b3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(trainerName)}</div>
                 <div style="font-size:12px;color:#999;">Тренер</div>
               </div>
-              <span style="color:#E85A2B;font-weight:700;font-size:15px;flex-shrink:0;">${sub.price} ₽/мес</span>
+              <span style="color:#E85A2B;font-weight:700;font-size:15px;flex-shrink:0;">${formatMonthlyPrice(sub.price)}</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f0f0f0;">
               <div>
@@ -620,7 +621,7 @@ async function loadPopularPosts(
           <div class="profile-content__popular-stats">
             <span class="profile-content__popular-likes">
               <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              ${post.likes_count}
+              ${post.likes_count || 0}
             </span>
           </div>
         </div>
@@ -825,6 +826,9 @@ export async function renderProfileContent(
         <h4 style="margin:0 0 12px; font-size:14px; font-weight:600;">Вид спорта</h4>
         <div id="filter-sport-list"></div>
       `;
+      // Клики внутри выпадашки не должны всплывать к кнопке фильтра (иначе она закроется),
+      // чтобы можно было выбирать пункт кликом по названию, а не только по галочке.
+      activeDropdown.addEventListener('click', (ev: Event) => ev.stopPropagation());
       filtersElement.appendChild(activeDropdown);
 
       const sportTypes = await api.getSportTypes().catch(() => ({ sport_types: [] }));

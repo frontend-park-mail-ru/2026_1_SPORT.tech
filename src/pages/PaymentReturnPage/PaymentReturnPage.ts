@@ -2,6 +2,7 @@ import './PaymentReturnPage.css';
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse, PaymentResponse } from '../../types/api.types';
 import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar';
+import { formatMonthlyPrice } from '../../utils/profilePageData';
 
 interface PaymentReturnPageParams {
   currentUser?: AuthResponse | null;
@@ -33,14 +34,13 @@ function renderSuccess(el: HTMLElement, payment: PaymentResponse, navigateTo: (p
   let details = '';
   if (isSubscription) {
     const sub = payment.subscription!;
-    const price = sub.price.toLocaleString('ru-RU');
     const expires = sub.expires_at
       ? new Date(sub.expires_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
       : '';
     details = `
       <div class="payment-result__sub-info">
         <p class="payment-result__sub-tier">Тариф: <strong>${sub.tier_name}</strong></p>
-        <p class="payment-result__sub-price">${price} ₽/мес</p>
+        <p class="payment-result__sub-price">${formatMonthlyPrice(sub.price)}</p>
         ${expires ? `<p class="payment-result__sub-expires">Активна до: ${expires}</p>` : ''}
       </div>
     `;

@@ -8,6 +8,15 @@ export function getUserRoleLabel(isTrainer: boolean): string {
   return isTrainer ? 'Тренер' : 'Клиент';
 }
 
+/**
+ * Цена уровня/подписки в месяц. Бэк (proto3) не отдаёт нулевое поле price,
+ * поэтому undefined/null трактуем как 0 → «Бесплатно».
+ */
+export function formatMonthlyPrice(price?: number | null): string {
+  const value = typeof price === 'number' && !Number.isNaN(price) ? price : 0;
+  return value === 0 ? 'Бесплатно' : `${value.toLocaleString('ru-RU')} ₽/мес`;
+}
+
 export function getFullName(profile: { first_name?: string; last_name?: string; username?: string } = {}): string {
   const first = profile.first_name || '';
   const last = profile.last_name || '';
@@ -123,7 +132,7 @@ async function buildPostsWithAuthor(
       authorName: author.name,
       authorRole: author.role,
       authorAvatar: author.avatar,
-      likes: post.likes_count,
+      likes: post.likes_count || 0,
       liked: post.is_liked,
       comments: post.comments_count ?? 0,
       can_view: post.can_view,

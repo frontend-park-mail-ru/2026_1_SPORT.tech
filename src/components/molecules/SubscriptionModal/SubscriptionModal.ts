@@ -2,6 +2,7 @@
 
 import type { ApiClient } from '../../../utils/api';
 import type { Tier, Subscription } from '../../../types/api.types';
+import { formatMonthlyPrice } from '../../../utils/profilePageData';
 
 export interface SubscriptionModalOptions {
   api: ApiClient;
@@ -37,11 +38,10 @@ export async function openSubscriptionModal({
         </h2>
         <div class="subscription-modal__list">
           ${tiers.map(tier => {
-    const price = (typeof tier.price === 'number' && !isNaN(tier.price)) ? tier.price : 0;
     const isCurrent = currentSubscription?.tier_id === tier.tier_id;
     return `
               <div class="subscription-modal__tier ${isCurrent ? 'subscription-modal__tier--current' : ''}">
-                <h3>${escapeHtml(tier.name)} (${price} ₽/мес)</h3>
+                <h3>${escapeHtml(tier.name)} (${formatMonthlyPrice(tier.price)})</h3>
                 <p>${escapeHtml(tier.description || 'Описание отсутствует')}</p>
                 <button
                   class="button button--primary-orange button--small"
