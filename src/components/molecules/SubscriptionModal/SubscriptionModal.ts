@@ -20,10 +20,33 @@ export async function openSubscriptionModal({
   try {
     const response = await api.getTrainerTiers(trainerId);
     const tiers: Tier[] = response?.tiers || [];
-    if (tiers.length === 0) return;
+    if (tiers.length === 0) {
+      showEmptyModal();
+      return;
+    }
     showModal(tiers, existingSubscription);
   } catch {
+    showEmptyModal();
     return;
+  }
+
+  function showEmptyModal(): void {
+    const modal = document.createElement('div');
+    modal.className = 'subscription-modal';
+    modal.innerHTML = `
+      <div class="subscription-modal__backdrop" data-close></div>
+      <div class="subscription-modal__panel">
+        <button class="subscription-modal__close" data-close>×</button>
+        <h2 class="subscription-modal__title">Подписки недоступны</h2>
+        <div class="subscription-modal__empty">
+          <p class="subscription-modal__empty-text">
+            У этого тренера пока нет планов подписки.
+          </p>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => modal.remove()));
   }
 
   function showModal(tiers: Tier[], currentSubscription?: Subscription | null): void {

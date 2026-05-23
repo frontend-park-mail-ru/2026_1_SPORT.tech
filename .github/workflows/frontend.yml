@@ -72,7 +72,7 @@ jobs:
               npm ci --prefer-offline
               npm run build
               # Перезапускаем serve: убиваем старый процесс на порту 8079 и стартуем новый
-              pkill -f "serve -s dist -l 8079" || true
+              fuser -k 8079/tcp 2>/dev/null || true
               sleep 1
               nohup npx serve -s dist -l 8079 > frontend.log 2>&1 &
               echo "Frontend deployed, PID=$!"

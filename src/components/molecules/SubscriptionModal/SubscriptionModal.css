@@ -123,3 +123,19 @@
   font-size: 15px;
   margin: 0;
 }
+
+.subscription-modal__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.subscription-modal__empty-text {
+  color: #4a5568;
+  font-size: 15px;
+  margin: 0;
+  line-height: 1.5;
+}
