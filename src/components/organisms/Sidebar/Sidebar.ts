@@ -20,6 +20,17 @@ interface SidebarParams {
   onLogout?: (() => Promise<void>) | null;
 }
 
+/**
+ * Обновляет активный пункт меню без перерендера всего сайдбара.
+ * Вызывается при каждом переходе между страницами.
+ */
+export function setActivePage(sidebarEl: HTMLElement, page: string): void {
+  sidebarEl.querySelectorAll('.sidebar__nav-item').forEach(item => {
+    const itemPage = (item as HTMLElement).dataset.page;
+    item.classList.toggle('sidebar__nav-item--active', itemPage === page);
+  });
+}
+
 export async function renderSidebar(
   container: HTMLElement,
   params: SidebarParams

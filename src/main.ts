@@ -4,12 +4,15 @@ import { ApiClient } from './utils/api';
 import { mapProfileData } from './utils/profilePageData';
 import type { AuthResponse } from './types/auth.types';
 import type { Router } from './types/router.types';
+import { renderSidebar, setActivePage } from './components/organisms/Sidebar/Sidebar';
 import './styles/index.css';
 import templates from './templates';
 
 // Регистрируем шаблоны глобально
 (window as unknown as { Handlebars: typeof Handlebars }).Handlebars = Handlebars;
 (Handlebars as typeof Handlebars & { templates: Record<string, Handlebars.TemplateDelegate> }).templates = templates;
+
+// ─── Boot / loading screens ──────────────────────────────────────────────────
 
 function renderBootScreen(container: HTMLElement, message = 'Загружаем интерфейс'): void {
   if (!container) return;
@@ -24,45 +27,56 @@ function renderBootScreen(container: HTMLElement, message = 'Загружаем 
   `;
 }
 
-function renderProfileShell(container: HTMLElement): void {
-  if (!container) return;
-  container.innerHTML = `
-    <div class="profile-page profile-page--loading">
-      <div class="profile-page__sidebar">
-        <div class="page-skeleton page-skeleton--sidebar">
-          <div class="page-skeleton__block page-skeleton__block--title"></div>
-          <div class="page-skeleton__block page-skeleton__block--nav"></div>
-          <div class="page-skeleton__block page-skeleton__block--nav"></div>
-          <div class="page-skeleton__block page-skeleton__block--nav"></div>
-          <div class="page-skeleton__block page-skeleton__block--footer"></div>
-        </div>
-      </div>
-      <div class="profile-page__main">
-        <div class="profile-page__container">
-          <div class="page-skeleton page-skeleton--header">
-            <div class="page-skeleton__block page-skeleton__block--cover"></div>
-            <div class="page-skeleton__row">
-              <div class="page-skeleton__block page-skeleton__block--avatar"></div>
-              <div class="page-skeleton__meta">
-                <div class="page-skeleton__block page-skeleton__block--name"></div>
-                <div class="page-skeleton__block page-skeleton__block--role"></div>
-              </div>
-            </div>
-          </div>
-          <div class="page-skeleton page-skeleton--content">
-            <div class="page-skeleton__row page-skeleton__row--tabs">
-              <div class="page-skeleton__block page-skeleton__block--tab"></div>
-              <div class="page-skeleton__block page-skeleton__block--tab"></div>
-              <div class="page-skeleton__block page-skeleton__block--tab"></div>
-            </div>
-            <div class="page-skeleton__block page-skeleton__block--card"></div>
-            <div class="page-skeleton__block page-skeleton__block--card"></div>
-          </div>
-        </div>
-      </div>
+/** Скелетон только для контентной области (не трогает сайдбар). */
+function renderContentSkeleton(content: HTMLElement): void {
+  content.innerHTML = `
+    <div class="content-skeleton">
+      <div class="page-skeleton page-skeleton--header"></div>
+      <div class="page-skeleton page-skeleton--content"></div>
     </div>
   `;
 }
+
+// ─── Persistent app shell ────────────────────────────────────────────────────
+
+/**
+ * Ссылка на <aside class="sidebar"> — создаётся один раз при первом
+ * аутентифицированном переходе и живёт всю сессию.
+ */
+let sidebarElement: HTMLElement | null = null;
+
+/**
+ * Создаёт структуру «сайдбар-спейсер + контент» в #app, если её ещё нет.
+ * Возвращает контентный контейнер (#app-content).
+ */
+function ensureShell(app: HTMLElement): HTMLElement {
+  let content = document.getElementById('app-content');
+  if (content) return content;
+
+  app.innerHTML = '';
+  app.classList.add('app--shell');
+  app.classList.remove('auth-page');
+
+  const sidebarSlot = document.createElement('div');
+  sidebarSlot.id = 'app-sidebar';
+
+  content = document.createElement('div');
+  content.id = 'app-content';
+
+  app.appendChild(sidebarSlot);
+  app.appendChild(content);
+
+  return content;
+}
+
+/** Разрушает шелл (при логауте — возвращаемся к чистому #app). */
+function destroyShell(app: HTMLElement): void {
+  sidebarElement = null;
+  app.innerHTML = '';
+  app.classList.remove('app--shell');
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function createLogoutHandler(
   api: ApiClient,
@@ -85,6 +99,8 @@ function setPageTitle(suffix?: string | null): void {
   document.title = suffix ? `Sporteon — ${suffix}` : 'Sporteon';
 }
 
+// ─── Router ──────────────────────────────────────────────────────────────────
+
 function createRouter(api: ApiClient): Router {
   let currentUserPromise: Promise<AuthResponse | null> | null = null;
 
@@ -96,12 +112,10 @@ function createRouter(api: ApiClient): Router {
     if (!options?.force && currentUserPromise) {
       return currentUserPromise;
     }
-
     currentUserPromise = api.getCurrentUser().catch((error: Error) => {
       currentUserPromise = null;
       throw error;
     });
-
     return currentUserPromise;
   }
 
@@ -110,59 +124,98 @@ function createRouter(api: ApiClient): Router {
     void handleRouting();
   }
 
-  async function showAuthPage(): Promise<void> {
-    const app = document.getElementById('app');
-    if (!app) return;
+  /**
+   * Инициализирует сайдбар один раз. При повторных вызовах только обновляет
+   * активную вкладку — DOM не пересоздаётся, мерцания нет.
+   */
+  async function syncSidebar(
+    app: HTMLElement,
+    currentUser: AuthResponse,
+    activePage: string,
+    onLogout: () => Promise<void>
+  ): Promise<void> {
+    const sidebarSlot = document.getElementById('app-sidebar');
+    if (!sidebarSlot) return;
+
+    if (!sidebarElement) {
+      // Первый вход — рендерим сайдбар
+      const user = currentUser.user;
+      const sidebarUser = user ? {
+        id: user.user_id,
+        name: `${user.first_name} ${user.last_name}`.trim() || user.username,
+        role: user.is_trainer ? 'Тренер' : 'Пользователь',
+        avatar: user.avatar_url ?? null,
+      } : null;
+
+      sidebarElement = await renderSidebar(sidebarSlot, {
+        activePage,
+        currentUser: sidebarUser,
+        users: [],
+        api,
+        onLogout,
+      });
+    } else {
+      // Последующие переходы — только меняем активный пункт
+      setActivePage(sidebarElement, activePage);
+    }
+  }
+
+  // ─── Page renderers ─────────────────────────────────────────────────────
+
+  async function showAuthPage(app: HTMLElement): Promise<void> {
+    destroyShell(app);
     setPageTitle('Вход');
     renderBootScreen(app, 'Загружаем страницу входа');
-    document.body.classList.add('auth-page');
+    app.classList.add('auth-page');
     try {
       const { renderAuthPage } = await import('./pages/AuthPage/AuthPage');
       await renderAuthPage(app, api);
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to load AuthPage:', err);
-      app.innerHTML = `<div style="color: red; padding: 20px;"><h2>Ошибка</h2><p>${err.message}</p></div>`;
+      app.innerHTML = `<div style="color:red;padding:20px"><h2>Ошибка</h2><p>${err.message}</p></div>`;
     }
   }
 
-  async function showHomePage(currentUser: AuthResponse | null): Promise<void> {
-    const app = document.getElementById('app');
-    if (!app) return;
+  async function showHomePage(app: HTMLElement, currentUser: AuthResponse): Promise<void> {
     setPageTitle('Главная');
-    renderProfileShell(app);
-    document.body.classList.remove('auth-page');
+    const content = ensureShell(app);
+    const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
+
+    // Сайдбар обновляется мгновенно — контент грузится параллельно
+    void syncSidebar(app, currentUser, 'home', onLogout);
+
+    renderContentSkeleton(content);
     try {
       const { renderHomePage } = await import('./pages/HomePage/HomePage');
-      await renderHomePage(api, app, {
-        currentUser,
-        onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
-      });
+      await renderHomePage(api, content, {});
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to load HomePage:', err);
-      app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
     }
   }
 
-  async function showProfilePage(currentUser: AuthResponse | null, viewedUserId?: number): Promise<void> {
-    const app = document.getElementById('app');
-    if (!app) return;
-    renderProfileShell(app);
-    document.body.classList.remove('auth-page');
+  async function showProfilePage(
+    app: HTMLElement,
+    currentUser: AuthResponse,
+    viewedUserId?: number
+  ): Promise<void> {
+    const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
     const userId = viewedUserId ?? currentUser?.user?.user_id;
-    if (!userId) {
-      navigateTo('/auth');
-      return;
-    }
+    if (!userId) { navigateTo('/auth'); return; }
+
+    const content = ensureShell(app);
+    void syncSidebar(app, currentUser, 'profile', onLogout);
+
+    renderContentSkeleton(content);
     try {
-      // Загружаем только профиль (быстро) — посты загрузятся внутри страницы
       const profileData = await api.getProfile(userId);
       const mappedData = mapProfileData(profileData, currentUser);
       setPageTitle(mappedData.profile.isOwnProfile ? 'Мой профиль' : mappedData.profile.name);
 
       const { renderProfilePage } = await import('./pages/ProfilePage/ProfilePage');
-      await renderProfilePage(api, app, {
+      await renderProfilePage(api, content, {
         profile: mappedData.profile,
         currentUser: mappedData.currentUser,
         subscriptions: [],
@@ -170,54 +223,61 @@ function createRouter(api: ApiClient): Router {
         activeTab: 'publications',
         popularPosts: [],
         viewedUserId: userId,
-        onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
+        onLogout,
       });
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to load ProfilePage:', err);
-      app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
     }
   }
 
-  async function showPaymentReturnPage(currentUser: AuthResponse | null): Promise<void> {
-    const app = document.getElementById('app');
-    if (!app) return;
-    setPageTitle('Оплата');
-    renderProfileShell(app);
-    document.body.classList.remove('auth-page');
-    try {
-      const { renderPaymentReturnPage } = await import('./pages/PaymentReturnPage/PaymentReturnPage');
-      await renderPaymentReturnPage(api, app, {
-        currentUser,
-        onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
-      });
-    } catch (error: unknown) {
-      const err = error as Error;
-      app.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
-    }
-  }
-
-  async function showNotificationsPage(currentUser: AuthResponse | null): Promise<void> {
-    const app = document.getElementById('app');
-    if (!app) return;
+  async function showNotificationsPage(app: HTMLElement, currentUser: AuthResponse): Promise<void> {
     setPageTitle('Уведомления');
-    renderProfileShell(app);
-    document.body.classList.remove('auth-page');
+    const content = ensureShell(app);
+    const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
+
+    void syncSidebar(app, currentUser, 'notifications', onLogout);
+
     try {
       const { renderNotificationsPage } = await import('./pages/NotificationsPage/NotificationsPage');
-      await renderNotificationsPage(api, app, {
-        currentUser,
-        onLogout: createLogoutHandler(api, setCurrentUser, navigateTo)
-      });
+      await renderNotificationsPage(api, content, { currentUser, onLogout });
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to load NotificationsPage:', err);
-      app.innerHTML = `<div style="color: red; padding: 20px;"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
     }
   }
 
+  async function showPaymentReturnPage(app: HTMLElement, currentUser: AuthResponse): Promise<void> {
+    setPageTitle('Оплата');
+    const content = ensureShell(app);
+    const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
+
+    void syncSidebar(app, currentUser, '', onLogout);
+
+    try {
+      const { renderPaymentReturnPage } = await import('./pages/PaymentReturnPage/PaymentReturnPage');
+      await renderPaymentReturnPage(api, content, { currentUser, onLogout });
+    } catch (error: unknown) {
+      const err = error as Error;
+      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+    }
+  }
+
+  // ─── Routing ─────────────────────────────────────────────────────────────
+
   async function handleRouting(): Promise<void> {
-    const currentUser = await getCurrentUser();
+    const app = document.getElementById('app');
+    if (!app) return;
+
+    let currentUser: AuthResponse | null;
+    try {
+      currentUser = await getCurrentUser();
+    } catch {
+      currentUser = null;
+    }
+
     const isAuthenticated = !!currentUser;
     const path = window.location.pathname;
     const viewedProfileMatch = path.match(/^\/profile\/(\d+)$/);
@@ -226,45 +286,38 @@ function createRouter(api: ApiClient): Router {
       navigateTo(isAuthenticated ? '/' : '/auth');
       return;
     }
-    if (path === '/') {
-      if (!isAuthenticated) navigateTo('/auth');
-      else await showHomePage(currentUser);
-      return;
-    }
     if (path === '/auth') {
       if (isAuthenticated) navigateTo('/');
-      else await showAuthPage();
+      else await showAuthPage(app);
       return;
     }
-    if (path === '/profile') {
-      if (!isAuthenticated) navigateTo('/auth');
-      else await showProfilePage(currentUser);
+    if (!isAuthenticated) {
+      navigateTo('/auth');
       return;
     }
-    if (viewedProfileMatch) {
-      if (!isAuthenticated) navigateTo('/auth');
-      else await showProfilePage(currentUser, Number(viewedProfileMatch[1]));
-      return;
+
+    // Все маршруты ниже — только для аутентифицированных
+    if (path === '/') {
+      await showHomePage(app, currentUser!);
+    } else if (path === '/profile') {
+      await showProfilePage(app, currentUser!);
+    } else if (viewedProfileMatch) {
+      await showProfilePage(app, currentUser!, Number(viewedProfileMatch[1]));
+    } else if (path === '/notifications') {
+      await showNotificationsPage(app, currentUser!);
+    } else if (path === '/payment/return') {
+      await showPaymentReturnPage(app, currentUser!);
+    } else if (path === '/payment/cancel') {
+      navigateTo('/');
+    } else {
+      navigateTo('/');
     }
-    if (path === '/notifications') {
-      if (!isAuthenticated) navigateTo('/auth');
-      else await showNotificationsPage(currentUser);
-      return;
-    }
-    if (path === '/payment/return') {
-      if (!isAuthenticated) navigateTo('/auth');
-      else await showPaymentReturnPage(currentUser);
-      return;
-    }
-    if (path === '/payment/cancel') {
-      navigateTo(isAuthenticated ? '/' : '/auth');
-      return;
-    }
-    navigateTo(isAuthenticated ? '/' : '/auth');
   }
 
   return { handleRouting, navigateTo, setCurrentUser, getCurrentUser };
 }
+
+// ─── Bootstrap ───────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
   const app = document.getElementById('app');
@@ -276,8 +329,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const apiClient = new ApiClient(API_BASE_URL);
   const router = createRouter(apiClient);
   (window as unknown as { router: Router }).router = router;
+
   renderBootScreen(app);
   await router.handleRouting();
+
   window.addEventListener('popstate', () => {
     void router.handleRouting();
   });

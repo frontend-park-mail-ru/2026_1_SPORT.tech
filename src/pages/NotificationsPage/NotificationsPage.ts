@@ -2,7 +2,6 @@ import './NotificationsPage.css';
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse } from '../../types/api.types';
 import type { Notification } from '../../types/api.types';
-import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar';
 
 interface NotificationsPageParams {
   currentUser?: AuthResponse | null;
@@ -51,31 +50,13 @@ export async function renderNotificationsPage(
   container: HTMLElement,
   params: NotificationsPageParams
 ): Promise<void> {
-  const { currentUser = null, onLogout = null } = params;
+  void params; // sidebar managed by main.ts
 
   const template = (window as any).Handlebars.templates['NotificationsPage.hbs'];
   container.innerHTML = template({}).trim();
 
-  const sidebarContainer = container.querySelector('#sidebar-container') as HTMLElement;
   const listEl = container.querySelector('#notifications-list') as HTMLElement;
   const markAllBtn = container.querySelector('#mark-all-read-btn') as HTMLButtonElement;
-
-  const currentUserData = currentUser?.user;
-  const fullName = currentUserData
-    ? `${currentUserData.first_name} ${currentUserData.last_name}`.trim() || currentUserData.username
-    : '';
-
-  await renderSidebar(sidebarContainer, {
-    activePage: 'notifications',
-    currentUser: currentUserData ? {
-      id: currentUserData.user_id,
-      name: fullName,
-      role: currentUserData.is_trainer ? 'Тренер' : 'Пользователь',
-      avatar: currentUserData.avatar_url
-    } : null,
-    api,
-    onLogout
-  });
 
   // Show skeleton
   listEl.innerHTML = renderSkeleton();

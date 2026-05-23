@@ -1,12 +1,7 @@
 .home-page {
-  display: flex;
-  min-height: 100vh;
   background: #e8f4f8;
-}
-
-.home-page__sidebar {
-  flex-shrink: 0;
-  width: 240px;
+  min-height: 100vh;
+  flex: 1;
 }
 
 .home-page__main {

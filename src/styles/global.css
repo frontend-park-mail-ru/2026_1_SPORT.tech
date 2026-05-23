@@ -165,6 +165,49 @@ h6 { font-size: var(--font-size-md); }
     min-height: 100vh;
 }
 
+/* ===== ПЕРСИСТЕНТНЫЙ ШЕЛЛ (аутентифицированные страницы) ===== */
+#app.app--shell {
+    display: flex;
+    align-items: stretch;
+    min-height: 100vh;
+}
+
+/* Слот для сайдбара: 240px-спейсер + содержит fixed-сайдбар */
+#app-sidebar {
+    width: 240px;
+    flex-shrink: 0;
+}
+
+/* Контентная область — сюда рендерятся страницы */
+#app-content {
+    flex: 1;
+    min-width: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Скелетон только для контента (без сайдбара) */
+.content-skeleton {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+@media (max-width: 1024px) {
+    #app.app--shell {
+        flex-direction: column;
+    }
+    #app-sidebar {
+        width: 100%;
+    }
+    #app-content {
+        min-height: 0;
+    }
+}
+
 .app-loader {
     min-height: 100vh;
     display: flex;

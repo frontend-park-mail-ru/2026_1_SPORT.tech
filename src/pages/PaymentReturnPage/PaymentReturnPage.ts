@@ -1,7 +1,6 @@
 import './PaymentReturnPage.css';
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse, PaymentResponse } from '../../types/api.types';
-import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { formatMonthlyPrice } from '../../utils/profilePageData';
 
 interface PaymentReturnPageParams {
@@ -92,30 +91,12 @@ export async function renderPaymentReturnPage(
   container: HTMLElement,
   params: PaymentReturnPageParams
 ): Promise<void> {
-  const { currentUser = null, onLogout = null } = params;
+  void params; // sidebar managed by main.ts
 
   const template = (window as any).Handlebars.templates['PaymentReturnPage.hbs'];
   container.innerHTML = template({}).trim();
 
-  const sidebarContainer = container.querySelector('#sidebar-container') as HTMLElement;
   const resultEl = container.querySelector('#payment-result') as HTMLElement;
-
-  const currentUserData = currentUser?.user;
-  const fullName = currentUserData
-    ? `${currentUserData.first_name} ${currentUserData.last_name}`.trim() || currentUserData.username
-    : '';
-
-  await renderSidebar(sidebarContainer, {
-    activePage: '',
-    currentUser: currentUserData ? {
-      id: currentUserData.user_id,
-      name: fullName,
-      role: currentUserData.is_trainer ? 'Тренер' : 'Пользователь',
-      avatar: currentUserData.avatar_url
-    } : null,
-    api,
-    onLogout
-  });
 
   renderProcessing(resultEl);
 
