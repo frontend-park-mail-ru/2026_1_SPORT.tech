@@ -1,6 +1,5 @@
 # Зависимости
 node_modules/
-package-lock.json
 
 # Сборка
 dist/
