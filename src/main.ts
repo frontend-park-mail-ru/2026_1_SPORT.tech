@@ -1,7 +1,7 @@
 import Handlebars from 'handlebars';
 import { API_BASE_URL } from './config/constants';
 import { ApiClient } from './utils/api';
-import { mapProfileData } from './utils/profilePageData';
+import { mapProfileData, getUserRoleLabel } from './utils/profilePageData';
 import type { AuthResponse } from './types/auth.types';
 import type { Router } from './types/router.types';
 import { renderSidebar, setActivePage } from './components/organisms/Sidebar/Sidebar';
@@ -143,7 +143,7 @@ function createRouter(api: ApiClient): Router {
       const sidebarUser = user ? {
         id: user.user_id,
         name: `${user.first_name} ${user.last_name}`.trim() || user.username,
-        role: user.is_trainer ? 'Тренер' : 'Пользователь',
+        role: getUserRoleLabel(user.is_trainer),
         avatar: user.avatar_url ?? null,
       } : null;
 

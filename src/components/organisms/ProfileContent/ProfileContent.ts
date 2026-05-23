@@ -615,7 +615,7 @@ async function loadPopularPosts(
     }
 
     listEl.innerHTML = posts.map((post, idx) => `
-      <div class="profile-content__popular-item" data-post-id="${post.post_id}">
+      <div class="profile-content__popular-item" data-post-id="${post.post_id}" style="cursor:pointer;">
         <div class="profile-content__popular-rank">#${idx + 1}</div>
         <div class="profile-content__popular-info">
           <div class="profile-content__popular-title">${escapeHtml(post.title)}</div>
@@ -628,6 +628,28 @@ async function loadPopularPosts(
         </div>
       </div>
     `).join('');
+
+    // Навигация к посту: скролл + раскрытие карточки в ленте
+    listEl.querySelectorAll<HTMLElement>('.profile-content__popular-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const postId = item.dataset.postId;
+        if (!postId) return;
+
+        // Ищем карточку поста в основном контейнере
+        const postCard = element.querySelector<HTMLElement>(
+          `[data-post-id="${postId}"][data-post-expand]`
+        );
+
+        if (postCard) {
+          postCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Раскрываем карточку если она ещё не развёрнута
+          const expandBtn = postCard.querySelector<HTMLElement>('[data-post-expand-btn]');
+          if (expandBtn && !postCard.classList.contains('post-card--expanded')) {
+            expandBtn.click();
+          }
+        }
+      });
+    });
   } catch {
     // не критично — оставляем пустым
   }
@@ -716,6 +738,8 @@ export async function renderProfileContent(
   if (!isTrainer) {
     if (filtersElement) filtersElement.style.display = 'none';
     if (addButtonContainer) addButtonContainer.style.display = 'none';
+    // Популярные публикации — только для тренеров
+    if (sidebarRight) sidebarRight.style.display = 'none';
   }
 
   // Панель статистики — только для собственного профиля тренера
@@ -899,7 +923,8 @@ export async function renderProfileContent(
       if (progressContainer) progressContainer.style.display = 'none';
 
       toggleSearchVisibility(false);
-      toggleSidebarVisibility(true);
+      // Правая колонка (Популярные публикации) — только для тренеров
+      toggleSidebarVisibility(isTrainer);
 
       if (tabId === 'progress') {
         toggleSidebarVisibility(false);
