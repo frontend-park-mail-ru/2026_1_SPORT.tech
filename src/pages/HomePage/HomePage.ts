@@ -115,19 +115,13 @@ export async function renderHomePage(
   const filtersDropdown = page.querySelector('#filters-dropdown') as HTMLElement;
   const sportCheckboxesContainer = page.querySelector('#sport-checkboxes') as HTMLElement;
 
-  // Загружаем профиль пользователя (для сайдбара)
-  let currentUserProfile = null;
-  if (currentUser?.user?.user_id) {
-    try {
-      currentUserProfile = await api.getProfile(currentUser.user.user_id);
-    } catch { currentUserProfile = null; }
-  }
-
+  // Сайдбар рендерим немедленно из данных сессии — без лишнего API-запроса,
+  // чтобы не было мерцания пока грузится профиль.
   const sidebarUser = currentUser?.user ? {
     id: currentUser.user.user_id,
-    name: getFullName(currentUserProfile || currentUser.user),
-    role: getUserRoleLabel((currentUserProfile || currentUser.user).is_trainer),
-    avatar: currentUserProfile?.avatar_url || currentUser.user.avatar_url || null
+    name: getFullName(currentUser.user),
+    role: getUserRoleLabel(currentUser.user.is_trainer),
+    avatar: currentUser.user.avatar_url || null
   } : null;
 
   await renderSidebar(sidebarContainer, {
