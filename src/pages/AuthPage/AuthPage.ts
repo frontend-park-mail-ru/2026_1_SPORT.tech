@@ -71,13 +71,11 @@ export async function renderAuthPage(
     const sports = Array.isArray(data.trainer_details?.sports) ? data.trainer_details.sports : [];
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(careerDate)) {
-      alert('Введите дату в формате ГГГГ-ММ-ДД (например, 2020-01-01)');
-      return;
+      throw new Error('Введите дату в формате ГГГГ-ММ-ДД (например, 2020-01-01)');
     }
 
     if (sports.length === 0) {
-      alert('Выберите хотя бы один вид спорта');
-      return;
+      throw new Error('Выберите хотя бы один вид спорта');
     }
 
     const response = await api.registerTrainer({
@@ -102,8 +100,28 @@ export async function renderAuthPage(
   }
 
   async function switchMode(newMode: string): Promise<void> {
+    // Save common field values before wiping the form
+    const savedValues: Record<string, string> = {};
+    if (_form) {
+      const data = _form.getData();
+      for (const key of ['username', 'email', 'password', 'password_repeat', 'first_name', 'last_name']) {
+        const val = data[key];
+        if (typeof val === 'string' && val) savedValues[key] = val;
+      }
+    }
+
     currentMode = newMode;
     await render();
+
+    // Restore saved values into the new form
+    if (_form && Object.keys(savedValues).length > 0) {
+      for (const [key, value] of Object.entries(savedValues)) {
+        const inputApi = _form.inputs.get(key);
+        if (inputApi && 'setValue' in inputApi) {
+          (inputApi as any).setValue(value);
+        }
+      }
+    }
   }
 
   async function render(): Promise<void> {

@@ -205,7 +205,11 @@ export async function openPostFormModal({
 
   function handleFileSelect(file: File, block: ContentBlock, mediaContainer: HTMLElement): void {
     const error = validateFile(file);
-    if (error) { alert(error); return; }
+    if (error) {
+      globalErr.textContent = error;
+      globalErr.hidden = false;
+      return;
+    }
 
     block.file = file;
     block.existingUrl = undefined;
@@ -380,7 +384,8 @@ export async function openPostFormModal({
             const uploadResult = await api.uploadPostMedia(block.file);
             return { file_url: uploadResult.file_url, kind: block.file.type.startsWith('video/') ? 'video' : 'image' };
           } catch {
-            alert('⚠️ Загрузка медиа временно недоступна. Файл не будет добавлен.');
+            globalErr.textContent = '⚠️ Загрузка медиа временно недоступна. Файл не будет добавлен.';
+            globalErr.hidden = false;
             return null;
           }
         } else if (block.type === 'media' && block.existingUrl) {

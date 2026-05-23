@@ -1,8 +1,3 @@
-/**
- * @fileoverview Модальное окно пожертвования (оверлей поверх приложения)
- * @module components/molecules/DonationModal
- */
-
 import type { ApiClient } from '../../../utils/api';
 import type { InputAPI } from '../../atoms/Input/Input';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
@@ -13,9 +8,6 @@ export interface DonationModalOptions {
   recipientUserId: number;
 }
 
-/**
- * Показывает модальное окно пожертвования
- */
 export async function openDonationModal({
   api,
   recipientUserId
@@ -27,28 +19,27 @@ export async function openDonationModal({
 
   const form = modal.querySelector('.donation-modal__form') as HTMLFormElement;
   const amountHost = modal.querySelector('#donation-field-amount') as HTMLElement;
-  const emailHost = modal.querySelector('#donation-field-email') as HTMLElement;
+  const messageHost = modal.querySelector('#donation-field-message') as HTMLElement;
   const globalErr = modal.querySelector('[data-donation-global-error]') as HTMLElement;
   const submitBtn = modal.querySelector('.donation-modal__cta') as HTMLButtonElement;
   const validator = new Validator();
 
   const amountApi: InputAPI = await renderInput(amountHost, {
     type: INPUT_TYPES.WITHOUTS,
-    label: 'Сумма (Российский Рубль)',
-    placeholder: 'Введите сумму',
+    label: 'Сумма (₽)',
+    placeholder: 'Например, 500',
     name: 'amount',
     required: true,
     onChange: () => amountApi.setNormal()
   });
 
-  const emailApi: InputAPI = await renderInput(emailHost, {
-    type: INPUT_TYPES.MAIL,
-    label: 'Почта для чека',
-    placeholder: 'Введите почту',
-    name: 'email',
-    required: true,
-    autocomplete: 'email',
-    onChange: () => emailApi.setNormal()
+  const messageApi: InputAPI = await renderInput(messageHost, {
+    type: INPUT_TYPES.WITHOUTS,
+    label: 'Сообщение тренеру (необязательно)',
+    placeholder: 'Напишите что-нибудь приятное',
+    name: 'message',
+    required: false,
+    onChange: () => messageApi.setNormal()
   });
 
   const close = (): void => {
@@ -70,88 +61,67 @@ export async function openDonationModal({
     globalErr.textContent = '';
 
     const amountStr = amountApi.getValue();
-    const email = emailApi.getValue();
-
-    const result = validator.validateDonationForm({ amount: amountStr, email });
+    const result = validator.validateDonationPaymentForm({ amount: amountStr });
 
     if (!result.isValid) {
       result.errors.forEach((err: { field: string; message: string }) => {
         if (err.field === 'amount') amountApi.setError(err.message);
-        if (err.field === 'email') emailApi.setError(err.message);
       });
       return;
     }
 
     submitBtn.disabled = true;
-
-    const originalBtnText = submitBtn.innerHTML;
-    submitBtn.innerHTML = `
-      <span class="donation-modal__cta-text">Отправка...</span>
-      <span class="donation-modal__sbp" aria-hidden="true">
-        <span class="donation-modal__sbp-icon"></span>
-        <span class="donation-modal__sbp-label">сбп система быстрых платежей</span>
-      </span>
-    `;
+    const originalBtnHtml = submitBtn.innerHTML;
+    submitBtn.textContent = 'Перенаправление...';
 
     try {
-      const amountInCents = Math.round((result.amountNumber || 0) * 100);
+      const amountInKopecks = Math.round((result.amountNumber || 0) * 100);
+      const message = messageApi.getValue().trim() || 'Пожертвование';
+      const origin = window.location.origin;
 
-      await api.createDonation(
-        recipientUserId,
-        amountInCents,
-        'RUB',
-        'Пожертвование'
-      );
-
-      // Успех
-      amountApi.setValue('');
-      emailApi.setValue('');
-
-      form.querySelectorAll('.donation-modal__field').forEach(field => {
-        (field as HTMLElement).style.display = 'none';
+      const payment = await api.createDonationPayment({
+        user_id: recipientUserId,
+        amount_value: amountInKopecks,
+        currency: 'RUB',
+        message,
+        return_url: `${origin}/payment/return`,
+        cancel_url: `${origin}/payment/cancel`
       });
 
-      submitBtn.style.display = 'none';
-
-      const successMessage = document.createElement('div');
-      successMessage.className = 'donation-modal__success';
-      successMessage.innerHTML = `
-        <div class="donation-modal__success-icon">✓</div>
-        <h3 class="donation-modal__success-title">Спасибо!</h3>
-        <p class="donation-modal__success-text">
-          Ваше пожертвование в размере <strong>${result.amountNumber} ₽</strong> успешно отправлено.
-        </p>
-        <button class="donation-modal__success-btn" type="button">Закрыть</button>
-      `;
-
-      form.appendChild(successMessage);
-
-      const successBtn = successMessage.querySelector('.donation-modal__success-btn');
-      if (successBtn) {
-        successBtn.addEventListener('click', () => {
-          close();
-        });
+      if (payment.confirmation_url) {
+        localStorage.setItem('sporteon_pending_payment', JSON.stringify({
+          payment_id: payment.payment_id,
+          confirmation_token: payment.confirmation_token
+        }));
+        // Показываем сообщение об уходе на страницу оплаты
+        form.innerHTML = `
+          <div class="donation-modal__redirect">
+            <div class="donation-modal__redirect-spinner"></div>
+            <p class="donation-modal__redirect-text">
+              Перенаправляем вас на страницу оплаты&hellip;
+            </p>
+            <p class="donation-modal__redirect-hint">
+              Сумма: <strong>${result.amountNumber} ₽</strong>
+            </p>
+          </div>
+        `;
+        // Небольшая задержка чтобы пользователь увидел сообщение
+        setTimeout(() => {
+          window.location.href = payment.confirmation_url;
+        }, 800);
+        return;
       }
 
-      setTimeout(() => {
-        close();
-      }, 3000);
-
+      // Если confirmation_url нет — считаем успехом (тестовый режим)
+      showSuccess(form, submitBtn, result.amountNumber || 0, close);
     } catch (error: unknown) {
       const err = error as { message?: string; data?: { error?: { message?: string } } };
-      submitBtn.innerHTML = originalBtnText;
+      submitBtn.innerHTML = originalBtnHtml;
       submitBtn.disabled = false;
 
-      form.querySelectorAll('.donation-modal__field').forEach(field => {
-        (field as HTMLElement).style.display = 'block';
-      });
-
-      let errorMessage = 'Не удалось отправить данные.';
-      if (err.data?.error?.message) {
-        errorMessage = err.data.error.message;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
+      let errorMessage = 'Не удалось создать платёж. Попробуйте ещё раз.';
+      if (err.data?.error?.message) errorMessage = err.data.error.message;
+      else if (err.message) errorMessage = err.message;
 
       globalErr.textContent = errorMessage;
       globalErr.hidden = false;
@@ -162,4 +132,25 @@ export async function openDonationModal({
   document.body.appendChild(modal);
   modal.focus({ preventScroll: true } as FocusOptions);
   amountApi.focus();
+}
+
+function showSuccess(form: HTMLFormElement, submitBtn: HTMLButtonElement, amount: number, close: () => void): void {
+  form.querySelectorAll('.donation-modal__field').forEach(field => {
+    (field as HTMLElement).style.display = 'none';
+  });
+  submitBtn.style.display = 'none';
+
+  const successMessage = document.createElement('div');
+  successMessage.className = 'donation-modal__success';
+  successMessage.innerHTML = `
+    <div class="donation-modal__success-icon">✓</div>
+    <h3 class="donation-modal__success-title">Спасибо!</h3>
+    <p class="donation-modal__success-text">
+      Ваше пожертвование в размере <strong>${amount} ₽</strong> успешно отправлено.
+    </p>
+    <button class="donation-modal__success-btn" type="button">Закрыть</button>
+  `;
+  form.appendChild(successMessage);
+  successMessage.querySelector('.donation-modal__success-btn')?.addEventListener('click', close);
+  setTimeout(close, 3000);
 }

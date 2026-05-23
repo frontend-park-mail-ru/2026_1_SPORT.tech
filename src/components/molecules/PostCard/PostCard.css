@@ -108,16 +108,58 @@
 .post-card__body--short::after {
   content: '';
   position: absolute;
-  bottom: 0;
+  bottom: 28px; /* чуть выше кнопки "Подробнее" */
   left: 0;
   right: 0;
   height: 40px;
   background: linear-gradient(transparent, #f0f7ff);
   pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.post-card__body--short.post-card__body--hidden {
+  display: none;
+}
+
+/* Кнопка Подробнее */
+.post-card__expand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  background: #FFF5F0;
+  border: 1px solid #FFD4CC;
+  border-radius: 20px;
+  color: #E85A2B;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 6px;
+  position: relative;
+  z-index: 2;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.post-card__expand-btn:hover {
+  background: #E85A2B;
+  color: white;
+  border-color: #E85A2B;
+}
+
+.post-card__expand-btn svg {
+  transition: transform 0.3s ease;
 }
 
 .post-card__body--full {
   display: none;
+}
+
+.post-card__body--full.post-card__body--open {
+  display: block;
+}
+
+.post-card__body-inner {
+  overflow: hidden;
 }
 
 /* Текстовый блок */
@@ -172,6 +214,11 @@
 
 .post-card__action:disabled {
   opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.post-card__action--locked:disabled {
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
@@ -276,4 +323,104 @@
     width: auto;
     margin-left: auto;
   }
+}
+
+/* ===== КОММЕНТАРИИ ===== */
+.post-card__comments {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.post-card__comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.post-card__comment {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.post-card__comment-author {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.post-card__comment-body {
+  font-size: 14px;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.post-card__comments-empty,
+.post-card__comments-error {
+  color: var(--text-placeholder);
+  font-size: 13px;
+  text-align: center;
+  padding: 8px 0 12px;
+}
+
+.post-card__comment-error {
+  color: #e85a2b;
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+.post-card__comment-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.post-card__comment-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  background: rgba(255, 255, 255, 0.8);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.post-card__comment-input:focus {
+  border-color: var(--primary-orange);
+}
+
+.post-card__comment-submit {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary-orange);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.post-card__comment-submit:hover {
+  background: var(--primary-orange-hover);
+}
+
+.post-card__comment-submit:disabled {
+  background: var(--border-light);
+  cursor: not-allowed;
+}
+
+.post-card__action--active {
+  color: var(--primary-orange);
 }

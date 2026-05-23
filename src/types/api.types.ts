@@ -120,8 +120,24 @@ export interface Tier {
   name: string;
   price: number;
   description: string;
+  chat_enabled: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface ChatMessage {
+  message_id: number;
+  sender_user_id: number;
+  receiver_user_id: number;
+  body: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface ChatConversation {
+  other_user_id: number;
+  last_message: ChatMessage;
+  unread_count: number;
 }
 
 export interface Subscription {
@@ -139,4 +155,112 @@ export interface Subscription {
 // НОВЫЙ ТИП для обновления подписки
 export interface UpdateSubscriptionPayload {
   tier_id: number;
+}
+
+export interface Subscriber {
+  subscription_id: number;
+  client_id: number;
+  tier_id: number;
+  tier_name: string;
+  price: number;
+  active: boolean;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Comment {
+  comment_id: number;
+  post_id: number;
+  author_user_id: number;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StatisticsResponse {
+  trainer_id: number;
+  posts_count: number;
+  monthly_revenue: number;
+  total_revenue: number;
+  donations_count: number;
+  currency: string;
+}
+
+export interface BalanceResponse {
+  trainer_id: number;
+  amount_value: number;
+  currency: string;
+}
+
+export interface DonationItem {
+  donation_id: number;
+  sender_user_id: number;
+  amount_value: number;
+  currency: string;
+  message?: string | null;
+  created_at: string;
+}
+
+export interface ListDonationsResponse {
+  donations: DonationItem[];
+  total: number;
+}
+
+export interface Notification {
+  notification_id: number;
+  user_id: number;
+  type: string;
+  title: string;
+  body: string;
+  is_read: boolean;
+  actor_user_id: number | null;
+  post_id: number | null;
+  comment_id: number | null;
+  donation_id: number | null;
+  subscription_id: number | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface PaymentDonation {
+  donation_id: number;
+  sender_user_id: number;
+  recipient_user_id: number;
+  amount_value: number;
+  currency: string;
+  message: string;
+  created_at: string;
+}
+
+export interface Measurement {
+  measurement_id: number;
+  user_id: number;
+  measured_at: string; // timestamp string
+  weight_kg: number | null;
+  body_fat_pct: number | null;
+  chest_cm: number | null;
+  waist_cm: number | null;
+  hips_cm: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentResponse {
+  payment_id: number;
+  confirmation_url: string;
+  confirmation_token: string;
+  status: string;
+  donation: PaymentDonation | null;
+  subscription: Subscription | null;
+  amount_value: number;
+  currency: string;
+  message: string;
+  recipient_user_id: number;
+  sender_user_id: number;
+  provider_payment_id: string;
+  confirmed_at: string | null;
+  created_at: string;
+  updated_at: string;
 }

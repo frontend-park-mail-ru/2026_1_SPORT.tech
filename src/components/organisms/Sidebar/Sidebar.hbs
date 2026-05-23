@@ -18,6 +18,7 @@
       <a href="{{url}}" class="sidebar__nav-item {{#if active}}sidebar__nav-item--active{{/if}}" data-page="{{id}}">
         {{{icon}}}
         <span class="sidebar__nav-text">{{label}}</span>
+        {{#if badge}}<span class="sidebar__nav-badge">{{badge}}</span>{{/if}}
       </a>
       {{/each}}
     </nav>

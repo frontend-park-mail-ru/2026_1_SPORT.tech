@@ -1,13 +1,9 @@
 import type { ApiClient } from '../../utils/api';
-import type { AuthResponse, TrainerListItem } from '../../types/api.types';
+import type { TrainerListItem } from '../../types/api.types';
 import type { SportType } from '../../types/api.types';
-import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { escapeHtml, getFullName, getUserRoleLabel } from '../../utils/profilePageData';
 
-interface HomePageParams {
-  currentUser?: AuthResponse | null;
-  onLogout?: (() => Promise<void>) | null;
-}
+type HomePageParams = Record<string, never>;
 
 function getInitials(name: string = ''): string {
   return String(name)
@@ -96,7 +92,7 @@ export async function renderHomePage(
   container: HTMLElement,
   params: HomePageParams = {}
 ): Promise<HTMLElement> {
-  const { currentUser = null, onLogout = null } = params;
+  void params; // params reserved for future use
 
   const template = (window as any).Handlebars.templates['HomePage.hbs'];
   const html = template({});
@@ -107,36 +103,12 @@ export async function renderHomePage(
   container.innerHTML = '';
   container.appendChild(page);
 
-  const sidebarContainer = page.querySelector('#sidebar-container') as HTMLElement;
   const grid = page.querySelector('#trainers-grid') as HTMLElement;
   const emptyState = page.querySelector('#trainers-empty') as HTMLElement;
   const searchInput = page.querySelector('.home-page__search-input') as HTMLInputElement;
   const filtersBtn = page.querySelector('#filters-btn') as HTMLElement;
   const filtersDropdown = page.querySelector('#filters-dropdown') as HTMLElement;
   const sportCheckboxesContainer = page.querySelector('#sport-checkboxes') as HTMLElement;
-
-  // Загружаем профиль пользователя (для сайдбара)
-  let currentUserProfile = null;
-  if (currentUser?.user?.user_id) {
-    try {
-      currentUserProfile = await api.getProfile(currentUser.user.user_id);
-    } catch { currentUserProfile = null; }
-  }
-
-  const sidebarUser = currentUser?.user ? {
-    id: currentUser.user.user_id,
-    name: getFullName(currentUserProfile || currentUser.user),
-    role: getUserRoleLabel((currentUserProfile || currentUser.user).is_trainer),
-    avatar: currentUserProfile?.avatar_url || currentUser.user.avatar_url || null
-  } : null;
-
-  await renderSidebar(sidebarContainer, {
-    activePage: 'home',
-    currentUser: sidebarUser,
-    users: [],
-    api,
-    onLogout
-  });
 
   // Загружаем виды спорта для фильтров
   const sportTypesResponse = await api.getSportTypes().catch(() => ({ sport_types: [] as SportType[] }));

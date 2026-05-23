@@ -10,6 +10,7 @@ export interface ProfileHeaderConfig {
   role: string;
   avatar?: string | null;
   isOwnProfile?: boolean;
+  isTrainer?: boolean;
   api: ApiClient;
   viewedUserId?: number;
   onEdit?: (() => void) | null;
@@ -23,7 +24,7 @@ export async function renderProfileHeader(
   config: ProfileHeaderConfig
 ): Promise<HTMLElement> {
   const {
-    name, role, avatar = null, isOwnProfile = false, api,
+    name, role, avatar = null, isOwnProfile = false, isTrainer = false, api,
     viewedUserId, showDonate = false, onDonate = null,
     onSubscribed = null
   } = config;
@@ -32,7 +33,8 @@ export async function renderProfileHeader(
   const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
   const id = 'header-' + Date.now();
 
-  const html = template({ name, role, avatar, initials, id, isOwnProfile });
+  const showStats = isOwnProfile && isTrainer;
+  const html = template({ name, role, avatar, initials, id, isOwnProfile, showStats });
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild as HTMLElement;
@@ -71,9 +73,10 @@ export async function renderProfileHeader(
     const handleClick = async () => {
       if (!viewedUserId) return;
 
+      // Подписываться может любой авторизованный пользователь (клиент или тренер),
+      // кроме как на самого себя.
       const currentUser = await api.getCurrentUser();
-      const isClient = currentUser?.user && !currentUser.user.is_trainer;
-      if (!isClient) return;
+      if (!currentUser?.user || currentUser.user.user_id === viewedUserId) return;
 
       // Свежая активная подписка перед открытием
       let existingSubscription = null;
@@ -133,17 +136,18 @@ export async function renderProfileHeader(
     });
   }
 
-  // Остальные кнопки – без изменений
+  // Статистика тренера (модалка)
   const statBtn = element.querySelector(`#stat-btn-${id}`) as HTMLElement | null;
-  if (statBtn) statBtn.addEventListener('click', () => {
-    statBtn.classList.add('button--active');
-    setTimeout(() => statBtn.classList.remove('button--active'), 100);
+  if (statBtn) statBtn.addEventListener('click', async () => {
+    const { openStatisticsModal } = await import('../StatisticsModal/StatisticsModal');
+    await openStatisticsModal({ api });
   });
 
-  const subsBtn = element.querySelector(`#subscriptions-btn-${id}`) as HTMLElement | null;
-  if (subsBtn) subsBtn.addEventListener('click', () => {
-    subsBtn.classList.add('button--active');
-    setTimeout(() => subsBtn.classList.remove('button--active'), 100);
+  // Подписчики тренера (модалка)
+  const subscribersBtn = element.querySelector(`#subscribers-btn-${id}`) as HTMLElement | null;
+  if (subscribersBtn) subscribersBtn.addEventListener('click', async () => {
+    const { openSubscribersModal } = await import('../SubscribersModal/SubscribersModal');
+    await openSubscribersModal({ api });
   });
 
   const cameraBtn = element.querySelector('.profile-header__camera-btn') as HTMLElement | null;

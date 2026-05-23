@@ -7,7 +7,8 @@
   position: fixed;
   left: 0;
   top: 0;
-  overflow: hidden; /* Скрываем скролл у корневого элемента */
+  overflow: hidden;
+  z-index: 10;
 }
 
 /* Скроллируемый контейнер для всего содержимого */
@@ -102,6 +103,19 @@
 
 .sidebar__nav-text {
   font-size: 14px;
+}
+
+.sidebar__nav-badge {
+  margin-left: auto;
+  background: white;
+  color: #E85A2B;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 16px;
 }
 
 /* Блок подписок - занимает всё доступное пространство */

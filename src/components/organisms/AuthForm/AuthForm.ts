@@ -63,6 +63,29 @@ export interface AuthFormAPI {
   inputs: Map<string, InputAPI | SportTypeFieldApi>;
 }
 
+const SERVER_ERROR_MAP: Record<string, string> = {
+  'invalid credentials': 'Неверный email или пароль',
+  'invalid credential': 'Неверный email или пароль',
+  'wrong password': 'Неверный email или пароль',
+  'user not found': 'Пользователь не найден',
+  'email already exists': 'Этот email уже занят',
+  'email already taken': 'Этот email уже занят',
+  'username already exists': 'Это имя пользователя уже занято',
+  'username already taken': 'Это имя пользователя уже занято',
+  'user already exists': 'Пользователь с таким email или именем уже существует',
+  'unauthorized': 'Необходима авторизация',
+  'forbidden': 'Доступ запрещён',
+  'internal server error': 'Ошибка сервера, попробуйте позже',
+  'service unavailable': 'Сервис временно недоступен, попробуйте позже',
+  'too many requests': 'Слишком много попыток, подождите немного'
+};
+
+function translateServerError(message: string): string {
+  if (!message) return 'Произошла ошибка';
+  const key = message.toLowerCase().trim();
+  return SERVER_ERROR_MAP[key] ?? message;
+}
+
 let sportTypesPromise: Promise<SportTypeFieldOption[]> | null = null;
 
 export async function loadSportTypes(api: ApiClient): Promise<SportTypeFieldOption[]> {
@@ -697,7 +720,7 @@ export async function renderAuthForm(
         if (err.data?.error?.fields) {
           setApiErrors(err.data.error.fields);
         } else {
-          setGlobalError(err.message || 'Произошла ошибка');
+          setGlobalError(translateServerError(err.message || ''));
         }
       }
     }

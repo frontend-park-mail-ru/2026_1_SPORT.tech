@@ -1,12 +1,7 @@
 .profile-page {
-  display: flex;
-  min-height: 100vh;
   background: #e8f4f8;
-}
-
-.profile-page__sidebar {
-  flex-shrink: 0;
-  width: 240px;
+  min-height: 100vh;
+  flex: 1;
 }
 
 .profile-page__main {

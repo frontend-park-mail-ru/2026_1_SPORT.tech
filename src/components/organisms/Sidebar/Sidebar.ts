@@ -10,6 +10,7 @@ interface SidebarUser {
   name: string;
   role: string;
   avatar?: string | null;
+  isTrainer?: boolean;
 }
 
 interface SidebarParams {
@@ -20,6 +21,17 @@ interface SidebarParams {
   onLogout?: (() => Promise<void>) | null;
 }
 
+/**
+ * Обновляет активный пункт меню без перерендера всего сайдбара.
+ * Вызывается при каждом переходе между страницами.
+ */
+export function setActivePage(sidebarEl: HTMLElement, page: string): void {
+  sidebarEl.querySelectorAll('.sidebar__nav-item').forEach(item => {
+    const itemPage = (item as HTMLElement).dataset.page;
+    item.classList.toggle('sidebar__nav-item--active', itemPage === page);
+  });
+}
+
 export async function renderSidebar(
   container: HTMLElement,
   params: SidebarParams
@@ -28,7 +40,7 @@ export async function renderSidebar(
     activePage = 'home',
     currentUser = null,
     users = [],
-    api: _api,
+    api,
     onLogout = null
   } = params;
 
@@ -50,40 +62,27 @@ export async function renderSidebar(
       active: activePage === 'profile'
     },
     {
-      id: 'feed',
-      label: 'Лента',
-      url: '/feed',
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>',
-      active: activePage === 'feed'
-    },
-    {
-      id: 'workouts',
-      label: 'Обзор тренировок',
-      url: '/workouts',
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
-      active: activePage === 'workouts'
-    },
-    {
-      id: 'messenger',
-      label: 'Мессенджер',
-      url: '/messenger',
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>',
-      active: activePage === 'messenger'
-    },
-    {
       id: 'notifications',
       label: 'Уведомления',
       url: '/notifications',
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
-      active: activePage === 'notifications'
+      active: activePage === 'notifications',
+      badge: 0
     },
     {
-      id: 'settings',
-      label: 'Настройки',
-      url: '/settings',
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
-      active: activePage === 'settings'
-    }
+      id: 'chat',
+      label: 'Чат',
+      url: '/chat',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+      active: activePage === 'chat'
+    },
+    ...(currentUser?.isTrainer ? [{
+      id: 'finance',
+      label: 'Финансы',
+      url: '/finance',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+      active: activePage === 'finance'
+    }] : [])
   ];
 
   const usersWithInitials = users.map((u: SidebarUser) => ({
@@ -109,7 +108,10 @@ export async function renderSidebar(
   const urls: Record<string, string> = {
     'profile': '/profile',
     'home': '/',
-    'auth': '/auth'
+    'auth': '/auth',
+    'notifications': '/notifications',
+    'finance': '/finance',
+    'chat': '/chat'
   };
 
   element.querySelectorAll('.sidebar__nav-item').forEach((item: Element) => {
@@ -124,10 +126,20 @@ export async function renderSidebar(
 
   element.querySelectorAll('.sidebar__user-item').forEach((item: Element) => {
     item.addEventListener('click', () => {
-      const _userId = (item as HTMLElement).dataset.userId;
-      // TODO: Переход на профиль другого пользователя
+      const userId = (item as HTMLElement).dataset.userId;
+      if (userId) window.router.navigateTo(`/profile/${userId}`);
     });
   });
+
+  const currentUserEl = element.querySelector('.sidebar__current-user') as HTMLElement | null;
+  if (currentUserEl) {
+    currentUserEl.style.cursor = 'pointer';
+    currentUserEl.addEventListener('click', (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.sidebar__logout-btn')) return;
+      window.router.navigateTo('/profile');
+    });
+  }
 
   const logoutBtn = element.querySelector('.sidebar__logout-option') as HTMLElement;
   if (logoutBtn && onLogout) {
@@ -138,5 +150,76 @@ export async function renderSidebar(
   }
 
   container.appendChild(element);
+
+  if (currentUser) {
+    // Load unread notification badge
+    void (async () => {
+      try {
+        const data = await api.getNotifications({ limit: 50 });
+        const unreadCount = (data.notifications || []).filter(n => !n.is_read).length;
+        if (unreadCount > 0) {
+          const notifLink = element.querySelector('[data-page="notifications"]');
+          if (notifLink) {
+            let badge = notifLink.querySelector('.sidebar__nav-badge') as HTMLElement | null;
+            if (!badge) {
+              badge = document.createElement('span');
+              badge.className = 'sidebar__nav-badge';
+              notifLink.appendChild(badge);
+            }
+            badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+          }
+        }
+      } catch { /* ignore */ }
+    })();
+
+    // Load subscriptions into sidebar
+    void (async () => {
+      const listEl = element.querySelector('.sidebar__users-list') as HTMLElement | null;
+      if (!listEl) return;
+      try {
+        const subsData = await api.getMySubscriptions();
+        const activeSubs = (subsData.subscriptions || []).filter(s => s.active);
+
+        listEl.innerHTML = '';
+
+        if (activeSubs.length === 0) {
+          listEl.innerHTML = '<p style="color:rgba(255,255,255,0.5);font-size:12px;padding:8px;text-align:center;margin:0;">Вы пока ни на кого не подписаны</p>';
+          return;
+        }
+
+        const profiles = await Promise.all(
+          activeSubs.map(s => api.getProfile(s.trainer_id).catch(() => null))
+        );
+
+        activeSubs.forEach((sub, idx) => {
+          const profile = profiles[idx];
+          const name = profile
+            ? `${profile.first_name} ${profile.last_name}`.trim() || profile.username
+            : `Тренер #${sub.trainer_id}`;
+          const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+
+          const item = document.createElement('div');
+          item.className = 'sidebar__user-item';
+          item.dataset.userId = String(sub.trainer_id);
+          item.innerHTML = `
+            <div class="sidebar__user-avatar">
+              ${profile?.avatar_url
+        ? `<img src="${profile.avatar_url}" alt="${name}">`
+        : initials}
+            </div>
+            <div class="sidebar__user-info">
+              <div class="sidebar__user-name">${name}</div>
+              <div class="sidebar__user-role">${sub.tier_name}</div>
+            </div>
+          `;
+          item.addEventListener('click', () => {
+            window.router.navigateTo(`/profile/${sub.trainer_id}`);
+          });
+          listEl.appendChild(item);
+        });
+      } catch { /* ignore */ }
+    })();
+  }
+
   return element;
 }

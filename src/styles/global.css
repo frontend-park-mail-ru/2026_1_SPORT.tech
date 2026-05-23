@@ -108,6 +108,7 @@ body {
     overflow-x: hidden;
 }
 
+
 img {
     max-width: 100%;
 }
@@ -162,6 +163,49 @@ h6 { font-size: var(--font-size-md); }
 
 #app {
     min-height: 100vh;
+}
+
+/* ===== ПЕРСИСТЕНТНЫЙ ШЕЛЛ (аутентифицированные страницы) ===== */
+#app.app--shell {
+    display: flex;
+    align-items: stretch;
+    min-height: 100vh;
+}
+
+/* Слот для сайдбара: 240px-спейсер + содержит fixed-сайдбар */
+#app-sidebar {
+    width: 240px;
+    flex-shrink: 0;
+}
+
+/* Контентная область — сюда рендерятся страницы */
+#app-content {
+    flex: 1;
+    min-width: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Скелетон только для контента (без сайдбара) */
+.content-skeleton {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+@media (max-width: 1024px) {
+    #app.app--shell {
+        flex-direction: column;
+    }
+    #app-sidebar {
+        width: 100%;
+    }
+    #app-content {
+        min-height: 0;
+    }
 }
 
 .app-loader {
@@ -303,6 +347,24 @@ h6 { font-size: var(--font-size-md); }
     height: 160px;
 }
 
+/* Во время загрузки страницы держим левый бар оранжевым (как настоящий сайдбар),
+   иначе при переходах он мерцает: оранжевый → серый скелетон → оранжевый. */
+.profile-page--loading .profile-page__sidebar {
+    background: #E85A2B;
+}
+
+.profile-page--loading .page-skeleton--sidebar {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+.profile-page--loading .page-skeleton--sidebar .page-skeleton__block {
+    background: rgba(255, 255, 255, 0.18);
+    animation: none;
+}
+
 @keyframes app-loader-spin {
     to {
         transform: rotate(360deg);
@@ -317,6 +379,64 @@ h6 { font-size: var(--font-size-md); }
     100% {
         background-position: -200% 0;
     }
+}
+
+/* ===== СКЕЛЕТОН КАРТОЧКИ ПОСТА ===== */
+.post-skeleton {
+    background: rgba(255, 255, 255, 0.76);
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(36, 67, 103, 0.06);
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.post-skeleton__header {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.post-skeleton__avatar {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    flex-shrink: 0;
+    margin-bottom: 0 !important;
+}
+
+.post-skeleton__meta {
+    flex: 1;
+}
+
+.post-skeleton__name {
+    height: 14px;
+    width: 55%;
+    margin-bottom: 8px !important;
+}
+
+.post-skeleton__role {
+    height: 12px;
+    width: 35%;
+    margin-bottom: 0 !important;
+}
+
+.post-skeleton__title {
+    height: 20px;
+    width: 75%;
+    margin-bottom: 12px;
+}
+
+.post-skeleton__line {
+    height: 13px;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.post-skeleton__line--short {
+    width: 65%;
+    margin-bottom: 0;
 }
 
 @media (max-width: 768px) {

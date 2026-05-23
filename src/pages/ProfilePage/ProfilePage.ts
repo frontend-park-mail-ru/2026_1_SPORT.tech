@@ -5,7 +5,6 @@ import type { PostWithAuthor, ProfilePageData } from '../../types/post.types';
 import { openDonationModal } from '../../components/molecules/DonationModal/DonationModal';
 import { renderProfileHeader } from '../../components/molecules/ProfileHeader/ProfileHeader';
 import { fillProfilePostsSection, renderProfileContent } from '../../components/organisms/ProfileContent/ProfileContent';
-import { renderSidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { loadProfilePageData } from '../../utils/profilePageData';
 
 interface ProfilePageParams {
@@ -25,8 +24,7 @@ export async function renderProfilePage(
   const {
     viewedUserId,
     profile = { name: 'Абдурахман Гасанов', role: 'Фитнес-тренер', avatar: null, isOwnProfile: false, isTrainer: false },
-    currentUser = { id: 0, name: 'Абдурахман Гасанов', role: 'Фитнес-тренер', avatar: null },
-    subscriptions = [], posts = [], popularPosts = [], activeTab = 'publications', onLogout = null
+    posts = [], popularPosts = [], activeTab = 'publications',
   } = params;
 
   const HandlebarsGlobal = (window as any).Handlebars;
@@ -38,7 +36,6 @@ export async function renderProfilePage(
 
   container.innerHTML = '';
   container.appendChild(page);
-  const sidebarContainer = page.querySelector('#sidebar-container') as HTMLElement;
   const profileContainer = page.querySelector('#profile-container') as HTMLElement;
   const headerContainer = document.createElement('div'); headerContainer.className = 'profile-page__header'; profileContainer.appendChild(headerContainer);
   const contentContainer = document.createElement('div'); contentContainer.className = 'profile-page__content'; profileContainer.appendChild(contentContainer);
@@ -63,12 +60,12 @@ export async function renderProfilePage(
   }
 
   await Promise.all([
-    renderSidebar(sidebarContainer, { activePage: 'profile', currentUser, users: subscriptions, api, onLogout }),
     renderProfileHeader(headerContainer, {
       name: profile.name,
       role: profile.role,
       avatar: profile.avatar,
       isOwnProfile: profile.isOwnProfile,
+      isTrainer: profile.isTrainer,
       showDonate: profile.isTrainer,
       api,
       viewedUserId,
@@ -84,7 +81,8 @@ export async function renderProfilePage(
       canManagePosts: profile.isOwnProfile && profile.isTrainer,
       onPostsUpdated: reloadAllData,
       viewedUserId,
-      isTrainer: profile.isTrainer
+      isTrainer: profile.isTrainer,
+      isOwnProfile: profile.isOwnProfile
     })
   ]);
 

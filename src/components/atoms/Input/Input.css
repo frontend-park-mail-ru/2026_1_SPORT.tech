@@ -23,6 +23,11 @@
     transition: color 0.2s ease;
 }
 
+.input-field__required {
+    color: var(--error-red);
+    font-weight: var(--font-weight-medium);
+}
+
 .input-field__wrapper {
     position: relative;
     width: 100%;

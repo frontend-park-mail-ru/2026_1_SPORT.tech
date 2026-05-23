@@ -14,7 +14,17 @@ import type {
   DonationResponse,
   CSRFTokenResponse,
   Tier,
-  Subscription
+  Subscription,
+  Comment,
+  StatisticsResponse,
+  BalanceResponse,
+  Notification,
+  PaymentResponse,
+  Subscriber,
+  Measurement,
+  ListDonationsResponse,
+  ChatMessage,
+  ChatConversation
 } from '../types/api.types';
 
 export interface ApiResponse<T = unknown> {
@@ -362,6 +372,7 @@ export class ApiClient {
     only_available?: boolean;
     limit?: number;
     offset?: number;
+    sort?: string;
   }): Promise<{ posts: PostListItem[] }> {
     await this.ensureCsrfToken();
     return this.request<{ posts: PostListItem[] }>('/v1/posts:search', {
@@ -380,6 +391,7 @@ export class ApiClient {
     name: string;
     price: number;
     description?: string;
+    chat_enabled?: boolean;
   }): Promise<Tier> {
     await this.ensureCsrfToken();
     return this.request<Tier>('/v1/tiers', {
@@ -393,6 +405,7 @@ export class ApiClient {
     price?: number;
     description?: string;
     clear_description?: boolean;
+    chat_enabled?: boolean;
   }): Promise<Tier> {
     await this.ensureCsrfToken();
     return this.request<Tier>(`/v1/tiers/${tierId}`, {
@@ -492,8 +505,172 @@ export class ApiClient {
     return this.request<{ subscriptions: Subscription[] }>('/v1/subscriptions/me');
   }
 
+  async getMySubscribers(params?: { limit?: number; offset?: number }): Promise<{ subscribers: Subscriber[] }> {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    const qs = query.toString();
+    return this.request<{ subscribers: Subscriber[] }>(`/v1/subscribers/me${qs ? `?${qs}` : ''}`);
+  }
+
   async cancelSubscription(subscriptionId: number): Promise<void> {
     await this.ensureCsrfToken();
     await this.request(`/v1/subscriptions/${subscriptionId}`, { method: 'DELETE' });
+  }
+
+  // ========== COMMENTS ==========
+
+  async getComments(postId: number): Promise<{ comments: Comment[] }> {
+    return this.request<{ comments: Comment[] }>(`/v1/posts/${postId}/comments`);
+  }
+
+  async createComment(postId: number, body: string): Promise<{ comment: Comment }> {
+    await this.ensureCsrfToken();
+    return this.request<{ comment: Comment }>(`/v1/posts/${postId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body })
+    });
+  }
+
+  // ========== STATISTICS ==========
+
+  async getMyReceivedDonations(params?: { limit?: number; offset?: number }): Promise<ListDonationsResponse> {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    const qs = query.toString();
+    return this.request<ListDonationsResponse>(`/v1/donations/received${qs ? `?${qs}` : ''}`);
+  }
+
+  async getMyStatistics(): Promise<StatisticsResponse> {
+    return this.request<StatisticsResponse>('/v1/statistics/me');
+  }
+
+  async getMyBalance(): Promise<BalanceResponse> {
+    return this.request<BalanceResponse>('/v1/balance');
+  }
+
+  // ========== NOTIFICATIONS ==========
+
+  async getNotifications(params?: { limit?: number; offset?: number }): Promise<{ notifications: Notification[] }> {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    const qs = query.toString();
+    return this.request<{ notifications: Notification[] }>(`/v1/notifications${qs ? `?${qs}` : ''}`);
+  }
+
+  async markNotificationRead(notificationId: number): Promise<{ notification: Notification }> {
+    await this.ensureCsrfToken();
+    return this.request<{ notification: Notification }>(`/v1/notifications/${notificationId}/read`, {
+      method: 'PATCH'
+    });
+  }
+
+  // ========== MEASUREMENTS ==========
+
+  async createMeasurement(data: {
+    measured_at: string; // "YYYY-MM-DD"
+    weight_kg?: number | null;
+    body_fat_pct?: number | null;
+    chest_cm?: number | null;
+    waist_cm?: number | null;
+    hips_cm?: number | null;
+    notes?: string | null;
+  }): Promise<{ measurement: Measurement }> {
+    await this.ensureCsrfToken();
+    return this.request('/v1/measurements', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getMeasurements(userId: number, params?: { limit?: number; offset?: number }): Promise<{ measurements: Measurement[] }> {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    const qs = query.toString();
+    return this.request(`/v1/profiles/${userId}/measurements${qs ? `?${qs}` : ''}`);
+  }
+
+  async deleteMeasurement(measurementId: number): Promise<void> {
+    await this.ensureCsrfToken();
+    await this.request(`/v1/measurements/${measurementId}`, { method: 'DELETE' });
+  }
+
+  async getMeasurementSharing(): Promise<{ trainer_user_ids: number[] }> {
+    return this.request<{ trainer_user_ids: number[] }>('/v1/measurements/sharing');
+  }
+
+  async setMeasurementSharing(trainerUserIds: number[]): Promise<void> {
+    await this.request('/v1/measurements/sharing', {
+      method: 'PUT',
+      body: JSON.stringify({ trainer_user_ids: trainerUserIds }),
+    });
+  }
+
+  // ========== PAYMENTS ==========
+
+  async createDonationPayment(data: {
+    user_id: number;
+    amount_value: number;
+    currency: string;
+    message: string;
+    return_url: string;
+    cancel_url: string;
+  }): Promise<PaymentResponse> {
+    await this.ensureCsrfToken();
+    return this.request<PaymentResponse>('/v1/payments/donations', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async createSubscriptionPayment(data: {
+    trainer_id: number;
+    tier_id: number;
+    return_url: string;
+    cancel_url: string;
+  }): Promise<PaymentResponse> {
+    await this.ensureCsrfToken();
+    return this.request<PaymentResponse>('/v1/payments/subscriptions', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async confirmPayment(paymentId: number, confirmationToken: string): Promise<PaymentResponse> {
+    await this.ensureCsrfToken();
+    return this.request<PaymentResponse>(`/v1/payments/${paymentId}/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ confirmation_token: confirmationToken })
+    });
+  }
+
+  // ========== CHAT ==========
+
+  async sendChatMessage(receiverUserId: number, body: string): Promise<ChatMessage> {
+    await this.ensureCsrfToken();
+    return this.request<ChatMessage>('/v1/chat/messages', {
+      method: 'POST',
+      body: JSON.stringify({ receiver_user_id: receiverUserId, body })
+    });
+  }
+
+  async listChatMessages(otherUserId: number, params?: { limit?: number; offset?: number }): Promise<{ messages: ChatMessage[] }> {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return this.request<{ messages: ChatMessage[] }>(`/v1/chat/messages/${otherUserId}${qs}`);
+  }
+
+  async listChatConversations(): Promise<{ conversations: ChatConversation[] }> {
+    return this.request<{ conversations: ChatConversation[] }>('/v1/chat/conversations');
+  }
+
+  async markChatMessageRead(messageId: number): Promise<void> {
+    await this.ensureCsrfToken();
+    await this.request(`/v1/chat/messages/${messageId}/read`, { method: 'PATCH', body: '{}' });
   }
 }

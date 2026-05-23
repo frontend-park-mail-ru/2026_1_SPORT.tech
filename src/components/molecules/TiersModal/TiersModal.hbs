@@ -64,6 +64,24 @@
                 placeholder="Что получает подписчик"
               >
             </div>
+
+            <div class="tier-field tier-field--chat">
+              <label class="tier-chat-toggle">
+                <input
+                  type="checkbox"
+                  class="tier-input tier-chat-input"
+                  data-tier-id="{{this.id}}"
+                  data-field="chat_enabled"
+                  {{#if this.chat_enabled}}checked{{/if}}
+                >
+                <span class="tier-chat-toggle__label">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  Открыть чат с тренером
+                </span>
+              </label>
+            </div>
           </div>
         </div>
       {{/each}}

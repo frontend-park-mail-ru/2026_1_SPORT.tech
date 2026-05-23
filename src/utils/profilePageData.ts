@@ -8,6 +8,15 @@ export function getUserRoleLabel(isTrainer: boolean): string {
   return isTrainer ? 'Тренер' : 'Клиент';
 }
 
+/**
+ * Цена уровня/подписки в месяц. Бэк (proto3) не отдаёт нулевое поле price,
+ * поэтому undefined/null трактуем как 0 → «Бесплатно».
+ */
+export function formatMonthlyPrice(price?: number | null): string {
+  const value = typeof price === 'number' && !Number.isNaN(price) ? price : 0;
+  return value === 0 ? 'Бесплатно' : `${value.toLocaleString('ru-RU')} ₽/мес`;
+}
+
 export function getFullName(profile: { first_name?: string; last_name?: string; username?: string } = {}): string {
   const first = profile.first_name || '';
   const last = profile.last_name || '';
@@ -78,6 +87,98 @@ export function mapProfileData(
   };
 }
 
+async function buildPostsWithAuthor(
+  api: ApiClient,
+  postList: PostListItem[],
+  author: { name: string; role: string; avatar: string | null },
+  sportNamesById: Map<number, string>
+): Promise<PostWithAuthor[]> {
+  return Promise.all(postList.map(async (post: PostListItem): Promise<PostWithAuthor> => {
+    let fullPost: Post | null = null;
+    if (post.can_view) {
+      try {
+        fullPost = await api.getPost(post.post_id);
+      } catch {
+        // отдельный пост может быть недоступен
+      }
+    }
+
+    const contentBlocks: ContentBlockForPost[] = [];
+    if (fullPost?.blocks) {
+      for (const block of fullPost.blocks) {
+        if (block.text_content) {
+          contentBlocks.push({ type: 'text', content: block.text_content });
+        }
+        if (block.file_url) {
+          contentBlocks.push({ type: 'attachment', file_url: block.file_url, kind: block.kind || 'image' });
+        }
+      }
+    }
+
+    const sportTypeName = post.sport_type_id
+      ? sportNamesById.get(post.sport_type_id) || ''
+      : '';
+
+    const allText = contentBlocks
+      .filter(b => b.type === 'text')
+      .map(b => b.content)
+      .join('\n');
+
+    return {
+      post_id: post.post_id,
+      title: post.title,
+      content: post.can_view ? formatPostContent(allText) : 'Нет доступа к содержимому поста',
+      raw_text: allText,
+      authorName: author.name,
+      authorRole: author.role,
+      authorAvatar: author.avatar,
+      likes: post.likes_count || 0,
+      liked: post.is_liked,
+      comments: post.comments_count ?? 0,
+      can_view: post.can_view ?? false,
+      created_at: post.created_at,
+      min_tier_id: post.min_tier_id ?? null,
+      sport_type_id: post.sport_type_id ?? null,
+      sport_type: sportTypeName,
+      contentBlocks: contentBlocks,
+      attachments: []
+    };
+  }));
+}
+
+/** Поиск постов тренера через бэкенд (фильтр по видам спорта, текстовый запрос, сортировка). */
+export async function searchProfilePosts(
+  api: ApiClient,
+  viewedUserId: number,
+  opts: { sportTypeIds?: number[]; query?: string; sort?: string } = {}
+): Promise<PostWithAuthor[]> {
+  const [profileData, sportTypesData] = await Promise.all([
+    api.getProfile(viewedUserId),
+    api.getSportTypes().catch(() => ({ sport_types: [] }))
+  ]);
+
+  const sportNamesById = new Map<number, string>(
+    (sportTypesData?.sport_types || []).map(s => [s.sport_type_id, s.name])
+  );
+
+  const author = {
+    name: getFullName(profileData),
+    role: getUserRoleLabel(profileData.is_trainer),
+    avatar: profileData.avatar_url || null
+  };
+
+  const response = await api.searchPosts({
+    trainer_ids: [viewedUserId],
+    sport_type_ids: opts.sportTypeIds && opts.sportTypeIds.length > 0 ? opts.sportTypeIds : undefined,
+    query: opts.query || undefined,
+    sort: opts.sort,
+    only_available: false,
+    limit: 50
+  });
+
+  return buildPostsWithAuthor(api, response.posts || [], author, sportNamesById);
+}
+
 export async function loadProfilePageData(
   api: ApiClient,
   userId: number,
@@ -101,72 +202,14 @@ export async function loadProfilePageData(
     (sportTypesData?.sport_types || []).map(s => [s.sport_type_id, s.name])
   );
 
-  const authorName = getFullName(profileData);
-  const authorRole = getUserRoleLabel(profileData.is_trainer);
-  const authorAvatar = profileData.avatar_url || null;
+  const author = {
+    name: getFullName(profileData),
+    role: getUserRoleLabel(profileData.is_trainer),
+    avatar: profileData.avatar_url || null
+  };
   const postList: PostListItem[] = Array.isArray(postsData?.posts) ? postsData.posts : [];
 
-  const posts: PostWithAuthor[] = await Promise.all(postList.map(async (post: PostListItem): Promise<PostWithAuthor> => {
-    let fullPost: Post | null = null;
-    if (post.can_view) {
-      try {
-        fullPost = await api.getPost(post.post_id);
-      } catch {
-        // отдельный пост может быть недоступен
-      }
-    }
-
-    // Собираем contentBlocks с сохранением порядка из blocks
-    const contentBlocks: ContentBlockForPost[] = [];
-    if (fullPost?.blocks) {
-      for (const block of fullPost.blocks) {
-        if (block.text_content) {
-          contentBlocks.push({
-            type: 'text',
-            content: block.text_content
-          });
-        }
-        if (block.file_url) {
-          contentBlocks.push({
-            type: 'attachment',
-            file_url: block.file_url,
-            kind: block.kind || 'image'
-          });
-        }
-      }
-    }
-
-    // Преобразуем sport_type_id в название
-    const sportTypeName = post.sport_type_id
-      ? sportNamesById.get(post.sport_type_id) || ''
-      : '';
-
-    // Текстовый контент для краткого превью
-    const allText = contentBlocks
-      .filter(b => b.type === 'text')
-      .map(b => b.content)
-      .join('\n');
-
-    return {
-      post_id: post.post_id,
-      title: post.title,
-      content: post.can_view ? formatPostContent(allText) : 'Нет доступа к содержимому поста',
-      raw_text: allText,
-      authorName,
-      authorRole,
-      authorAvatar,
-      likes: post.likes_count,
-      liked: post.is_liked,
-      comments: post.comments_count ?? 0,
-      can_view: post.can_view,
-      created_at: post.created_at,
-      min_tier_id: post.min_tier_id ?? null,
-      sport_type_id: post.sport_type_id ?? null,
-      sport_type: sportTypeName,
-      contentBlocks: contentBlocks,
-      attachments: []
-    };
-  }));
+  const posts: PostWithAuthor[] = await buildPostsWithAuthor(api, postList, author, sportNamesById);
 
   const mappedData = mapProfileData(profileData, currentUser);
 
