@@ -63,14 +63,17 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            cd "${{ secrets.FRONTEND_DEPLOY_PATH }}"
-            git fetch origin "$DEPLOY_REF"
-            git checkout "$DEPLOY_REF" || git checkout -b "$DEPLOY_REF" "origin/$DEPLOY_REF"
-            git pull --ff-only origin "$DEPLOY_REF"
-            npm ci --prefer-offline
-            npm run build
-            # Перезапускаем serve: убиваем старый процесс на порту 8079 и стартуем новый
-            pkill -f "serve -s dist -l 8079" || true
-            sleep 1
-            nohup npx serve -s dist -l 8079 > frontend.log 2>&1 &
-            echo "Frontend deployed, PID=$!"
+            sudo DEPLOY_REF="$DEPLOY_REF" FRONTEND_DEPLOY_PATH="${{ secrets.FRONTEND_DEPLOY_PATH }}" bash -lc '
+              set -euo pipefail
+              cd "$FRONTEND_DEPLOY_PATH"
+              git fetch origin "$DEPLOY_REF"
+              git checkout "$DEPLOY_REF" || git checkout -b "$DEPLOY_REF" "origin/$DEPLOY_REF"
+              git pull --ff-only origin "$DEPLOY_REF"
+              npm ci --prefer-offline
+              npm run build
+              # Перезапускаем serve: убиваем старый процесс на порту 8079 и стартуем новый
+              pkill -f "serve -s dist -l 8079" || true
+              sleep 1
+              nohup npx serve -s dist -l 8079 > frontend.log 2>&1 &
+              echo "Frontend deployed, PID=$!"
+            '
