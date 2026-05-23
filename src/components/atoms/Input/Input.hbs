@@ -1,6 +1,6 @@
 <div class="input-field input-field--{{state}} input-field--{{type}}" id="input-{{id}}-container">
     {{#if label}}
-        <label class="input-field__label" for="{{id}}">{{label}}</label>
+        <label class="input-field__label" for="{{id}}">{{label}}{{#if required}}<span class="input-field__required" aria-hidden="true"> *</span>{{/if}}</label>
     {{/if}}
 
     <div class="input-field__wrapper">
