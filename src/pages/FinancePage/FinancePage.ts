@@ -179,8 +179,8 @@ function renderDonationRow(
     <div class="finance-page__donation-row">
       <div class="finance-page__donation-avatar">
         ${avatarUrl
-      ? `<img src="${avatarUrl}" alt="${name}" class="finance-page__avatar-img">`
-      : `<span class="finance-page__avatar-initials">${initials}</span>`}
+    ? `<img src="${avatarUrl}" alt="${name}" class="finance-page__avatar-img">`
+    : `<span class="finance-page__avatar-initials">${initials}</span>`}
       </div>
       <div class="finance-page__donation-info">
         <div class="finance-page__donation-sender">${name}</div>
@@ -200,14 +200,14 @@ function renderPagination(currentPage: number, totalPages: number): string {
   const end = Math.min(totalPages - 1, currentPage + 2);
 
   if (start > 0) {
-    pages.push(`<button class="finance-page__page-btn" data-page="0">1</button>`);
-    if (start > 1) pages.push(`<span class="finance-page__page-ellipsis">…</span>`);
+    pages.push('<button class="finance-page__page-btn" data-page="0">1</button>');
+    if (start > 1) pages.push('<span class="finance-page__page-ellipsis">…</span>');
   }
   for (let i = start; i <= end; i++) {
     pages.push(`<button class="finance-page__page-btn${i === currentPage ? ' finance-page__page-btn--active' : ''}" data-page="${i}">${i + 1}</button>`);
   }
   if (end < totalPages - 1) {
-    if (end < totalPages - 2) pages.push(`<span class="finance-page__page-ellipsis">…</span>`);
+    if (end < totalPages - 2) pages.push('<span class="finance-page__page-ellipsis">…</span>');
     pages.push(`<button class="finance-page__page-btn" data-page="${totalPages - 1}">${totalPages}</button>`);
   }
 
@@ -259,8 +259,8 @@ async function loadSubscribers(api: ApiClient, container: HTMLElement): Promise<
         <div class="finance-page__subscriber-row" data-user-id="${s.client_id}" style="cursor:pointer;">
           <div class="finance-page__donation-avatar">
             ${avatarUrl
-          ? `<img src="${avatarUrl}" alt="${name}" class="finance-page__avatar-img">`
-          : `<span class="finance-page__avatar-initials">${initials}</span>`}
+    ? `<img src="${avatarUrl}" alt="${name}" class="finance-page__avatar-img">`
+    : `<span class="finance-page__avatar-initials">${initials}</span>`}
           </div>
           <div class="finance-page__donation-info">
             <div class="finance-page__donation-sender">${name}</div>

@@ -69,6 +69,13 @@ export async function renderSidebar(
       active: activePage === 'notifications',
       badge: 0
     },
+    {
+      id: 'chat',
+      label: 'Чат',
+      url: '/chat',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+      active: activePage === 'chat'
+    },
     ...(currentUser?.isTrainer ? [{
       id: 'finance',
       label: 'Финансы',
@@ -103,7 +110,8 @@ export async function renderSidebar(
     'home': '/',
     'auth': '/auth',
     'notifications': '/notifications',
-    'finance': '/finance'
+    'finance': '/finance',
+    'chat': '/chat'
   };
 
   element.querySelectorAll('.sidebar__nav-item').forEach((item: Element) => {

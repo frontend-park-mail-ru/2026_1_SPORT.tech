@@ -268,6 +268,24 @@ function createRouter(api: ApiClient): Router {
     }
   }
 
+  async function showChatPage(app: HTMLElement, currentUser: AuthResponse, initialUserId?: number): Promise<void> {
+    setPageTitle('Чат');
+    const content = ensureShell(app);
+    const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
+
+    void syncSidebar(app, currentUser, 'chat', onLogout);
+
+    renderContentSkeleton(content);
+    try {
+      const { renderChatPage } = await import('./pages/ChatPage/ChatPage');
+      await renderChatPage(api, content, { currentUser, initialUserId });
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Failed to load ChatPage:', err);
+      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+    }
+  }
+
   async function showPaymentReturnPage(app: HTMLElement, currentUser: AuthResponse): Promise<void> {
     setPageTitle('Оплата');
     const content = ensureShell(app);
@@ -300,6 +318,7 @@ function createRouter(api: ApiClient): Router {
     const isAuthenticated = !!currentUser;
     const path = window.location.pathname;
     const viewedProfileMatch = path.match(/^\/profile\/(\d+)$/);
+    const chatWithMatch = path.match(/^\/chat\/(\d+)$/);
 
     if (path === '/index.html') {
       navigateTo(isAuthenticated ? '/' : '/auth');
@@ -325,7 +344,15 @@ function createRouter(api: ApiClient): Router {
     } else if (path === '/notifications') {
       await showNotificationsPage(app, currentUser!);
     } else if (path === '/finance') {
+      if (!currentUser!.user.is_trainer) {
+        navigateTo('/');
+        return;
+      }
       await showFinancePage(app, currentUser!);
+    } else if (path === '/chat') {
+      await showChatPage(app, currentUser!);
+    } else if (chatWithMatch) {
+      await showChatPage(app, currentUser!, Number(chatWithMatch[1]));
     } else if (path === '/payment/return') {
       await showPaymentReturnPage(app, currentUser!);
     } else if (path === '/payment/cancel') {

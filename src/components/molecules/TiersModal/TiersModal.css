@@ -217,3 +217,40 @@
 .tiers-error-message {
   animation: fadeIn 0.3s ease;
 }
+
+/* Chat enabled toggle */
+.tier-field--chat {
+  margin-top: 4px;
+}
+
+.tier-chat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tier-chat-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #E85A2B;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.tier-chat-toggle__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.tier-chat-toggle__label svg {
+  width: 14px;
+  height: 14px;
+  stroke: #E85A2B;
+  flex-shrink: 0;
+}

@@ -120,8 +120,24 @@ export interface Tier {
   name: string;
   price: number;
   description: string;
+  chat_enabled: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface ChatMessage {
+  message_id: number;
+  sender_user_id: number;
+  receiver_user_id: number;
+  body: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface ChatConversation {
+  other_user_id: number;
+  last_message: ChatMessage;
+  unread_count: number;
 }
 
 export interface Subscription {

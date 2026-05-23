@@ -14,12 +14,13 @@ export interface TiersModalOptions {
 }
 
 interface TierData {
-  id: string;        // 'tier-{tier_id}' для существующих, 'new-{counter}' для новых
+  id: string;           // 'tier-{tier_id}' для существующих, 'new-{counter}' для новых
   name: string;
   price: number;
   description: string;
+  chat_enabled: boolean;
   index?: number;
-  existingId?: number; // настоящий tier_id с бэкенда
+  existingId?: number;  // настоящий tier_id с бэкенда
 }
 
 export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
@@ -96,7 +97,8 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
         id: `new-${Date.now()}-${tierCounter}`,
         name: '',
         price: 0,
-        description: ''
+        description: '',
+        chat_enabled: false
       });
       render();
       break;
@@ -135,6 +137,8 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
         tier.name = target.value;
       } else if (field === 'description') {
         tier.description = target.value;
+      } else if (field === 'chat_enabled') {
+        tier.chat_enabled = (target as HTMLInputElement).checked;
       }
     }
   });
@@ -176,7 +180,8 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
             await api.updateTier(tier.existingId, {
               name: tier.name.trim(),
               price: tier.price,
-              description: tier.description.trim() || ''
+              description: tier.description.trim() || '',
+              chat_enabled: tier.chat_enabled
             });
           } catch (error) {
             console.error(`Failed to update tier ${tier.existingId}:`, error);
@@ -187,7 +192,8 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
             await api.createTier({
               name: tier.name.trim(),
               price: tier.price,
-              description: tier.description.trim() || ''
+              description: tier.description.trim() || '',
+              chat_enabled: tier.chat_enabled
             });
           } catch (error) {
             console.error('Failed to create tier:', error);
@@ -227,6 +233,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
           name: t.name || '',
           price: t.price || 0,
           description: t.description || '',
+          chat_enabled: t.chat_enabled ?? false,
           existingId: t.tier_id
         }));
         tierCounter = tiers.length;

@@ -22,7 +22,9 @@ import type {
   PaymentResponse,
   Subscriber,
   Measurement,
-  ListDonationsResponse
+  ListDonationsResponse,
+  ChatMessage,
+  ChatConversation
 } from '../types/api.types';
 
 export interface ApiResponse<T = unknown> {
@@ -389,6 +391,7 @@ export class ApiClient {
     name: string;
     price: number;
     description?: string;
+    chat_enabled?: boolean;
   }): Promise<Tier> {
     await this.ensureCsrfToken();
     return this.request<Tier>('/v1/tiers', {
@@ -402,6 +405,7 @@ export class ApiClient {
     price?: number;
     description?: string;
     clear_description?: boolean;
+    chat_enabled?: boolean;
   }): Promise<Tier> {
     await this.ensureCsrfToken();
     return this.request<Tier>(`/v1/tiers/${tierId}`, {
@@ -641,5 +645,32 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify({ confirmation_token: confirmationToken })
     });
+  }
+
+  // ========== CHAT ==========
+
+  async sendChatMessage(receiverUserId: number, body: string): Promise<ChatMessage> {
+    await this.ensureCsrfToken();
+    return this.request<ChatMessage>('/v1/chat/messages', {
+      method: 'POST',
+      body: JSON.stringify({ receiver_user_id: receiverUserId, body })
+    });
+  }
+
+  async listChatMessages(otherUserId: number, params?: { limit?: number; offset?: number }): Promise<{ messages: ChatMessage[] }> {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return this.request<{ messages: ChatMessage[] }>(`/v1/chat/messages/${otherUserId}${qs}`);
+  }
+
+  async listChatConversations(): Promise<{ conversations: ChatConversation[] }> {
+    return this.request<{ conversations: ChatConversation[] }>('/v1/chat/conversations');
+  }
+
+  async markChatMessageRead(messageId: number): Promise<void> {
+    await this.ensureCsrfToken();
+    await this.request(`/v1/chat/messages/${messageId}/read`, { method: 'PATCH', body: '{}' });
   }
 }

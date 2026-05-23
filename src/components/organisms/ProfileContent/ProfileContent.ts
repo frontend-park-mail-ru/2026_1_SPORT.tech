@@ -367,8 +367,13 @@ async function renderStatsPanel(container: HTMLElement, api: ApiClient): Promise
         </div>
       </div>
     `;
-  } catch {
-    container.innerHTML = '';
+  } catch (err: unknown) {
+    console.error('[ProfileContent] failed to load stats:', err);
+    container.innerHTML = `
+      <div class="profile-stats profile-stats--error">
+        <span style="color:#999;font-size:13px;">Статистика недоступна</span>
+      </div>
+    `;
   }
 }
 
