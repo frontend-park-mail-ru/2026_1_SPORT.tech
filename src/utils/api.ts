@@ -20,7 +20,8 @@ import type {
   BalanceResponse,
   Notification,
   PaymentResponse,
-  Subscriber
+  Subscriber,
+  Measurement
 } from '../types/api.types';
 
 export interface ApiResponse<T = unknown> {
@@ -551,6 +552,37 @@ export class ApiClient {
     return this.request<{ notification: Notification }>(`/v1/notifications/${notificationId}/read`, {
       method: 'PATCH'
     });
+  }
+
+  // ========== MEASUREMENTS ==========
+
+  async createMeasurement(data: {
+    measured_at: string; // "YYYY-MM-DD"
+    weight_kg?: number | null;
+    body_fat_pct?: number | null;
+    chest_cm?: number | null;
+    waist_cm?: number | null;
+    hips_cm?: number | null;
+    notes?: string | null;
+  }): Promise<{ measurement: Measurement }> {
+    await this.ensureCsrfToken();
+    return this.request('/v1/measurements', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getMeasurements(userId: number, params?: { limit?: number; offset?: number }): Promise<{ measurements: Measurement[] }> {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    const qs = query.toString();
+    return this.request(`/v1/profiles/${userId}/measurements${qs ? `?${qs}` : ''}`);
+  }
+
+  async deleteMeasurement(measurementId: number): Promise<void> {
+    await this.ensureCsrfToken();
+    await this.request(`/v1/measurements/${measurementId}`, { method: 'DELETE' });
   }
 
   // ========== PAYMENTS ==========

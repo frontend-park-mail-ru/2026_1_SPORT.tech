@@ -59,7 +59,7 @@ function renderSuccess(el: HTMLElement, payment: PaymentResponse, navigateTo: (p
       ${details}
       <div class="payment-result__actions">
         <button class="payment-result__btn payment-result__btn--primary" id="btn-home">На главную</button>
-        ${trainerId ? `<button class="payment-result__btn payment-result__btn--secondary" id="btn-profile">Профиль тренера</button>` : ''}
+        ${trainerId ? '<button class="payment-result__btn payment-result__btn--secondary" id="btn-profile">Профиль тренера</button>' : ''}
       </div>
     </div>
   `;

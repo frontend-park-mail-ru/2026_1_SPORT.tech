@@ -203,6 +203,20 @@ export interface PaymentDonation {
   created_at: string;
 }
 
+export interface Measurement {
+  measurement_id: number;
+  user_id: number;
+  measured_at: string; // timestamp string
+  weight_kg: number | null;
+  body_fat_pct: number | null;
+  chest_cm: number | null;
+  waist_cm: number | null;
+  hips_cm: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PaymentResponse {
   payment_id: number;
   confirmation_url: string;

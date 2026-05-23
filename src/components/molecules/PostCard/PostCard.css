@@ -217,6 +217,11 @@
   cursor: not-allowed;
 }
 
+.post-card__action--locked:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .post-card__action svg {
   width: 20px;
   height: 20px;

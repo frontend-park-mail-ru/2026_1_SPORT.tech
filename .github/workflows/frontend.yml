@@ -1,0 +1,76 @@
+name: Frontend CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, Type-check, Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  deploy:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: quality
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+        (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'))
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_REF: ${{ github.ref_name }}
+        with:
+          host: ${{ secrets.FRONTEND_DEPLOY_HOST }}
+          username: ${{ secrets.FRONTEND_DEPLOY_USER }}
+          key: ${{ secrets.FRONTEND_DEPLOY_SSH_KEY }}
+          port: ${{ secrets.FRONTEND_DEPLOY_PORT || 22 }}
+          envs: DEPLOY_REF
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.FRONTEND_DEPLOY_PATH }}"
+            git fetch origin "$DEPLOY_REF"
+            git checkout "$DEPLOY_REF" || git checkout -b "$DEPLOY_REF" "origin/$DEPLOY_REF"
+            git pull --ff-only origin "$DEPLOY_REF"
+            npm ci --prefer-offline
+            npm run build
+            # Перезапускаем serve: убиваем старый процесс на порту 8079 и стартуем новый
+            pkill -f "serve -s dist -l 8079" || true
+            sleep 1
+            nohup npx serve -s dist -l 8079 > frontend.log 2>&1 &
+            echo "Frontend deployed, PID=$!"

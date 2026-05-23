@@ -21,7 +21,9 @@
   width: 100%;
   max-width: 560px;
   max-height: 90vh;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--base-white);
   border-radius: var(--radius-lg);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
@@ -65,6 +67,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+  flex: 1;
+  overflow-y: auto;
+  /* небольшой отступ справа чтобы контент не прилегал к скроллбару */
+  padding-right: 4px;
 }
 
 .post-form-modal__field {
@@ -121,6 +127,11 @@
   justify-content: flex-end;
   gap: var(--spacing-md);
   flex-wrap: wrap;
+  flex-shrink: 0;
+  padding-top: var(--spacing-lg);
+  margin-top: auto;
+  border-top: 1px solid var(--border-light);
+  background: var(--base-white);
 }
 
 @media (max-width: 768px) {
@@ -134,6 +145,7 @@
     max-height: calc(100dvh - 24px);
     padding: 18px 16px;
     border-radius: 16px;
+    padding-bottom: 12px;
   }
 
   .post-form-modal__textarea {

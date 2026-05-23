@@ -8,6 +8,7 @@ import { openPostFormModal } from '../../molecules/PostFormModal/PostFormModal';
 import { openTiersModal } from '../../molecules/TiersModal/TiersModal';
 import { formatMonthlyPrice } from '../../../utils/profilePageData';
 import type { Profile, TrainerDetails, PostListItem, PostBlock } from '../../../types/api.types';
+import { renderProgressTab } from '../../molecules/ProgressTab/ProgressTab';
 
 interface ProfileContentParams {
   activeTab?: string;
@@ -667,6 +668,7 @@ export async function renderProfileContent(
     ]
     : [
       { id: 'publications', label: 'Понравившиеся', active: activeTab === 'publications' || activeTab === 'main' },
+      { id: 'progress', label: 'Прогресс', active: activeTab === 'progress' },
       { id: 'about', label: aboutLabel, active: activeTab === 'about' }
     ];
 
@@ -674,6 +676,7 @@ export async function renderProfileContent(
     main: 'Недавние публикации',
     publications: isTrainer ? 'Все публикации' : 'Понравившиеся',
     subscriptions: 'Уровни подписки',
+    progress: 'История замеров',
     about: aboutLabel
   };
 
@@ -705,6 +708,7 @@ export async function renderProfileContent(
   const addButtonContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
   const postsContainer = element.querySelector('#posts-container') as HTMLElement;
   const subsContainer = element.querySelector('#subscriptions-container') as HTMLElement | null;
+  const progressContainer = element.querySelector('#progress-container') as HTMLElement | null;
   const searchBlock = element.querySelector('.profile-content__search') as HTMLElement | null;
   const searchInput = searchBlock?.querySelector('.profile-content__search-input') as HTMLInputElement | null;
   const sidebarRight = element.querySelector('.profile-content__sidebar-right') as HTMLElement | null;
@@ -892,11 +896,26 @@ export async function renderProfileContent(
 
       if (postsContainer) postsContainer.style.display = 'none';
       if (subsContainer) subsContainer.style.display = 'none';
+      if (progressContainer) progressContainer.style.display = 'none';
 
       toggleSearchVisibility(false);
       toggleSidebarVisibility(true);
 
-      if (tabId === 'about') {
+      if (tabId === 'progress') {
+        toggleSidebarVisibility(false);
+        if (filtersElement) filtersElement.style.display = 'none';
+        if (addButtonContainer) addButtonContainer.style.display = 'none';
+        sectionTitleEl.textContent = 'История замеров';
+        if (progressContainer) {
+          progressContainer.style.display = 'block';
+          progressContainer.innerHTML = '';
+          void renderProgressTab(progressContainer, {
+            api,
+            userId: viewedUserId,
+            isOwnProfile
+          });
+        }
+      } else if (tabId === 'about') {
         toggleSidebarVisibility(false);
         if (filtersElement) filtersElement.style.display = 'none';
         if (addButtonContainer) addButtonContainer.style.display = 'none';
@@ -984,7 +1003,11 @@ export async function renderProfileContent(
     void loadPopularPosts(element, api, viewedUserId);
   }
 
-  if (currentTab === 'about') {
+  if (currentTab === 'progress' && progressContainer) {
+    toggleSidebarVisibility(false);
+    progressContainer.style.display = 'block';
+    void renderProgressTab(progressContainer, { api, userId: viewedUserId, isOwnProfile });
+  } else if (currentTab === 'about') {
     toggleSidebarVisibility(false);
     if (postsContainer) postsContainer.style.display = 'block';
     if (isTrainer) {

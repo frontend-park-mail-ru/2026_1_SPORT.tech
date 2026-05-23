@@ -155,7 +155,7 @@ export async function renderSidebar(
         listEl.innerHTML = '';
 
         if (activeSubs.length === 0) {
-          listEl.innerHTML = `<p style="color:rgba(255,255,255,0.5);font-size:12px;padding:8px;text-align:center;margin:0;">Вы пока ни на кого не подписаны</p>`;
+          listEl.innerHTML = '<p style="color:rgba(255,255,255,0.5);font-size:12px;padding:8px;text-align:center;margin:0;">Вы пока ни на кого не подписаны</p>';
           return;
         }
 
@@ -176,8 +176,8 @@ export async function renderSidebar(
           item.innerHTML = `
             <div class="sidebar__user-avatar">
               ${profile?.avatar_url
-                ? `<img src="${profile.avatar_url}" alt="${name}">`
-                : initials}
+        ? `<img src="${profile.avatar_url}" alt="${name}">`
+        : initials}
             </div>
             <div class="sidebar__user-info">
               <div class="sidebar__user-name">${name}</div>

@@ -160,7 +160,13 @@ export async function renderPostCard(
       try {
         const response = wasLiked ? await api.unlikePost(postId) : await api.likePost(postId);
         // Бэк (proto3) не отдаёт нулевые поля, поэтому likes_count при 0 приходит undefined.
-        setLikeUi(!!response.is_liked, response.likes_count || 0);
+        // Если бэк вернул 204 (response = null), определяем новое состояние оптимистично.
+        const currentCount = parseInt(likeCountEl?.textContent || '0', 10) || 0;
+        const newLiked = response != null ? !!response.is_liked : !wasLiked;
+        const newCount = response != null
+          ? (response.likes_count ?? 0)
+          : (wasLiked ? Math.max(0, currentCount - 1) : currentCount + 1);
+        setLikeUi(newLiked, newCount);
         if (onPostsUpdated) await onPostsUpdated();
       } catch (error) { console.error('Like error:', error); }
       finally { likeBtn.disabled = false; }
