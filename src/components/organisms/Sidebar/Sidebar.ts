@@ -10,6 +10,7 @@ interface SidebarUser {
   name: string;
   role: string;
   avatar?: string | null;
+  isTrainer?: boolean;
 }
 
 interface SidebarParams {
@@ -68,6 +69,13 @@ export async function renderSidebar(
       active: activePage === 'notifications',
       badge: 0
     },
+    ...(currentUser?.isTrainer ? [{
+      id: 'finance',
+      label: 'Финансы',
+      url: '/finance',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+      active: activePage === 'finance'
+    }] : [])
   ];
 
   const usersWithInitials = users.map((u: SidebarUser) => ({
@@ -94,7 +102,8 @@ export async function renderSidebar(
     'profile': '/profile',
     'home': '/',
     'auth': '/auth',
-    'notifications': '/notifications'
+    'notifications': '/notifications',
+    'finance': '/finance'
   };
 
   element.querySelectorAll('.sidebar__nav-item').forEach((item: Element) => {

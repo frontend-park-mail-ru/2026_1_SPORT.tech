@@ -145,6 +145,7 @@ function createRouter(api: ApiClient): Router {
         name: `${user.first_name} ${user.last_name}`.trim() || user.username,
         role: getUserRoleLabel(user.is_trainer),
         avatar: user.avatar_url ?? null,
+        isTrainer: user.is_trainer,
       } : null;
 
       sidebarElement = await renderSidebar(sidebarSlot, {
@@ -249,6 +250,24 @@ function createRouter(api: ApiClient): Router {
     }
   }
 
+  async function showFinancePage(app: HTMLElement, currentUser: AuthResponse): Promise<void> {
+    setPageTitle('Финансы');
+    const content = ensureShell(app);
+    const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
+
+    void syncSidebar(app, currentUser, 'finance', onLogout);
+
+    renderContentSkeleton(content);
+    try {
+      const { renderFinancePage } = await import('./pages/FinancePage/FinancePage');
+      await renderFinancePage(api, content, { currentUser });
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Failed to load FinancePage:', err);
+      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+    }
+  }
+
   async function showPaymentReturnPage(app: HTMLElement, currentUser: AuthResponse): Promise<void> {
     setPageTitle('Оплата');
     const content = ensureShell(app);
@@ -305,6 +324,8 @@ function createRouter(api: ApiClient): Router {
       await showProfilePage(app, currentUser!, Number(viewedProfileMatch[1]));
     } else if (path === '/notifications') {
       await showNotificationsPage(app, currentUser!);
+    } else if (path === '/finance') {
+      await showFinancePage(app, currentUser!);
     } else if (path === '/payment/return') {
       await showPaymentReturnPage(app, currentUser!);
     } else if (path === '/payment/cancel') {

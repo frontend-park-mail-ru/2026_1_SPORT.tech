@@ -21,7 +21,8 @@ import type {
   Notification,
   PaymentResponse,
   Subscriber,
-  Measurement
+  Measurement,
+  ListDonationsResponse
 } from '../types/api.types';
 
 export interface ApiResponse<T = unknown> {
@@ -528,6 +529,14 @@ export class ApiClient {
   }
 
   // ========== STATISTICS ==========
+
+  async getMyReceivedDonations(params?: { limit?: number; offset?: number }): Promise<ListDonationsResponse> {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    const qs = query.toString();
+    return this.request<ListDonationsResponse>(`/v1/donations/received${qs ? `?${qs}` : ''}`);
+  }
 
   async getMyStatistics(): Promise<StatisticsResponse> {
     return this.request<StatisticsResponse>('/v1/statistics/me');

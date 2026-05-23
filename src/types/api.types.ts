@@ -177,6 +177,20 @@ export interface BalanceResponse {
   currency: string;
 }
 
+export interface DonationItem {
+  donation_id: number;
+  sender_user_id: number;
+  amount_value: number;
+  currency: string;
+  message?: string | null;
+  created_at: string;
+}
+
+export interface ListDonationsResponse {
+  donations: DonationItem[];
+  total: number;
+}
+
 export interface Notification {
   notification_id: number;
   user_id: number;
