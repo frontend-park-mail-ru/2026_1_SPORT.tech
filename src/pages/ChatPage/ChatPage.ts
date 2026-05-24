@@ -50,6 +50,8 @@ export async function renderChatPage(
   // State
   let activeConvUserId: number | null = null;
   let conversations: ChatConversation[] = [];
+  let lastRenderedMessageId = 0;
+  let lastRenderedDateLabel = '';
   // Map userId → profile name/avatar (cached)
   const profileCache = new Map<number, { name: string; avatar?: string | null }>();
 
@@ -179,11 +181,36 @@ export async function renderChatPage(
 
     await loadMessages(userId);
     setupInput(userId);
-    setupPolling(userId);
+    setupSSE(userId);
   }
 
-  // ── Load and render messages ─────────────────────────────────────────────
-  async function loadMessages(userId: number, append = false): Promise<void> {
+  // ── Append a single message node to the area ────────────────────────────
+  function appendMessageNode(area: HTMLElement, msg: ChatMessage): void {
+    const dateLabel = formatDate(msg.created_at);
+    if (dateLabel !== lastRenderedDateLabel) {
+      const div = document.createElement('div');
+      div.className = 'chat-messages__date-divider';
+      div.textContent = dateLabel;
+      area.appendChild(div);
+      lastRenderedDateLabel = dateLabel;
+    }
+
+    const isOut = msg.sender_user_id === myUserId;
+    const msgEl = document.createElement('div');
+    msgEl.className = `chat-msg chat-msg--${isOut ? 'out' : 'in'}`;
+    msgEl.innerHTML = `
+      <div class="chat-msg__bubble">${escapeHtml(msg.body)}</div>
+      <div class="chat-msg__meta">${formatTime(msg.created_at)}${isOut && msg.is_read ? ' ✓✓' : ''}</div>
+    `;
+    area.appendChild(msgEl);
+
+    if (!isOut && !msg.is_read) {
+      api.markChatMessageRead(msg.message_id).catch(() => {/* ignore */});
+    }
+  }
+
+  // ── Load and render messages (full re-render) ────────────────────────────
+  async function loadMessages(userId: number): Promise<void> {
     const area = chatWindow.querySelector('#chat-messages-area') as HTMLElement;
     if (!area) return;
 
@@ -192,63 +219,71 @@ export async function renderChatPage(
       const data = await api.listChatMessages(userId, { limit: 50 });
       messages = data.messages || [];
     } catch {
-      messages = [];
+      return;
     }
 
     area.innerHTML = '';
+    lastRenderedMessageId = 0;
+    lastRenderedDateLabel = '';
+
     if (messages.length === 0) {
       area.innerHTML = '<p style="text-align:center;color:#adb5bd;font-size:13px;margin-top:40px;">Нет сообщений. Напишите первым!</p>';
       return;
     }
 
-    let lastDate = '';
     for (const msg of messages) {
-      const dateLabel = formatDate(msg.created_at);
-      if (dateLabel !== lastDate) {
-        const div = document.createElement('div');
-        div.className = 'chat-messages__date-divider';
-        div.textContent = dateLabel;
-        area.appendChild(div);
-        lastDate = dateLabel;
+      appendMessageNode(area, msg);
+      if (msg.message_id > lastRenderedMessageId) lastRenderedMessageId = msg.message_id;
+    }
+    area.scrollTop = area.scrollHeight;
+  }
+
+  // ── SSE ───────────────────────────────────────────────────────────────────
+  let activeEventSource: EventSource | null = null;
+
+  function setupSSE(userId: number): void {
+    clearSSE();
+    const url = `/api/v1/chat/messages/${userId}/stream?after=${lastRenderedMessageId}`;
+    const es = new EventSource(url, { withCredentials: true });
+    activeEventSource = es;
+
+    es.onmessage = (event: MessageEvent) => {
+      if (activeConvUserId !== userId) { clearSSE(); return; }
+      const area = chatWindow.querySelector('#chat-messages-area') as HTMLElement | null;
+      if (!area) { clearSSE(); return; }
+
+      let msg: ChatMessage;
+      try {
+        msg = JSON.parse(event.data) as ChatMessage;
+      } catch {
+        return;
       }
 
-      const isOut = msg.sender_user_id === myUserId;
-      const msgEl = document.createElement('div');
-      msgEl.className = `chat-msg chat-msg--${isOut ? 'out' : 'in'}`;
-      msgEl.innerHTML = `
-        <div class="chat-msg__bubble">${escapeHtml(msg.body)}</div>
-        <div class="chat-msg__meta">${formatTime(msg.created_at)}${isOut && msg.is_read ? ' ✓✓' : ''}</div>
-      `;
-      area.appendChild(msgEl);
+      if (msg.message_id <= lastRenderedMessageId) return;
 
-      // Mark incoming messages as read
-      if (!isOut && !msg.is_read) {
-        api.markChatMessageRead(msg.message_id).catch(() => {/* ignore */});
-      }
+      const placeholder = area.querySelector('p');
+      if (placeholder) area.innerHTML = '';
+
+      const isAtBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 80;
+      appendMessageNode(area, msg);
+      lastRenderedMessageId = msg.message_id;
+      if (isAtBottom) area.scrollTop = area.scrollHeight;
+    };
+
+    es.onerror = () => {
+      // EventSource автоматически переподключится; ничего делать не нужно.
+    };
+  }
+
+  function clearSSE(): void {
+    if (activeEventSource) {
+      activeEventSource.close();
+      activeEventSource = null;
     }
-
-    if (!append) {
-      area.scrollTop = area.scrollHeight;
-    }
   }
 
-  // ── Polling ──────────────────────────────────────────────────────────────
-  let pollingInterval: ReturnType<typeof setInterval> | null = null;
-
-  function setupPolling(userId: number): void {
-    clearPolling();
-    pollingInterval = setInterval(async () => {
-      if (activeConvUserId !== userId) { clearPolling(); return; }
-      await loadMessages(userId);
-    }, 3000);
-  }
-
-  function clearPolling(): void {
-    if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
-  }
-
-  // Stop polling when page unmounts (navigation)
-  window.addEventListener('popstate', clearPolling, { once: true });
+  // Закрываем поток при навигации
+  window.addEventListener('popstate', clearSSE, { once: true });
 
   // ── Input + send ─────────────────────────────────────────────────────────
   function setupInput(toUserId: number): void {
