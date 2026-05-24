@@ -157,22 +157,48 @@ export class ApiClient {
 
   async login(email: string, password: string): Promise<AuthResponse> {
     await this.ensureCsrfToken();
-    return this.request<AuthResponse>('/v1/auth/login', {
+    const response = await this.request<AuthResponse>('/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
+    // Кэшируем после успешного входа
+    if (response) {
+      localStorage.setItem('cached_user', JSON.stringify(response));
+    }
+    return response;
   }
 
   async logout(): Promise<void> {
     await this.ensureCsrfToken();
     await this.request('/v1/auth/logout', { method: 'POST' });
     this.csrfToken = null;
+    localStorage.removeItem('cached_user');
   }
 
   async getCurrentUser(): Promise<AuthResponse | null> {
     try {
-      return await this.request<AuthResponse>('/v1/auth/me');
-    } catch {
+      const user = await this.request<AuthResponse>('/v1/auth/me');
+      // Кэшируем данные пользователя для работы в офлайн-режиме
+      if (user) {
+        localStorage.setItem('cached_user', JSON.stringify(user));
+      }
+      return user;
+    } catch (err) {
+      if (err instanceof TypeError) {
+        // Сетевая ошибка (офлайн) — возвращаем закэшированного пользователя
+        const cached = localStorage.getItem('cached_user');
+        if (cached) {
+          try {
+            return JSON.parse(cached) as AuthResponse;
+          } catch {
+            // Повреждённый кэш — удаляем
+            localStorage.removeItem('cached_user');
+          }
+        }
+      } else {
+        // HTTP-ошибка (401, 403 и т.д.) — сессия истекла, чистим кэш
+        localStorage.removeItem('cached_user');
+      }
       return null;
     }
   }
@@ -697,6 +723,10 @@ export class ApiClient {
   async deleteAvailabilityRule(ruleId: number): Promise<void> {
     await this.ensureCsrfToken();
     await this.request(`/v1/meetings/availability/rules/${ruleId}`, { method: 'DELETE' });
+  }
+
+  async listMyAvailabilitySlots(): Promise<{ slots: MeetingSlot[] }> {
+    return this.request<{ slots: MeetingSlot[] }>('/v1/meetings/availability/slots');
   }
 
   async createAvailabilitySlot(startsAt: string): Promise<MeetingSlot> {

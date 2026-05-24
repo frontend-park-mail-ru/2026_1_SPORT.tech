@@ -8,7 +8,7 @@
  * @fileoverview
  */
 
-const CACHE_NAME = 'sportech-shell-v3';
+const CACHE_NAME = 'sportech-shell-v4';
 
 const SHELL_URLS = ['/'];
 
@@ -65,9 +65,17 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(request)
       .then(response => {
-        if (response.ok && request.mode === 'navigate') {
+        if (response.ok) {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put('/', copy));
+          caches.open(CACHE_NAME).then(cache => {
+            // Навигацию всегда сохраняем под ключом '/' (единственная точка входа SPA).
+            if (request.mode === 'navigate') {
+              cache.put('/', copy);
+            } else {
+              // Остальные ресурсы (CSS, статика) — под их URL.
+              cache.put(request, copy);
+            }
+          });
         }
         return response;
       })

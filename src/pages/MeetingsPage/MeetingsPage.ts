@@ -5,7 +5,7 @@
 
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse } from '../../types/auth.types';
-import type { MeetingBooking, MeetingAvailabilitySlot, MeetingAvailabilityRule, Subscription } from '../../types/api.types';
+import type { MeetingBooking, MeetingAvailabilitySlot, MeetingAvailabilityRule, MeetingSlot, Subscription } from '../../types/api.types';
 import './MeetingsPage.css';
 
 interface MeetingsPageParams {
@@ -354,6 +354,39 @@ export async function renderMeetingsPage(
         showError(card, friendlyError(err));
       }
     });
+
+    let oneOffSlots: MeetingSlot[] = [];
+    try {
+      const data = await api.listMyAvailabilitySlots();
+      oneOffSlots = data.slots || [];
+    } catch { /* ignore */ }
+
+    const slotTags = document.createElement('div');
+    slotTags.className = 'rule-tags';
+    slotTags.style.marginTop = '14px';
+    if (oneOffSlots.length === 0) {
+      slotTags.innerHTML = '<span class="meetings-empty">Разовых слотов нет.</span>';
+    } else {
+      for (const slot of oneOffSlots) {
+        const tag = document.createElement('span');
+        tag.className = 'rule-tag';
+        tag.innerHTML = `<span>${formatDateTime(slot.starts_at)}</span>`;
+        const del = document.createElement('button');
+        del.textContent = '×';
+        del.title = 'Удалить';
+        del.addEventListener('click', async () => {
+          try {
+            await api.deleteAvailabilitySlot(slot.slot_id);
+            await renderAll();
+          } catch (err) {
+            showError(card, friendlyError(err));
+          }
+        });
+        tag.appendChild(del);
+        slotTags.appendChild(tag);
+      }
+    }
+    card.appendChild(slotTags);
 
     const slotForm = document.createElement('div');
     slotForm.className = 'meetings-form';

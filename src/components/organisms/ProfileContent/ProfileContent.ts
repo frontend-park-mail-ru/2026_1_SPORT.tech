@@ -297,9 +297,10 @@ async function showTrainerAbout(
   }
 }
 
-function showClientAbout(container: HTMLElement, profile: Profile): void {
+function showClientAbout(container: HTMLElement, profile: Profile, isOwnProfile = false): void {
   setPostsContainerMessageState(container, false);
   const fullName: string = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Не указано';
+  const bioLabel = isOwnProfile ? 'О себе' : 'О клиенте';
 
   container.innerHTML = `
     <div class="trainer-about">
@@ -312,7 +313,7 @@ function showClientAbout(container: HTMLElement, profile: Profile): void {
         <p class="trainer-about__section-text">${fullName}</p>
       </div>
       <div class="trainer-about__section">
-        <h3 class="trainer-about__section-title">О себе</h3>
+        <h3 class="trainer-about__section-title">${bioLabel}</h3>
         <p class="trainer-about__section-text">${escapeHtml(profile.bio || 'Не указано')}</p>
       </div>
     </div>
@@ -733,8 +734,8 @@ export async function renderProfileContent(
   let tierNameMap: Map<number, string> | undefined;
   let tierPriceMap: Map<number, number> | undefined;
 
-  // «О себе» — для самого пользователя (свой профиль); «О тренере» — когда профиль тренера смотрит кто-то другой.
-  const aboutLabel = isOwnProfile ? 'О себе' : (isTrainer ? 'О тренере' : 'О себе');
+  // «О себе» — для самого пользователя (свой профиль); «О тренере»/«О клиенте» — для чужого профиля.
+  const aboutLabel = isOwnProfile ? 'О себе' : (isTrainer ? 'О тренере' : 'О клиенте');
 
   const tabs = isTrainer
     ? [
@@ -743,11 +744,17 @@ export async function renderProfileContent(
       ...(isOwnProfile ? [{ id: 'subscriptions', label: 'Уровни подписки', active: activeTab === 'subscriptions' }] : []),
       { id: 'about', label: aboutLabel, active: activeTab === 'about' }
     ]
-    : [
-      { id: 'publications', label: 'Понравившиеся', active: activeTab === 'publications' || activeTab === 'main' },
-      { id: 'progress', label: 'Прогресс', active: activeTab === 'progress' },
-      { id: 'about', label: aboutLabel, active: activeTab === 'about' }
-    ];
+    : isOwnProfile
+      ? [
+        { id: 'publications', label: 'Понравившиеся', active: activeTab === 'publications' || activeTab === 'main' },
+        { id: 'progress', label: 'Прогресс', active: activeTab === 'progress' },
+        { id: 'about', label: aboutLabel, active: activeTab === 'about' }
+      ]
+      : [
+        // Тренер смотрит профиль клиента: лайки клиента нерелевантны, показываем прогресс и инфо
+        { id: 'progress', label: 'Прогресс', active: activeTab === 'progress' || activeTab === 'publications' || activeTab === 'main' },
+        { id: 'about', label: aboutLabel, active: activeTab === 'about' }
+      ];
 
   const sectionTitles: Record<string, string> = {
     main: 'Недавние публикации',
@@ -1011,7 +1018,7 @@ export async function renderProfileContent(
         if (isTrainer) {
           void showTrainerAbout(postsContainer, api, viewedUserId);
         } else {
-          void api.getProfile(viewedUserId).then(p => showClientAbout(postsContainer, p)).catch(() => {
+          void api.getProfile(viewedUserId).then(p => showClientAbout(postsContainer, p, isOwnProfile)).catch(() => {
             setPostsContainerMessageState(postsContainer, true);
             postsContainer.innerHTML = '<div class="profile-content__empty"><p>Не удалось загрузить профиль</p></div>';
           });
