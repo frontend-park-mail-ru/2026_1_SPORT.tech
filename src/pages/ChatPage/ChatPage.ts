@@ -257,10 +257,14 @@ export async function renderChatPage(
     if (!field || !sendBtn) return;
 
     // Auto-resize textarea
-    field.addEventListener('input', () => {
+    const resizeField = () => {
       field.style.height = 'auto';
-      field.style.height = `${Math.min(field.scrollHeight, 120)}px`;
-    });
+      const newHeight = Math.min(field.scrollHeight, 120);
+      field.style.height = `${newHeight}px`;
+      field.style.overflowY = field.scrollHeight > 120 ? 'auto' : 'hidden';
+    };
+    field.addEventListener('input', resizeField);
+    resizeField();
 
     async function sendMessage(): Promise<void> {
       const body = field.value.trim();

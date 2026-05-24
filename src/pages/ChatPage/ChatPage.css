@@ -301,8 +301,8 @@
   resize: none;
   outline: none;
   font-family: inherit;
-  max-height: 120px;
   line-height: 1.5;
+  overflow-y: hidden;
   transition: border-color 0.15s;
 }
 
