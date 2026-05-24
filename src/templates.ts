@@ -20,6 +20,7 @@ import ProfileEditModalTemplate from './components/molecules/ProfileEditModal/Pr
 import NotificationsPageTemplate from './pages/NotificationsPage/NotificationsPage.hbs';
 import PaymentReturnPageTemplate from './pages/PaymentReturnPage/PaymentReturnPage.hbs';
 import ChatPageTemplate from './pages/ChatPage/ChatPage.hbs';
+import MeetingsPageTemplate from './pages/MeetingsPage/MeetingsPage.hbs';
 
 const templates: Record<string, Handlebars.TemplateDelegate> = {
   'Button.hbs': Handlebars.compile(ButtonTemplate),
@@ -40,7 +41,8 @@ const templates: Record<string, Handlebars.TemplateDelegate> = {
   'ProfileEditModal.hbs': Handlebars.compile(ProfileEditModalTemplate),
   'NotificationsPage.hbs': Handlebars.compile(NotificationsPageTemplate),
   'PaymentReturnPage.hbs': Handlebars.compile(PaymentReturnPageTemplate),
-  'ChatPage.hbs': Handlebars.compile(ChatPageTemplate)
+  'ChatPage.hbs': Handlebars.compile(ChatPageTemplate),
+  'MeetingsPage.hbs': Handlebars.compile(MeetingsPageTemplate)
 };
 
 export default templates;

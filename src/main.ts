@@ -310,6 +310,25 @@ function createRouter(api: ApiClient): Router {
     }
   }
 
+  async function showMeetingsPage(app: HTMLElement, currentUser: AuthResponse, isStale: () => boolean, initialTrainerId?: number): Promise<void> {
+    setPageTitle('Календарь');
+    const content = ensureShell(app);
+    const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
+
+    void syncSidebar(app, currentUser, 'meetings', onLogout);
+
+    renderContentSkeleton(content);
+    try {
+      const { renderMeetingsPage } = await import('./pages/MeetingsPage/MeetingsPage');
+      if (isStale()) return;
+      await renderMeetingsPage(api, content, { currentUser, initialTrainerId });
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Failed to load MeetingsPage:', err);
+      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+    }
+  }
+
   async function showPaymentReturnPage(app: HTMLElement, currentUser: AuthResponse, isStale: () => boolean): Promise<void> {
     setPageTitle('Оплата');
     const content = ensureShell(app);
@@ -349,6 +368,7 @@ function createRouter(api: ApiClient): Router {
     const path = window.location.pathname;
     const viewedProfileMatch = path.match(/^\/profile\/(\d+)$/);
     const chatWithMatch = path.match(/^\/chat\/(\d+)$/);
+    const meetingsWithMatch = path.match(/^\/meetings\/(\d+)$/);
 
     if (path === '/index.html') {
       navigateTo(isAuthenticated ? '/' : '/auth');
@@ -383,6 +403,10 @@ function createRouter(api: ApiClient): Router {
       await showChatPage(app, currentUser!, isStale);
     } else if (chatWithMatch) {
       await showChatPage(app, currentUser!, isStale, Number(chatWithMatch[1]));
+    } else if (path === '/meetings') {
+      await showMeetingsPage(app, currentUser!, isStale);
+    } else if (meetingsWithMatch) {
+      await showMeetingsPage(app, currentUser!, isStale, Number(meetingsWithMatch[1]));
     } else if (path === '/payment/return') {
       await showPaymentReturnPage(app, currentUser!, isStale);
     } else if (path === '/payment/cancel') {

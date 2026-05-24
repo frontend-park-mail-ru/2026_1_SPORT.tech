@@ -121,8 +121,41 @@ export interface Tier {
   price: number;
   description: string;
   chat_enabled: boolean;
+  calendar_enabled: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface MeetingAvailabilityRule {
+  rule_id: number;
+  weekday: number;
+  start_hour: number;
+  created_at: string;
+}
+
+export interface MeetingSlot {
+  slot_id: number;
+  starts_at: string;
+  created_at: string;
+}
+
+export interface MeetingAvailabilitySlot {
+  starts_at: string;
+  ends_at: string;
+}
+
+export interface MeetingBooking {
+  booking_id: number;
+  trainer_user_id: number;
+  client_user_id: number;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  created_by_user_id: number;
+  note?: string;
+  created_at: string;
+  role: string;
+  other_user_id: number;
 }
 
 export interface ChatMessage {

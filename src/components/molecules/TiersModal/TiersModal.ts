@@ -19,6 +19,7 @@ interface TierData {
   price: number;
   description: string;
   chat_enabled: boolean;
+  calendar_enabled: boolean;
   index?: number;
   existingId?: number;  // настоящий tier_id с бэкенда
 }
@@ -98,7 +99,8 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
         name: '',
         price: 0,
         description: '',
-        chat_enabled: false
+        chat_enabled: false,
+        calendar_enabled: false
       });
       render();
       break;
@@ -139,6 +141,8 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
         tier.description = target.value;
       } else if (field === 'chat_enabled') {
         tier.chat_enabled = (target as HTMLInputElement).checked;
+      } else if (field === 'calendar_enabled') {
+        tier.calendar_enabled = (target as HTMLInputElement).checked;
       }
     }
   });
@@ -181,7 +185,8 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
               name: tier.name.trim(),
               price: tier.price,
               description: tier.description.trim() || '',
-              chat_enabled: tier.chat_enabled
+              chat_enabled: tier.chat_enabled,
+              calendar_enabled: tier.calendar_enabled
             });
           } catch (error) {
             console.error(`Failed to update tier ${tier.existingId}:`, error);
@@ -193,7 +198,8 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
               name: tier.name.trim(),
               price: tier.price,
               description: tier.description.trim() || '',
-              chat_enabled: tier.chat_enabled
+              chat_enabled: tier.chat_enabled,
+              calendar_enabled: tier.calendar_enabled
             });
           } catch (error) {
             console.error('Failed to create tier:', error);
@@ -234,6 +240,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
           price: t.price || 0,
           description: t.description || '',
           chat_enabled: t.chat_enabled ?? false,
+          calendar_enabled: t.calendar_enabled ?? false,
           existingId: t.tier_id
         }));
         tierCounter = tiers.length;

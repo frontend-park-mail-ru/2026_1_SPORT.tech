@@ -24,7 +24,11 @@ import type {
   Measurement,
   ListDonationsResponse,
   ChatMessage,
-  ChatConversation
+  ChatConversation,
+  MeetingAvailabilityRule,
+  MeetingSlot,
+  MeetingAvailabilitySlot,
+  MeetingBooking
 } from '../types/api.types';
 
 export interface ApiResponse<T = unknown> {
@@ -392,6 +396,7 @@ export class ApiClient {
     price: number;
     description?: string;
     chat_enabled?: boolean;
+    calendar_enabled?: boolean;
   }): Promise<Tier> {
     await this.ensureCsrfToken();
     return this.request<Tier>('/v1/tiers', {
@@ -406,6 +411,7 @@ export class ApiClient {
     description?: string;
     clear_description?: boolean;
     chat_enabled?: boolean;
+    calendar_enabled?: boolean;
   }): Promise<Tier> {
     await this.ensureCsrfToken();
     return this.request<Tier>(`/v1/tiers/${tierId}`, {
@@ -672,5 +678,70 @@ export class ApiClient {
   async markChatMessageRead(messageId: number): Promise<void> {
     await this.ensureCsrfToken();
     await this.request(`/v1/chat/messages/${messageId}/read`, { method: 'PATCH', body: '{}' });
+  }
+
+  // ========== MEETINGS ==========
+
+  async listMyAvailabilityRules(): Promise<{ rules: MeetingAvailabilityRule[] }> {
+    return this.request<{ rules: MeetingAvailabilityRule[] }>('/v1/meetings/availability/rules');
+  }
+
+  async createAvailabilityRule(weekday: number, startHour: number): Promise<MeetingAvailabilityRule> {
+    await this.ensureCsrfToken();
+    return this.request<MeetingAvailabilityRule>('/v1/meetings/availability/rules', {
+      method: 'POST',
+      body: JSON.stringify({ weekday, start_hour: startHour })
+    });
+  }
+
+  async deleteAvailabilityRule(ruleId: number): Promise<void> {
+    await this.ensureCsrfToken();
+    await this.request(`/v1/meetings/availability/rules/${ruleId}`, { method: 'DELETE' });
+  }
+
+  async createAvailabilitySlot(startsAt: string): Promise<MeetingSlot> {
+    await this.ensureCsrfToken();
+    return this.request<MeetingSlot>('/v1/meetings/availability/slots', {
+      method: 'POST',
+      body: JSON.stringify({ starts_at: startsAt })
+    });
+  }
+
+  async deleteAvailabilitySlot(slotId: number): Promise<void> {
+    await this.ensureCsrfToken();
+    await this.request(`/v1/meetings/availability/slots/${slotId}`, { method: 'DELETE' });
+  }
+
+  async getTrainerAvailability(trainerId: number, params?: { from?: string; to?: string }): Promise<{ slots: MeetingAvailabilitySlot[] }> {
+    const query = new URLSearchParams();
+    if (params?.from) query.set('from', params.from);
+    if (params?.to) query.set('to', params.to);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return this.request<{ slots: MeetingAvailabilitySlot[] }>(`/v1/trainers/${trainerId}/meetings/availability${qs}`);
+  }
+
+  async bookMeeting(trainerId: number, startsAt: string): Promise<MeetingBooking> {
+    await this.ensureCsrfToken();
+    return this.request<MeetingBooking>(`/v1/trainers/${trainerId}/meetings/book`, {
+      method: 'POST',
+      body: JSON.stringify({ starts_at: startsAt })
+    });
+  }
+
+  async assignMeeting(data: { client_user_id: number; starts_at: string; duration_hours: number; note?: string }): Promise<MeetingBooking> {
+    await this.ensureCsrfToken();
+    return this.request<MeetingBooking>('/v1/meetings/assign', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async listMyMeetings(): Promise<{ bookings: MeetingBooking[] }> {
+    return this.request<{ bookings: MeetingBooking[] }>('/v1/meetings/me');
+  }
+
+  async cancelMeeting(bookingId: number): Promise<void> {
+    await this.ensureCsrfToken();
+    await this.request(`/v1/meetings/${bookingId}`, { method: 'DELETE' });
   }
 }

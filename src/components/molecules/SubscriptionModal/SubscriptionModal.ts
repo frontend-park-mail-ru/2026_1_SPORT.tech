@@ -65,10 +65,14 @@ export async function openSubscriptionModal({
     const chatBadge = tier.chat_enabled
       ? '<span class="subscription-modal__chat-badge">💬 Чат с тренером</span>'
       : '';
+    const calendarBadge = tier.calendar_enabled
+      ? '<span class="subscription-modal__chat-badge">📅 Запись в календарь</span>'
+      : '';
     return `
               <div class="subscription-modal__tier ${isCurrent ? 'subscription-modal__tier--current' : ''}">
                 <h3>${escapeHtml(tier.name)} (${formatMonthlyPrice(tier.price)})</h3>
                 ${chatBadge}
+                ${calendarBadge}
                 <p>${escapeHtml(tier.description || 'Описание отсутствует')}</p>
                 <button
                   class="button button--primary-orange button--small"

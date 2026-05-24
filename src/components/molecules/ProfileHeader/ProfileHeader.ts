@@ -85,6 +85,15 @@ export async function renderProfileHeader(
               });
               chatBtnContainer.appendChild(btn);
             }
+            if (tier?.calendar_enabled) {
+              const bookBtn = document.createElement('button');
+              bookBtn.className = 'button button--secondary button--medium profile-header__chat-btn';
+              bookBtn.innerHTML = '📅 Записаться';
+              bookBtn.addEventListener('click', () => {
+                window.router.navigateTo(`/meetings/${viewedUserId}`);
+              });
+              chatBtnContainer.appendChild(bookBtn);
+            }
           } catch { /* игнорируем */ }
         }
       } catch {
