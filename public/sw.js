@@ -2,15 +2,17 @@
  * Service Worker.
  * Стратегии:
  *   - /api/**            → только сеть, никогда не кэшируем (динамика).
- *   - навигация (HTML)   → network-first, офлайн-фолбэк на закэшированный '/'.
+ *   - shell/ассеты сборки → precache при установке.
+ *   - навигация (HTML)   → network-first, offline fallback на закэшированный '/'.
  *   - хешированные ассеты → cache-first (имя файла меняется при сборке, безопасно).
- *   - остальное          → network-first (нехешированные CSS/JS не залипают).
+ *   - остальное          → network-first с fallback только на совпадающий cache key.
  * @fileoverview
  */
 
-const CACHE_NAME = 'sportech-shell-v4';
-
-const SHELL_URLS = ['/'];
+const CACHE_VERSION = 'dev'; // __CACHE_VERSION__
+const CACHE_NAME = `sportech-shell-${CACHE_VERSION}`;
+const PRECACHE_URLS = ['/']; // __PRECACHE_URLS__
+const NAVIGATION_FALLBACK_URL = '/';
 
 // Иммутабельные бандлы вида main.a1b2c3d4.js / styles.deadbeef12.css
 const IMMUTABLE_ASSET = /\.[0-9a-f]{8,}\.(js|css)$/;
@@ -18,7 +20,7 @@ const IMMUTABLE_ASSET = /\.[0-9a-f]{8,}\.(js|css)$/;
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(SHELL_URLS))
+      .then(cache => cache.addAll(PRECACHE_URLS))
       .then(() => self.skipWaiting())
   );
 });
@@ -61,26 +63,34 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Навигация и всё остальное: network-first с офлайн-фолбэком.
+  // Навигация: network-first с fallback на SPA entrypoint.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(NAVIGATION_FALLBACK_URL, copy);
+            });
+          }
+          return response;
+        })
+        .catch(() => caches.match(NAVIGATION_FALLBACK_URL).then(cached => cached || Response.error()))
+    );
+    return;
+  }
+
+  // Остальные same-origin ресурсы: network-first, но без подстановки HTML.
   event.respondWith(
     fetch(request)
       .then(response => {
         if (response.ok) {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            // Навигацию всегда сохраняем под ключом '/' (единственная точка входа SPA).
-            if (request.mode === 'navigate') {
-              cache.put('/', copy);
-            } else {
-              // Остальные ресурсы (CSS, статика) — под их URL.
-              cache.put(request, copy);
-            }
-          });
+          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
         }
         return response;
       })
-      .catch(() =>
-        caches.match(request).then(c => c || caches.match('/'))
-      )
+      .catch(() => caches.match(request).then(cached => cached || Response.error()))
   );
 });

@@ -51,7 +51,11 @@
         {{/if}}
         {{#if file_url}}
           <div class="post-card__media-block">
-            <img src="{{file_url}}" alt="" loading="lazy">
+            {{#if isVideo}}
+              <video src="{{file_url}}" controls preload="metadata"></video>
+            {{else}}
+              <img src="{{file_url}}" alt="" loading="lazy">
+            {{/if}}
           </div>
         {{/if}}
       {{/each}}

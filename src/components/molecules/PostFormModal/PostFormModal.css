@@ -329,13 +329,14 @@
 .post-form__block-textarea {
   width: 100%;
   min-height: 80px;
-  padding: 12px;
+  padding: 12px 44px 12px 12px; /* right: 24px кнопка + 8px от края + 12px зазор */
   border: none;
   font-family: inherit;
   font-size: 14px;
   line-height: 1.6;
   resize: vertical;
   outline: none;
+  box-sizing: border-box;
 }
 
 .post-form__block-media {

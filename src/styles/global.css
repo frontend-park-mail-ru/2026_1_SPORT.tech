@@ -47,8 +47,8 @@
     --gradient-end: #E1F2FE;     /* 65% */
 
     /* ===== ШРИФТЫ ===== */
-    --font-heading: 'IBM Plex Sans', sans-serif;  /* Для заголовков */
-    --font-body: 'Inter', sans-serif;              /* Для обычного текста */
+    --font-heading: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;  /* Для заголовков */
+    --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;     /* Для обычного текста */
 
     /* Размеры шрифтов */
     --font-size-xs: 12px;

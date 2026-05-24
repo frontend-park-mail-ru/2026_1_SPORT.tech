@@ -32,12 +32,17 @@ interface ContentBlock {
   value: string;
   file: File | null;
   existingUrl?: string;
+  existingKind?: string;
 }
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_SIZE = 12 * 1024 * 1024; // совпадает с лимитом gateway для /posts/media
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+const ALLOWED_VIDEO_TYPES = ['video/mp4'];
 const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+
+function inferMediaKind(url: string): 'image' | 'video' {
+  return /\.(mp4|webm|mov|quicktime)(\?|#|$)/i.test(url) ? 'video' : 'image';
+}
 
 export async function openPostFormModal({
   api,
@@ -89,7 +94,8 @@ export async function openPostFormModal({
               type: 'media',
               value: block.file_url,
               file: null,
-              existingUrl: block.file_url
+              existingUrl: block.file_url,
+              existingKind: block.kind || inferMediaKind(block.file_url)
             });
           }
         });
@@ -195,7 +201,7 @@ export async function openPostFormModal({
   // ========== ФУНКЦИИ ДЛЯ БЛОКОВ ==========
   function validateFile(file: File): string | null {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return 'Неподдерживаемый формат файла. Разрешены: JPEG, PNG, GIF, WebP, MP4, WebM, MOV';
+      return 'Неподдерживаемый формат файла. Разрешены: JPEG, PNG, GIF, WebP, MP4';
     }
     if (file.size > MAX_FILE_SIZE) {
       return `Файл слишком большой. Максимальный размер: ${MAX_FILE_SIZE / 1024 / 1024}MB`;
@@ -208,6 +214,7 @@ export async function openPostFormModal({
     if (error) {
       globalErr.textContent = error;
       globalErr.hidden = false;
+      block.file = null;
       return;
     }
 
@@ -246,9 +253,7 @@ export async function openPostFormModal({
 
   function createMediaPreview(block: ContentBlock, container: HTMLElement): void {
     if (block.existingUrl && !block.file) {
-      container.innerHTML = block.existingUrl.toLowerCase().includes('.mp4') ||
-                          block.existingUrl.toLowerCase().includes('.webm') ||
-                          block.existingUrl.toLowerCase().includes('.mov')
+      container.innerHTML = (block.existingKind || inferMediaKind(block.existingUrl)) === 'video'
         ? `<video controls src="${block.existingUrl}" style="max-width:100%;max-height:300px;"></video>`
         : `<img src="${block.existingUrl}" alt="Медиа" style="max-width:100%;max-height:300px;object-fit:contain;">`;
       return;
@@ -389,7 +394,7 @@ export async function openPostFormModal({
             return null;
           }
         } else if (block.type === 'media' && block.existingUrl) {
-          return { file_url: block.existingUrl, kind: 'image' };
+          return { file_url: block.existingUrl, kind: block.existingKind || inferMediaKind(block.existingUrl) };
         } else if (block.type === 'text' && block.value.trim()) {
           return { text_content: block.value.trim(), kind: 'text' };
         }

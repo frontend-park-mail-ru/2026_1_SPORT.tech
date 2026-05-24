@@ -30,6 +30,14 @@ interface ContentBlock {
   content?: string;
   file_url?: string;
   kind?: string;
+  isVideo?: boolean;
+  isImage?: boolean;
+}
+
+function isVideoBlock(block: ContentBlock): boolean {
+  const kind = (block.kind || '').toLowerCase();
+  const url = (block.file_url || '').toLowerCase();
+  return kind === 'video' || /\.(mp4|webm|mov|quicktime)(\?|#|$)/.test(url);
 }
 
 export async function renderPostCard(
@@ -84,6 +92,15 @@ export async function renderPostCard(
     }
   }
 
+  const contentBlocksForTemplate = contentBlocks.map(block => {
+    const isVideo = block.type === 'attachment' && isVideoBlock(block);
+    return {
+      ...block,
+      isVideo,
+      isImage: block.type === 'attachment' && !isVideo
+    };
+  });
+
   const template = (window as any).Handlebars.templates['PostCard.hbs'];
   const initials = authorName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
   const firstTextBlock = contentBlocks.find(b => b.type === 'text');
@@ -95,7 +112,7 @@ export async function renderPostCard(
     post_id: postId, title, content: shortTextContent, fullContent: content,
     authorName, authorRole, authorAvatar, authorInitials: initials,
     likes, liked, comments, can_view: finalCanView, isOwner,
-    contentBlocks, minTierId, sportType, tierName, tierPrice
+    contentBlocks: contentBlocksForTemplate, minTierId, sportType, tierName, tierPrice
   });
 
   const wrapper = document.createElement('div');

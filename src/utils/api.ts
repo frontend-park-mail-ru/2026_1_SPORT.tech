@@ -31,6 +31,8 @@ import type {
   MeetingBooking
 } from '../types/api.types';
 
+const OFFLINE_API_CACHE_PREFIX = 'sporteon_api_cache:v1:';
+
 export interface ApiResponse<T = unknown> {
   data?: T;
   error?: { message: string };
@@ -43,6 +45,108 @@ export class ApiClient {
 
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL;
+  }
+
+  private serializeRequestBody(body: BodyInit | null | undefined): string {
+    if (!body) return '';
+    if (typeof body === 'string') return body;
+    if (body instanceof URLSearchParams) return body.toString();
+    return '';
+  }
+
+  private getOfflineCacheKey(method: string, endpoint: string, body: BodyInit | null | undefined): string {
+    return `${OFFLINE_API_CACHE_PREFIX}${method}:${this.baseURL}${endpoint}:${this.serializeRequestBody(body)}`;
+  }
+
+  private isOfflineCacheableRequest(method: string, endpoint: string): boolean {
+    if (endpoint.startsWith('/v1/auth/')) return false;
+    if (method === 'GET') return true;
+    return method === 'POST' && (
+      endpoint === '/v1/posts:search' ||
+      endpoint === '/v1/trainers:search'
+    );
+  }
+
+  private isNetworkError(error: unknown): boolean {
+    if (error instanceof TypeError) return true;
+    if (!(error instanceof Error)) return false;
+    return /Failed to fetch|NetworkError|Load failed/i.test(error.message);
+  }
+
+  private normalizeStorageUrl(value: string): string {
+    if (value.startsWith('/avatars/') || value.startsWith('/post-media/')) {
+      return value;
+    }
+
+    try {
+      const url = new URL(value);
+      const isStoragePath = url.pathname.startsWith('/avatars/') || url.pathname.startsWith('/post-media/');
+      const isKnownStorageHost = ['localhost', '127.0.0.1', 'minio', 'sporteon.ru', 'www.sporteon.ru'].includes(url.hostname);
+      if (isStoragePath && isKnownStorageHost) {
+        return `${url.pathname}${url.search}${url.hash}`;
+      }
+    } catch {
+      // Не URL — оставляем строку как есть.
+    }
+
+    return value;
+  }
+
+  private normalizeStorageUrls<T>(value: T): T {
+    if (typeof value === 'string') {
+      return this.normalizeStorageUrl(value) as T;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map(item => this.normalizeStorageUrls(item)) as T;
+    }
+
+    if (value && typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      Object.keys(record).forEach(key => {
+        record[key] = this.normalizeStorageUrls(record[key]);
+      });
+    }
+
+    return value;
+  }
+
+  private readOfflineCache<T>(cacheKey: string): T | null {
+    if (typeof localStorage === 'undefined') return null;
+
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (!raw) return null;
+      const cached = JSON.parse(raw) as { data?: T };
+      return Object.prototype.hasOwnProperty.call(cached, 'data') ? this.normalizeStorageUrls(cached.data as T) : null;
+    } catch {
+      localStorage.removeItem(cacheKey);
+      return null;
+    }
+  }
+
+  private writeOfflineCache<T>(cacheKey: string, data: T): void {
+    if (typeof localStorage === 'undefined') return;
+
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        saved_at: new Date().toISOString(),
+        data
+      }));
+    } catch (error) {
+      console.warn('[API] Failed to write offline cache:', error);
+    }
+  }
+
+  private clearOfflineCache(): void {
+    if (typeof localStorage === 'undefined') return;
+
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(OFFLINE_API_CACHE_PREFIX)) {
+        localStorage.removeItem(key);
+      }
+    }
   }
 
   private getCookie(name: string): string | null {
@@ -102,8 +206,12 @@ export class ApiClient {
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    const method = options.method || 'GET';
+    const method = (options.method || 'GET').toUpperCase();
     const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+    const isOfflineCacheable = this.isOfflineCacheableRequest(method, endpoint);
+    const offlineCacheKey = isOfflineCacheable
+      ? this.getOfflineCacheKey(method, endpoint, options.body)
+      : null;
 
     const headers: Record<string, string> = {};
 
@@ -120,37 +228,52 @@ export class ApiClient {
       }
     }
 
-    const response = await fetch(url, {
-      ...options,
-      credentials: 'include',
-      headers
-    });
+    try {
+      const response = await fetch(url, {
+        ...options,
+        credentials: 'include',
+        headers
+      });
 
-    if (response.status === 204) {
-      return null as T;
-    }
+      if (response.status === 204) {
+        return null as T;
+      }
 
-    let data: T;
-    const contentType = response.headers.get('content-type');
+      let data: T;
+      const contentType = response.headers.get('content-type');
 
-    if (contentType && contentType.includes('application/json')) {
-      data = await response.json() as T;
-    } else {
-      const text = await response.text();
-      console.error('[API] Non-JSON response:', text.substring(0, 500));
-      throw new Error(`Сервер вернул не JSON (${response.status}): ${text.substring(0, 200)}`);
-    }
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json() as T;
+        data = this.normalizeStorageUrls(data);
+      } else {
+        const text = await response.text();
+        console.error('[API] Non-JSON response:', text.substring(0, 500));
+        throw new Error(`Сервер вернул не JSON (${response.status}): ${text.substring(0, 200)}`);
+      }
 
-    if (!response.ok) {
-      const errorData = data as { error?: { message?: string; code?: string } };
-      const errorMessage = errorData?.error?.message || `HTTP ${response.status}`;
-      console.error('[API] Error:', errorData);
-      const error = new Error(errorMessage);
-      (error as Error & { data: T }).data = data;
+      if (!response.ok) {
+        const errorData = data as { error?: { message?: string; code?: string } };
+        const errorMessage = errorData?.error?.message || `HTTP ${response.status}`;
+        console.error('[API] Error:', errorData);
+        const error = new Error(errorMessage);
+        (error as Error & { data: T }).data = data;
+        throw error;
+      }
+
+      if (offlineCacheKey) {
+        this.writeOfflineCache(offlineCacheKey, data);
+      }
+
+      return data;
+    } catch (error) {
+      if (offlineCacheKey && this.isNetworkError(error)) {
+        const cached = this.readOfflineCache<T>(offlineCacheKey);
+        if (cached !== null) {
+          return cached;
+        }
+      }
       throw error;
     }
-
-    return data;
   }
 
   // ========== AUTH ENDPOINTS ==========
@@ -163,6 +286,7 @@ export class ApiClient {
     });
     // Кэшируем после успешного входа
     if (response) {
+      this.clearOfflineCache();
       localStorage.setItem('cached_user', JSON.stringify(response));
     }
     return response;
@@ -173,6 +297,7 @@ export class ApiClient {
     await this.request('/v1/auth/logout', { method: 'POST' });
     this.csrfToken = null;
     localStorage.removeItem('cached_user');
+    this.clearOfflineCache();
   }
 
   async getCurrentUser(): Promise<AuthResponse | null> {
@@ -212,10 +337,15 @@ export class ApiClient {
     last_name: string;
   }): Promise<AuthResponse> {
     await this.ensureCsrfToken();
-    return this.request<AuthResponse>('/v1/auth/register/client', {
+    const response = await this.request<AuthResponse>('/v1/auth/register/client', {
       method: 'POST',
       body: JSON.stringify(data)
     });
+    if (response) {
+      this.clearOfflineCache();
+      localStorage.setItem('cached_user', JSON.stringify(response));
+    }
+    return response;
   }
 
   async registerTrainer(data: {
@@ -228,10 +358,15 @@ export class ApiClient {
     trainer_details: TrainerDetails;
   }): Promise<AuthResponse> {
     await this.ensureCsrfToken();
-    return this.request<AuthResponse>('/v1/auth/register/trainer', {
+    const response = await this.request<AuthResponse>('/v1/auth/register/trainer', {
       method: 'POST',
       body: JSON.stringify(data)
     });
+    if (response) {
+      this.clearOfflineCache();
+      localStorage.setItem('cached_user', JSON.stringify(response));
+    }
+    return response;
   }
 
   // ========== PROFILE ENDPOINTS ==========

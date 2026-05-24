@@ -473,30 +473,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Офлайн-баннер: уведомляем пользователя об отсутствии сети
-  function updateOfflineBanner(isOnline: boolean): void {
-    const existingBanner = document.getElementById('offline-banner');
-    if (isOnline) {
-      existingBanner?.remove();
-    } else if (!existingBanner) {
-      const banner = document.createElement('div');
-      banner.id = 'offline-banner';
-      banner.setAttribute('role', 'status');
-      banner.style.cssText = [
-        'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:9999',
-        'background:#f59e0b', 'color:#1c1917', 'text-align:center',
-        'padding:6px 16px', 'font-size:13px', 'font-weight:600',
-        'box-shadow:0 2px 4px rgba(0,0,0,.2)'
-      ].join(';');
-      banner.textContent = '⚡ Нет соединения — показаны кэшированные данные';
-      document.body.prepend(banner);
-    }
-  }
-
-  window.addEventListener('online', () => updateOfflineBanner(true));
-  window.addEventListener('offline', () => updateOfflineBanner(false));
-  if (!navigator.onLine) updateOfflineBanner(false);
-
   const apiClient = new ApiClient(API_BASE_URL);
   const router = createRouter(apiClient);
   (window as unknown as { router: Router }).router = router;
