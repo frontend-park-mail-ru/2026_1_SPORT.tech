@@ -48,7 +48,9 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'public/static', to: 'static', noErrorOnMissing: true }
+        { from: 'public/static', to: 'static', noErrorOnMissing: true },
+        { from: 'public/sw.js', to: 'sw.js' },
+        { from: 'public/favicon.svg', to: 'favicon.svg' }
       ]
     })
   ]

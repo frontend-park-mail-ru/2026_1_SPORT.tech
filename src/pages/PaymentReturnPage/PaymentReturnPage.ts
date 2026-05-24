@@ -8,10 +8,9 @@ interface PaymentReturnPageParams {
   onLogout?: (() => Promise<void>) | null;
 }
 
-function formatAmount(kopecks: number, currency: string): string {
-  const roubles = kopecks / 100;
+function formatAmount(amount: number, currency: string): string {
   const symbol = currency === 'RUB' ? '₽' : currency;
-  return `${roubles.toLocaleString('ru-RU')} ${symbol}`;
+  return `${amount.toLocaleString('ru-RU')} ${symbol}`;
 }
 
 function renderProcessing(el: HTMLElement): void {
@@ -24,7 +23,12 @@ function renderProcessing(el: HTMLElement): void {
   `;
 }
 
-function renderSuccess(el: HTMLElement, payment: PaymentResponse, navigateTo: (p: string) => void): void {
+async function renderSuccess(
+  el: HTMLElement,
+  payment: PaymentResponse,
+  navigateTo: (p: string) => void,
+  api: ApiClient
+): Promise<void> {
   const isSubscription = !!payment.subscription;
   const trainerId = isSubscription
     ? payment.subscription!.trainer_id
@@ -51,14 +55,30 @@ function renderSuccess(el: HTMLElement, payment: PaymentResponse, navigateTo: (p
     `;
   }
 
+  // Определяем, включён ли чат в купленном тире подписки
+  let chatEnabled = false;
+  if (isSubscription && trainerId && payment.subscription?.tier_id) {
+    try {
+      const tiersResp = await api.getTrainerTiers(trainerId);
+      const tier = (tiersResp?.tiers || []).find(t => t.tier_id === payment.subscription!.tier_id);
+      chatEnabled = tier?.chat_enabled ?? false;
+    } catch { /* игнорируем */ }
+  }
+
+  const chatBtn = chatEnabled && trainerId
+    ? '<button class="payment-result__btn payment-result__btn--chat" id="btn-chat">💬 Написать тренеру</button>'
+    : '';
+
   el.innerHTML = `
     <div class="payment-result">
       <div class="payment-result__icon payment-result__icon--success">✓</div>
       <h1 class="payment-result__title">${isSubscription ? 'Подписка оформлена!' : 'Оплата прошла!'}</h1>
       ${details}
+      ${chatEnabled ? '<p class="payment-result__chat-hint">Ваша подписка включает чат с тренером — напишите ему прямо сейчас!</p>' : ''}
       <div class="payment-result__actions">
         <button class="payment-result__btn payment-result__btn--primary" id="btn-home">На главную</button>
         ${trainerId ? '<button class="payment-result__btn payment-result__btn--secondary" id="btn-profile">Профиль тренера</button>' : ''}
+        ${chatBtn}
       </div>
     </div>
   `;
@@ -67,6 +87,11 @@ function renderSuccess(el: HTMLElement, payment: PaymentResponse, navigateTo: (p
     el.querySelector('#btn-profile')?.addEventListener('click', () =>
       navigateTo(`/profile/${trainerId}`)
     );
+    if (chatEnabled) {
+      el.querySelector('#btn-chat')?.addEventListener('click', () =>
+        navigateTo(`/chat/${trainerId}`)
+      );
+    }
   }
 }
 
@@ -134,7 +159,7 @@ export async function renderPaymentReturnPage(
   try {
     const payment = await api.confirmPayment(paymentId, confirmationToken);
     localStorage.removeItem('sporteon_pending_payment');
-    renderSuccess(resultEl, payment, navigateTo);
+    await renderSuccess(resultEl, payment, navigateTo, api);
   } catch (error: unknown) {
     const err = error as { message?: string; data?: { error?: { message?: string } } };
     const msg = err.data?.error?.message || err.message || 'Не удалось подтвердить платёж.';

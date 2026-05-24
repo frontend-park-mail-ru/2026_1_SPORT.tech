@@ -75,13 +75,13 @@ export async function openDonationModal({
     submitBtn.textContent = 'Перенаправление...';
 
     try {
-      const amountInKopecks = Math.round((result.amountNumber || 0) * 100);
+      const amountValue = Math.round(result.amountNumber || 0);
       const message = messageApi.getValue().trim() || 'Пожертвование';
       const origin = window.location.origin;
 
       const payment = await api.createDonationPayment({
         user_id: recipientUserId,
-        amount_value: amountInKopecks,
+        amount_value: amountValue,
         currency: 'RUB',
         message,
         return_url: `${origin}/payment/return`,

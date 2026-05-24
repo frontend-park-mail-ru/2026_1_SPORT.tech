@@ -747,3 +747,29 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ── Кнопка пагинации публикаций ── */
+.profile-content__load-more-btn {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 24px;
+  background: transparent;
+  border: 2px solid var(--primary-orange, #E85A2B);
+  border-radius: 10px;
+  color: var(--primary-orange, #E85A2B);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.profile-content__load-more-btn:hover:not(:disabled) {
+  background: var(--primary-orange, #E85A2B);
+  color: #fff;
+}
+
+.profile-content__load-more-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

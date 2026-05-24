@@ -66,9 +66,18 @@
 .post-form-modal__form {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.post-form-modal__body {
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-lg);
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
   /* небольшой отступ справа чтобы контент не прилегал к скроллбару */
   padding-right: 4px;
 }

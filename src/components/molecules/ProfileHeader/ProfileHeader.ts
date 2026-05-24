@@ -52,19 +52,41 @@ export async function renderProfileHeader(
     });
   }
 
-  // Подписка / изменение подписки
+  // Подписка / изменение подписки + кнопка чата
   if (!isOwnProfile && showDonate && actionsContainer) {
     let subscriptionButton: ButtonAPI | null = null;
+    // Контейнер для кнопки чата (вставляется после кнопки подписки)
+    const chatBtnContainer = document.createElement('div');
+    chatBtnContainer.className = 'profile-header__chat-btn-wrap';
+    actionsContainer.after(chatBtnContainer);
 
-    // Функция обновления текста кнопки с учётом active === true
-    const updateButtonText = async () => {
+    // Проверяет активную подписку и наличие чата в тире; обновляет кнопки
+    const updateSubscriptionUI = async () => {
       if (!subscriptionButton) return;
       try {
         const subs = await api.getMySubscriptions();
-        const hasActiveSubscription = subs.subscriptions.some(
+        const activeSub = subs.subscriptions.find(
           s => s.trainer_id === viewedUserId && s.active === true
         );
-        subscriptionButton.setText(hasActiveSubscription ? 'Изменить подписку' : 'Подписаться');
+        subscriptionButton.setText(activeSub ? 'Изменить подписку' : 'Подписаться');
+
+        // Показываем кнопку «Написать», если тир активной подписки содержит чат
+        chatBtnContainer.innerHTML = '';
+        if (activeSub && viewedUserId) {
+          try {
+            const tiersResp = await api.getTrainerTiers(viewedUserId);
+            const tier = (tiersResp?.tiers || []).find(t => t.tier_id === activeSub.tier_id);
+            if (tier?.chat_enabled) {
+              const btn = document.createElement('button');
+              btn.className = 'button button--secondary button--medium profile-header__chat-btn';
+              btn.innerHTML = '💬 Написать';
+              btn.addEventListener('click', () => {
+                window.router.navigateTo(`/chat/${viewedUserId}`);
+              });
+              chatBtnContainer.appendChild(btn);
+            }
+          } catch { /* игнорируем */ }
+        }
       } catch {
         // игнорируем
       }
@@ -93,8 +115,8 @@ export async function renderProfileHeader(
         trainerId: viewedUserId,
         existingSubscription,
         onSubscribed: async () => {
-          // Обновить текст кнопки и остальную часть страницы
-          await updateButtonText();
+          // Обновить текст кнопки, кнопку чата и остальную часть страницы
+          await updateSubscriptionUI();
           if (onSubscribed) await onSubscribed();
         }
       });
@@ -108,7 +130,7 @@ export async function renderProfileHeader(
       size: 'medium',
       onClick: handleClick
     });
-    await updateButtonText();
+    await updateSubscriptionUI();
   }
 
   // Редактировать профиль (только свой)

@@ -62,9 +62,13 @@ export async function openSubscriptionModal({
         <div class="subscription-modal__list">
           ${tiers.map(tier => {
     const isCurrent = currentSubscription?.tier_id === tier.tier_id;
+    const chatBadge = tier.chat_enabled
+      ? '<span class="subscription-modal__chat-badge">💬 Чат с тренером</span>'
+      : '';
     return `
               <div class="subscription-modal__tier ${isCurrent ? 'subscription-modal__tier--current' : ''}">
                 <h3>${escapeHtml(tier.name)} (${formatMonthlyPrice(tier.price)})</h3>
+                ${chatBadge}
                 <p>${escapeHtml(tier.description || 'Описание отсутствует')}</p>
                 <button
                   class="button button--primary-orange button--small"

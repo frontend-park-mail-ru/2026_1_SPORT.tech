@@ -139,3 +139,17 @@
   margin: 0;
   line-height: 1.5;
 }
+
+.subscription-modal__chat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff3ee;
+  color: #e85a2b;
+  border: 1px solid #f9c3af;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}

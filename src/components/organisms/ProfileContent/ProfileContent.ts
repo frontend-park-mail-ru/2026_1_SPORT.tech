@@ -23,6 +23,8 @@ interface ProfileContentParams {
   isOwnProfile?: boolean;
 }
 
+const POSTS_PER_PAGE = 10;
+
 interface FillPostsParams {
   activeTab: string;
   posts: PostWithAuthor[];
@@ -114,17 +116,60 @@ export async function fillProfilePostsSection(
   setPostsContainerMessageState(postsContainer, false);
   postsContainer.innerHTML = '';
 
-  for (const post of posts) {
-    if (tierNameMap && post.min_tier_id) {
-      post.tier_name = tierNameMap.get(post.min_tier_id);
-      post.tier_price = tierPriceMap?.get(post.min_tier_id) ?? 0;
+  // Вкладка "публикации" показывает с пагинацией (10 постов на страницу).
+  // Остальные вкладки (лайкнутые, подписки, about) рендерят всё сразу.
+  const usePagination = activeTab === 'publications';
+  const visiblePosts = usePagination ? posts.slice(0, POSTS_PER_PAGE) : posts;
+
+  const renderPostsBatch = async (batch: PostWithAuthor[]): Promise<void> => {
+    for (const post of batch) {
+      if (tierNameMap && post.min_tier_id) {
+        post.tier_name = tierNameMap.get(post.min_tier_id);
+        post.tier_price = tierPriceMap?.get(post.min_tier_id) ?? 0;
+      }
+      await renderPostCard(postsContainer, {
+        ...post,
+        api,
+        isOwner: canManagePosts,
+        onPostsUpdated: onPostsUpdated ?? undefined
+      });
     }
-    await renderPostCard(postsContainer, {
-      ...post,
-      api,
-      isOwner: canManagePosts,
-      onPostsUpdated: onPostsUpdated ?? undefined
+  };
+
+  await renderPostsBatch(visiblePosts);
+
+  if (usePagination && posts.length > POSTS_PER_PAGE) {
+    let loadedCount = POSTS_PER_PAGE;
+
+    const loadMoreBtn = document.createElement('button');
+    loadMoreBtn.className = 'profile-content__load-more-btn';
+    loadMoreBtn.textContent = `Загрузить ещё (${posts.length - loadedCount} публикаций)`;
+
+    const updateBtn = (): void => {
+      const remaining = posts.length - loadedCount;
+      if (remaining <= 0) {
+        loadMoreBtn.remove();
+      } else {
+        loadMoreBtn.textContent = `Загрузить ещё (${remaining})`;
+        loadMoreBtn.disabled = false;
+      }
+    };
+
+    loadMoreBtn.addEventListener('click', async () => {
+      loadMoreBtn.disabled = true;
+      loadMoreBtn.textContent = 'Загрузка...';
+      // Временно убираем кнопку чтобы посты рендерились выше неё
+      loadMoreBtn.remove();
+
+      const nextBatch = posts.slice(loadedCount, loadedCount + POSTS_PER_PAGE);
+      await renderPostsBatch(nextBatch);
+      loadedCount += nextBatch.length;
+
+      postsContainer.appendChild(loadMoreBtn);
+      updateBtn();
     });
+
+    postsContainer.appendChild(loadMoreBtn);
   }
 }
 

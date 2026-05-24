@@ -87,7 +87,10 @@ export async function renderChatPage(
             </svg>
           </div>
           <p class="chat-empty-state__text">Нет диалогов</p>
-          <p class="chat-empty-state__hint">Чат доступен при подписке с опцией «Чат»</p>
+          <p class="chat-empty-state__hint">
+            Чат доступен при подписке с опцией «Чат».<br>
+            Откройте профиль тренера и нажмите кнопку <strong>«💬 Написать»</strong>.
+          </p>
         </div>
       `;
       return;

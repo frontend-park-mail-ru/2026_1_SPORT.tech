@@ -374,6 +374,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  // Регистрируем Service Worker для офлайн-поддержки
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch((err: Error) => {
+      console.error('SW registration failed:', err);
+    });
+  }
+
   const apiClient = new ApiClient(API_BASE_URL);
   const router = createRouter(apiClient);
   (window as unknown as { router: Router }).router = router;
