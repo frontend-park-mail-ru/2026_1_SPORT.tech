@@ -385,6 +385,24 @@
   to { transform: rotate(360deg); }
 }
 
+/* ─── Send error banner ──────────────────────────────────────────────────── */
+.chat-send-error {
+  margin: 0 16px 8px;
+  padding: 10px 14px;
+  background: #fff3f3;
+  border: 1px solid #f5c2c7;
+  border-radius: 8px;
+  color: #842029;
+  font-size: 13px;
+  line-height: 1.4;
+  animation: chat-fade-in 0.2s ease;
+}
+
+@keyframes chat-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .chat-sidebar {

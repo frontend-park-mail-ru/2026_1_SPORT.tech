@@ -265,16 +265,32 @@ export async function renderChatPage(
     async function sendMessage(): Promise<void> {
       const body = field.value.trim();
       if (!body) return;
-      field.value = '';
-      field.style.height = 'auto';
+
       sendBtn.disabled = true;
+      // Remove any previous error banner
+      chatWindow.querySelector('.chat-send-error')?.remove();
 
       try {
         await api.sendChatMessage(toUserId, body);
+        field.value = '';
+        field.style.height = 'auto';
         await loadMessages(toUserId);
         await renderConversations();
       } catch (err) {
         console.error('Ошибка отправки сообщения:', err);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        // Pick a user-friendly message
+        let displayText = 'Не удалось отправить сообщение';
+        if (errMsg.includes('forbidden') || errMsg.includes('PermissionDenied') || errMsg.includes('403')) {
+          displayText = 'Нет доступа к чату: проверьте, что у вас активная подписка с опцией «Чат»';
+        }
+        const errBanner = document.createElement('div');
+        errBanner.className = 'chat-send-error';
+        errBanner.textContent = displayText;
+        const inputEl = chatWindow.querySelector('.chat-input');
+        inputEl?.insertAdjacentElement('beforebegin', errBanner);
+        // Auto-remove after 5 seconds
+        setTimeout(() => errBanner.remove(), 5000);
       } finally {
         sendBtn.disabled = false;
         field.focus();
