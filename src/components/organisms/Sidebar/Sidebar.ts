@@ -4,6 +4,7 @@
  */
 
 import type { ApiClient } from '../../../utils/api';
+import { escapeHtml } from '../../../utils/profilePageData';
 
 interface SidebarUser {
   id: number;
@@ -236,6 +237,10 @@ export async function renderSidebar(
             ? `${profile.first_name} ${profile.last_name}`.trim() || profile.username
             : `Тренер #${sub.trainer_id}`;
           const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+          const safeName = escapeHtml(name);
+          const safeInitials = escapeHtml(initials);
+          const safeAvatarUrl = profile?.avatar_url ? escapeHtml(profile.avatar_url) : '';
+          const safeTierName = escapeHtml(sub.tier_name);
 
           const item = document.createElement('div');
           item.className = 'sidebar__user-item';
@@ -243,12 +248,12 @@ export async function renderSidebar(
           item.innerHTML = `
             <div class="sidebar__user-avatar">
               ${profile?.avatar_url
-        ? `<img src="${profile.avatar_url}" alt="${name}">`
-        : initials}
+        ? `<img src="${safeAvatarUrl}" alt="${safeName}">`
+        : safeInitials}
             </div>
             <div class="sidebar__user-info">
-              <div class="sidebar__user-name">${name}</div>
-              <div class="sidebar__user-role">${sub.tier_name}</div>
+              <div class="sidebar__user-name">${safeName}</div>
+              <div class="sidebar__user-role">${safeTierName}</div>
             </div>
           `;
           item.addEventListener('click', () => {

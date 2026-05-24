@@ -12,10 +12,11 @@
 const CACHE_VERSION = 'dev'; // __CACHE_VERSION__
 const CACHE_NAME = `sportech-shell-${CACHE_VERSION}`;
 const PRECACHE_URLS = ['/']; // __PRECACHE_URLS__
+const PRECACHE_URL_SET = new Set(PRECACHE_URLS);
 const NAVIGATION_FALLBACK_URL = '/';
 
 // Иммутабельные бандлы вида main.a1b2c3d4.js / styles.deadbeef12.css
-const IMMUTABLE_ASSET = /\.[0-9a-f]{8,}\.(js|css)$/;
+const IMMUTABLE_ASSET = /\.[0-9a-f]{8,}(?:\.chunk)?\.(js|css)$/;
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -45,6 +46,29 @@ self.addEventListener('fetch', event => {
   // Чужой origin и API не трогаем — пусть идут в сеть как есть.
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
+
+  if (request.mode === 'navigate' && self.navigator.onLine === false) {
+    event.respondWith(caches.match(NAVIGATION_FALLBACK_URL).then(cached => cached || Response.error()));
+    return;
+  }
+
+  // Всё, что попало в precache при сборке, отдаём cache-first без сетевого промаха.
+  // HTML-навигацию оставляем network-first, иначе '/' может зависнуть на старой версии.
+  if (request.mode !== 'navigate' && PRECACHE_URL_SET.has(url.pathname)) {
+    event.respondWith(
+      caches.match(url.pathname).then(cached => {
+        if (cached) return cached;
+        return fetch(request).then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(url.pathname, copy));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
 
   // Иммутабельные ассеты: cache-first.
   if (IMMUTABLE_ASSET.test(url.pathname)) {

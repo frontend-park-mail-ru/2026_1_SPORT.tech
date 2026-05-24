@@ -605,9 +605,11 @@ async function renderSubscriptionsSection(
             ? `${trainer.first_name} ${trainer.last_name}`.trim() || trainer.username
             : `Тренер #${sub.trainer_id}`;
           const avatarUrl = trainer?.avatar_url;
+          const safeAvatarUrl = escapeHtml(avatarUrl);
+          const safeInitial = escapeHtml(trainerName.charAt(0).toUpperCase());
           const avatarHtml = avatarUrl
-            ? `<img src="${avatarUrl}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
-            : `<div style="width:36px;height:36px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#888;flex-shrink:0;">${trainerName.charAt(0).toUpperCase()}</div>`;
+            ? `<img src="${safeAvatarUrl}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+            : `<div style="width:36px;height:36px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#888;flex-shrink:0;">${safeInitial}</div>`;
 
           const expiresDate = sub.expires_at ? new Date(sub.expires_at).toLocaleDateString('ru-RU') : 'Не указано';
 
@@ -625,7 +627,7 @@ async function renderSubscriptionsSection(
             <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f0f0f0;">
               <div>
                 <div style="font-size:13px;color:#555;font-weight:500;">${escapeHtml(sub.tier_name)}</div>
-                <div style="font-size:12px;color:#999;margin-top:2px;">Истекает: ${expiresDate}</div>
+                <div style="font-size:12px;color:#999;margin-top:2px;">Истекает: ${escapeHtml(expiresDate)}</div>
               </div>
               <span style="font-size:12px;color:var(--primary-orange);font-weight:600;">Перейти →</span>
             </div>

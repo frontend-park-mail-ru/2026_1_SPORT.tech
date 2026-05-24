@@ -1,20 +1,10 @@
 // src/components/molecules/SubscribersModal/SubscribersModal.ts
 
 import type { ApiClient } from '../../../utils/api';
-import { formatMonthlyPrice } from '../../../utils/profilePageData';
+import { escapeHtml, formatMonthlyPrice } from '../../../utils/profilePageData';
 
 export interface SubscribersModalOptions {
   api: ApiClient;
-}
-
-function escapeHtml(str: string): string {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 export async function openSubscribersModal({ api }: SubscribersModalOptions): Promise<void> {
@@ -57,9 +47,11 @@ export async function openSubscribersModal({ api }: SubscribersModalOptions): Pr
         ? `${client.first_name} ${client.last_name}`.trim() || client.username
         : `Пользователь #${sub.client_id}`;
       const avatarUrl = client?.avatar_url;
+      const safeAvatarUrl = avatarUrl ? escapeHtml(avatarUrl) : '';
+      const safeInitial = escapeHtml(name.charAt(0).toUpperCase());
       const avatarHtml = avatarUrl
-        ? `<img src="${avatarUrl}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
-        : `<div style="width:40px;height:40px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#888;flex-shrink:0;">${name.charAt(0).toUpperCase()}</div>`;
+        ? `<img src="${safeAvatarUrl}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+        : `<div style="width:40px;height:40px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#888;flex-shrink:0;">${safeInitial}</div>`;
       const expiresDate = sub.expires_at ? new Date(sub.expires_at).toLocaleDateString('ru-RU') : '—';
 
       const row = document.createElement('div');
@@ -68,7 +60,7 @@ export async function openSubscribersModal({ api }: SubscribersModalOptions): Pr
         ${avatarHtml}
         <div style="flex:1;min-width:0;">
           <div style="font-weight:600;font-size:14px;color:#1a2b3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
-          <div style="font-size:12px;color:#999;">${escapeHtml(sub.tier_name)} · до ${expiresDate}</div>
+          <div style="font-size:12px;color:#999;">${escapeHtml(sub.tier_name)} · до ${escapeHtml(expiresDate)}</div>
         </div>
         <span style="color:var(--primary-orange);font-weight:700;font-size:14px;flex-shrink:0;">${formatMonthlyPrice(sub.price)}</span>
       `;

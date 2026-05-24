@@ -3,6 +3,7 @@ import type { ApiClient } from '../../utils/api';
 import type { AuthResponse, Profile } from '../../types/api.types';
 import type { Notification } from '../../types/api.types';
 import { emitUnreadCount } from '../../components/organisms/Sidebar/Sidebar';
+import { escapeHtml } from '../../utils/profilePageData';
 
 interface NotificationsPageParams {
   currentUser?: AuthResponse | null;
@@ -57,6 +58,9 @@ function renderNotificationItem(n: Notification): HTMLElement {
   item.dataset.id = String(n.notification_id);
 
   if (n.actor_user_id) {
+    const safeTitle = escapeHtml(n.title);
+    const safeBody = escapeHtml(n.body);
+    const safeTime = escapeHtml(formatTime(n.created_at));
     // Резервируем место под аватар и имя сразу, чтобы не было layout shift при загрузке
     item.innerHTML = `
       <div class="notification-item__dot"></div>
@@ -65,20 +69,23 @@ function renderNotificationItem(n: Notification): HTMLElement {
       </a>
       <div class="notification-item__content">
         <div class="notification-item__actor-name notification-item__actor-name--loading"></div>
-        <div class="notification-item__title">${n.title}</div>
-        <div class="notification-item__body">${n.body}</div>
+        <div class="notification-item__title">${safeTitle}</div>
+        <div class="notification-item__body">${safeBody}</div>
       </div>
-      <div class="notification-item__time">${formatTime(n.created_at)}</div>
+      <div class="notification-item__time">${safeTime}</div>
     `;
   } else {
+    const safeTitle = escapeHtml(n.title);
+    const safeBody = escapeHtml(n.body);
+    const safeTime = escapeHtml(formatTime(n.created_at));
     item.innerHTML = `
       <div class="notification-item__dot"></div>
       <div class="notification-item__icon">${notifIcon(n.type)}</div>
       <div class="notification-item__content">
-        <div class="notification-item__title">${n.title}</div>
-        <div class="notification-item__body">${n.body}</div>
+        <div class="notification-item__title">${safeTitle}</div>
+        <div class="notification-item__body">${safeBody}</div>
       </div>
-      <div class="notification-item__time">${formatTime(n.created_at)}</div>
+      <div class="notification-item__time">${safeTime}</div>
     `;
   }
   return item;

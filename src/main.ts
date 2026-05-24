@@ -1,7 +1,7 @@
 import Handlebars from 'handlebars';
 import { API_BASE_URL } from './config/constants';
 import { ApiClient } from './utils/api';
-import { mapProfileData, getUserRoleLabel } from './utils/profilePageData';
+import { escapeHtml, mapProfileData, getUserRoleLabel } from './utils/profilePageData';
 import type { AuthResponse } from './types/auth.types';
 import type { Router } from './types/router.types';
 import { renderSidebar, setActivePage } from './components/organisms/Sidebar/Sidebar';
@@ -21,7 +21,7 @@ function renderBootScreen(container: HTMLElement, message = 'Загружаем 
       <div class="app-loader__panel">
         <div class="app-loader__brand">SPORT.tech</div>
         <div class="app-loader__spinner"></div>
-        <p class="app-loader__message">${message}</p>
+        <p class="app-loader__message">${escapeHtml(message)}</p>
       </div>
     </div>
   `;
@@ -86,17 +86,28 @@ function createLogoutHandler(
   return async () => {
     try {
       await api.logout();
-      setCurrentUser(null);
-      localStorage.removeItem('user');
-      navigateTo('/auth');
     } catch (error: unknown) {
       console.error('Logout error:', error);
+    } finally {
+      setCurrentUser(null);
+      localStorage.removeItem('user');
+      localStorage.removeItem('cached_user');
+      navigateTo('/auth');
     }
   };
 }
 
 function setPageTitle(suffix?: string | null): void {
   document.title = suffix ? `Sporteon - ${suffix}` : 'Sporteon';
+}
+
+function renderRouteError(message: string, level: 'h2' | 'h3' = 'h3'): string {
+  return `
+    <div style="color:red;padding:20px">
+      <${level}>Ошибка</${level}>
+      <p>${escapeHtml(message)}</p>
+    </div>
+  `;
 }
 
 // ─── Router ──────────────────────────────────────────────────────────────────
@@ -190,7 +201,7 @@ function createRouter(api: ApiClient): Router {
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to load AuthPage:', err);
-      app.innerHTML = `<div style="color:red;padding:20px"><h2>Ошибка</h2><p>${err.message}</p></div>`;
+      app.innerHTML = renderRouteError(err.message, 'h2');
     }
   }
 
@@ -210,7 +221,7 @@ function createRouter(api: ApiClient): Router {
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to load HomePage:', err);
-      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+      content.innerHTML = renderRouteError(err.message);
     }
   }
 
@@ -249,7 +260,7 @@ function createRouter(api: ApiClient): Router {
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to load ProfilePage:', err);
-      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+      content.innerHTML = renderRouteError(err.message);
     }
   }
 
@@ -268,7 +279,7 @@ function createRouter(api: ApiClient): Router {
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to load NotificationsPage:', err);
-      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+      content.innerHTML = renderRouteError(err.message);
     }
   }
 
@@ -287,7 +298,7 @@ function createRouter(api: ApiClient): Router {
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to load FinancePage:', err);
-      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+      content.innerHTML = renderRouteError(err.message);
     }
   }
 
@@ -306,7 +317,7 @@ function createRouter(api: ApiClient): Router {
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to load ChatPage:', err);
-      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+      content.innerHTML = renderRouteError(err.message);
     }
   }
 
@@ -325,7 +336,7 @@ function createRouter(api: ApiClient): Router {
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to load MeetingsPage:', err);
-      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+      content.innerHTML = renderRouteError(err.message);
     }
   }
 
@@ -343,7 +354,7 @@ function createRouter(api: ApiClient): Router {
       await renderPaymentReturnPage(api, content, { currentUser, onLogout });
     } catch (error: unknown) {
       const err = error as Error;
-      content.innerHTML = `<div style="color:red;padding:20px"><h3>Ошибка</h3><p>${err.message}</p></div>`;
+      content.innerHTML = renderRouteError(err.message);
     }
   }
 

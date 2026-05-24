@@ -253,9 +253,20 @@ export async function openPostFormModal({
 
   function createMediaPreview(block: ContentBlock, container: HTMLElement): void {
     if (block.existingUrl && !block.file) {
-      container.innerHTML = (block.existingKind || inferMediaKind(block.existingUrl)) === 'video'
-        ? `<video controls src="${block.existingUrl}" style="max-width:100%;max-height:300px;"></video>`
-        : `<img src="${block.existingUrl}" alt="Медиа" style="max-width:100%;max-height:300px;object-fit:contain;">`;
+      container.innerHTML = '';
+      if ((block.existingKind || inferMediaKind(block.existingUrl)) === 'video') {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.src = block.existingUrl;
+        video.style.cssText = 'max-width:100%;max-height:300px;';
+        container.appendChild(video);
+      } else {
+        const img = document.createElement('img');
+        img.src = block.existingUrl;
+        img.alt = 'Медиа';
+        img.style.cssText = 'max-width:100%;max-height:300px;object-fit:contain;';
+        container.appendChild(img);
+      }
       return;
     }
     if (block.value && block.file) {

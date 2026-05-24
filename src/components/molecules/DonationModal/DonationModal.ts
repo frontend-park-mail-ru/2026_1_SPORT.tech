@@ -89,6 +89,10 @@ export async function openDonationModal({
       });
 
       if (payment.confirmation_url) {
+        const confirmationUrl = getSafeRedirectUrl(payment.confirmation_url);
+        if (!confirmationUrl) {
+          throw new Error('Некорректная ссылка на оплату');
+        }
         localStorage.setItem('sporteon_pending_payment', JSON.stringify({
           payment_id: payment.payment_id,
           confirmation_token: payment.confirmation_token
@@ -107,7 +111,7 @@ export async function openDonationModal({
         `;
         // Небольшая задержка чтобы пользователь увидел сообщение
         setTimeout(() => {
-          window.location.href = payment.confirmation_url;
+          window.location.href = confirmationUrl;
         }, 800);
         return;
       }
@@ -132,6 +136,16 @@ export async function openDonationModal({
   document.body.appendChild(modal);
   modal.focus({ preventScroll: true } as FocusOptions);
   amountApi.focus();
+}
+
+function getSafeRedirectUrl(value: string): string | null {
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+    return url.href;
+  } catch {
+    return null;
+  }
 }
 
 function showSuccess(form: HTMLFormElement, submitBtn: HTMLButtonElement, amount: number, close: () => void): void {

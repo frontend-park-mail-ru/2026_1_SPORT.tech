@@ -73,6 +73,10 @@ export class ApiClient {
     return /Failed to fetch|NetworkError|Load failed/i.test(error.message);
   }
 
+  private isBrowserOffline(): boolean {
+    return typeof navigator !== 'undefined' && navigator.onLine === false;
+  }
+
   private normalizeStorageUrl(value: string): string {
     if (value.startsWith('/avatars/') || value.startsWith('/post-media/')) {
       return value;
@@ -213,6 +217,14 @@ export class ApiClient {
       ? this.getOfflineCacheKey(method, endpoint, options.body)
       : null;
 
+    if (offlineCacheKey && this.isBrowserOffline()) {
+      const cached = this.readOfflineCache<T>(offlineCacheKey);
+      if (cached !== null) {
+        return cached;
+      }
+      throw new TypeError('Offline');
+    }
+
     const headers: Record<string, string> = {};
 
     if (!(options.body instanceof FormData)) {
@@ -293,14 +305,29 @@ export class ApiClient {
   }
 
   async logout(): Promise<void> {
-    await this.ensureCsrfToken();
-    await this.request('/v1/auth/logout', { method: 'POST' });
-    this.csrfToken = null;
-    localStorage.removeItem('cached_user');
-    this.clearOfflineCache();
+    try {
+      await this.ensureCsrfToken();
+      await this.request('/v1/auth/logout', { method: 'POST' });
+    } finally {
+      this.csrfToken = null;
+      localStorage.removeItem('cached_user');
+      this.clearOfflineCache();
+    }
   }
 
   async getCurrentUser(): Promise<AuthResponse | null> {
+    if (this.isBrowserOffline()) {
+      const cached = localStorage.getItem('cached_user');
+      if (cached) {
+        try {
+          return JSON.parse(cached) as AuthResponse;
+        } catch {
+          localStorage.removeItem('cached_user');
+        }
+      }
+      return null;
+    }
+
     try {
       const user = await this.request<AuthResponse>('/v1/auth/me');
       // Кэшируем данные пользователя для работы в офлайн-режиме

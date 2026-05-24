@@ -4,6 +4,7 @@
  */
 
 import type { ApiClient } from '../../../utils/api';
+import { escapeHtml } from '../../../utils/profilePageData';
 import './FinanceTab.css';
 
 export interface FinanceTabOptions {
@@ -18,9 +19,9 @@ function fmtMoney(value: number, currency: string): string {
 function card(value: string, label: string, sub?: string): string {
   return `
     <div class="finance-card">
-      <div class="finance-card__value">${value}</div>
-      <div class="finance-card__label">${label}</div>
-      ${sub ? `<div class="finance-card__sub">${sub}</div>` : ''}
+      <div class="finance-card__value">${escapeHtml(value)}</div>
+      <div class="finance-card__label">${escapeHtml(label)}</div>
+      ${sub ? `<div class="finance-card__sub">${escapeHtml(sub)}</div>` : ''}
     </div>
   `;
 }
@@ -65,7 +66,7 @@ export async function renderFinanceTab(container: HTMLElement, { api }: FinanceT
       <div class="finance-tab__error">
         <div class="finance-tab__error-icon">⚠️</div>
         <p class="finance-tab__error-text">Не удалось загрузить финансовые данные</p>
-        <p class="finance-tab__error-detail">${msg}</p>
+        <p class="finance-tab__error-detail">${escapeHtml(msg)}</p>
         <button class="finance-tab__retry-btn">Попробовать снова</button>
       </div>
     `;

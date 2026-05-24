@@ -1,7 +1,7 @@
 import './PaymentReturnPage.css';
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse, PaymentResponse } from '../../types/api.types';
-import { formatMonthlyPrice } from '../../utils/profilePageData';
+import { escapeHtml, formatMonthlyPrice } from '../../utils/profilePageData';
 
 interface PaymentReturnPageParams {
   currentUser?: AuthResponse | null;
@@ -42,16 +42,16 @@ async function renderSuccess(
       : '';
     details = `
       <div class="payment-result__sub-info">
-        <p class="payment-result__sub-tier">Тариф: <strong>${sub.tier_name}</strong></p>
-        <p class="payment-result__sub-price">${formatMonthlyPrice(sub.price)}</p>
-        ${expires ? `<p class="payment-result__sub-expires">Активна до: ${expires}</p>` : ''}
+        <p class="payment-result__sub-tier">Тариф: <strong>${escapeHtml(sub.tier_name)}</strong></p>
+        <p class="payment-result__sub-price">${escapeHtml(formatMonthlyPrice(sub.price))}</p>
+        ${expires ? `<p class="payment-result__sub-expires">Активна до: ${escapeHtml(expires)}</p>` : ''}
       </div>
     `;
   } else {
     const amountStr = formatAmount(payment.amount_value, payment.currency || 'RUB');
     details = `
-      <div class="payment-result__amount">${amountStr}</div>
-      <p class="payment-result__message">${payment.message || 'Спасибо за поддержку!'}</p>
+      <div class="payment-result__amount">${escapeHtml(amountStr)}</div>
+      <p class="payment-result__message">${escapeHtml(payment.message || 'Спасибо за поддержку!')}</p>
     `;
   }
 
@@ -100,7 +100,7 @@ function renderError(el: HTMLElement, message: string, navigateTo: (p: string) =
     <div class="payment-result">
       <div class="payment-result__icon payment-result__icon--error">✗</div>
       <h1 class="payment-result__title">Ошибка оплаты</h1>
-      <p class="payment-result__message">${message}</p>
+      <p class="payment-result__message">${escapeHtml(message)}</p>
       <div class="payment-result__actions">
         <button class="payment-result__btn payment-result__btn--primary" id="btn-home">На главную</button>
         <button class="payment-result__btn payment-result__btn--secondary" id="btn-back">Назад</button>

@@ -18,6 +18,7 @@ import type { ValidationResult } from '../../../types/validation.types';
 import { Validator } from '../../../utils/validator';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
+import { escapeHtml } from '../../../utils/profilePageData';
 
 export const AUTH_MODES = {
   LOGIN: 'login',
@@ -173,7 +174,7 @@ export function createSportTypesField(
         class="sport-types-field__checkbox"
         value="${option.sport_type_id}"
       >
-      <span class="sport-types-field__option-label">${option.name}</span>
+      <span class="sport-types-field__option-label">${escapeHtml(option.name)}</span>
     `;
 
     const checkbox = item.querySelector('input') as HTMLInputElement;
@@ -339,13 +340,6 @@ export async function renderAuthForm(
       altLinkText: 'Войти',
       fields: [
         {
-          type: INPUT_TYPES.WITHOUTS as InputType,
-          name: 'username',
-          label: 'Никнейм (отображаемое имя)',
-          placeholder: 'john_doe',
-          required: true
-        },
-        {
           type: INPUT_TYPES.NAME as InputType,
           name: 'first_name',
           label: 'Имя',
@@ -357,6 +351,13 @@ export async function renderAuthForm(
           name: 'last_name',
           label: 'Фамилия',
           placeholder: 'Введите фамилию',
+          required: true
+        },
+        {
+          type: INPUT_TYPES.WITHOUTS as InputType,
+          name: 'username',
+          label: 'Никнейм (отображаемое имя)',
+          placeholder: 'john_doe',
           required: true
         },
         {

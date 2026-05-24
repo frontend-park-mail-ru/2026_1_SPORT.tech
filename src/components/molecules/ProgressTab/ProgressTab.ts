@@ -18,7 +18,8 @@ function escapeHtml(s: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function formatDate(ts: string): string {
@@ -289,7 +290,7 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
         row.innerHTML = `
           <input type="checkbox" class="progress-tab__sharing-checkbox" data-trainer-id="${sub.trainer_id}" ${checked}>
           <span class="progress-tab__sharing-name">Тренер #${sub.trainer_id}</span>
-          <span class="progress-tab__sharing-tier">${sub.tier_name}</span>
+          <span class="progress-tab__sharing-tier">${escapeHtml(sub.tier_name)}</span>
         `;
         body.appendChild(row);
       });

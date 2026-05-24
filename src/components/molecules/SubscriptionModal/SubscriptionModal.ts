@@ -2,7 +2,7 @@
 
 import type { ApiClient } from '../../../utils/api';
 import type { Tier, Subscription } from '../../../types/api.types';
-import { formatMonthlyPrice } from '../../../utils/profilePageData';
+import { escapeHtml, formatMonthlyPrice } from '../../../utils/profilePageData';
 
 export interface SubscriptionModalOptions {
   api: ApiClient;
@@ -116,6 +116,10 @@ export async function openSubscriptionModal({
           });
 
           if (payment.confirmation_url) {
+            const confirmationUrl = getSafeRedirectUrl(payment.confirmation_url);
+            if (!confirmationUrl) {
+              throw new Error('Некорректная ссылка на оплату');
+            }
             localStorage.setItem('sporteon_pending_payment', JSON.stringify({
               payment_id: payment.payment_id,
               confirmation_token: payment.confirmation_token
@@ -127,7 +131,7 @@ export async function openSubscriptionModal({
               </div>
             `;
             setTimeout(() => {
-              window.location.href = payment.confirmation_url;
+              window.location.href = confirmationUrl;
             }, 600);
             return;
           }
@@ -162,12 +166,12 @@ export async function openSubscriptionModal({
   }
 }
 
-function escapeHtml(str: string): string {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+function getSafeRedirectUrl(value: string): string | null {
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+    return url.href;
+  } catch {
+    return null;
+  }
 }

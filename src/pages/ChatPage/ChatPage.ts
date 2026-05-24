@@ -34,6 +34,19 @@ function initials(name: string): string {
   return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2);
 }
 
+function escapeHtml(str: string): string {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeMultilineHtml(str: string): string {
+  return escapeHtml(str).replace(/\n/g, '<br>');
+}
+
 export async function renderChatPage(
   api: ApiClient,
   container: HTMLElement,
@@ -108,8 +121,8 @@ export async function renderChatPage(
       item.dataset.userId = String(conv.other_user_id);
 
       const avatarHtml = info.avatar
-        ? `<img src="${info.avatar}" alt="${info.name}">`
-        : initials(info.name);
+        ? `<img src="${escapeHtml(info.avatar)}" alt="${escapeHtml(info.name)}">`
+        : escapeHtml(initials(info.name));
 
       const preview = conv.last_message?.body
         ? (conv.last_message.body.length > 40
@@ -124,11 +137,11 @@ export async function renderChatPage(
       item.innerHTML = `
         <div class="chat-conv-item__avatar">${avatarHtml}</div>
         <div class="chat-conv-item__info">
-          <div class="chat-conv-item__name">${info.name}</div>
-          <div class="chat-conv-item__preview">${preview}</div>
+          <div class="chat-conv-item__name">${escapeHtml(info.name)}</div>
+          <div class="chat-conv-item__preview">${escapeHtml(preview)}</div>
         </div>
         <div class="chat-conv-item__meta">
-          <span class="chat-conv-item__time">${timeStr}</span>
+          <span class="chat-conv-item__time">${escapeHtml(timeStr)}</span>
           ${badgeHtml}
         </div>
       `;
@@ -151,13 +164,13 @@ export async function renderChatPage(
 
     const info = await getProfileInfo(userId);
     const avatarHtml = info.avatar
-      ? `<img src="${info.avatar}" alt="${info.name}">`
-      : initials(info.name);
+      ? `<img src="${escapeHtml(info.avatar)}" alt="${escapeHtml(info.name)}">`
+      : escapeHtml(initials(info.name));
 
     chatWindow.innerHTML = `
       <div class="chat-window__header">
         <div class="chat-window__header-avatar">${avatarHtml}</div>
-        <div class="chat-window__header-name">${info.name}</div>
+        <div class="chat-window__header-name">${escapeHtml(info.name)}</div>
         <span class="chat-window__header-link" data-profile-id="${userId}">Перейти к профилю</span>
       </div>
       <div class="chat-messages" id="chat-messages-area">
@@ -199,7 +212,7 @@ export async function renderChatPage(
     const msgEl = document.createElement('div');
     msgEl.className = `chat-msg chat-msg--${isOut ? 'out' : 'in'}`;
     msgEl.innerHTML = `
-      <div class="chat-msg__bubble">${escapeHtml(msg.body)}</div>
+      <div class="chat-msg__bubble">${escapeMultilineHtml(msg.body)}</div>
       <div class="chat-msg__meta">${formatTime(msg.created_at)}${isOut && msg.is_read ? ' ✓✓' : ''}</div>
     `;
     area.appendChild(msgEl);
@@ -284,6 +297,13 @@ export async function renderChatPage(
 
   // Закрываем поток при навигации
   window.addEventListener('popstate', clearSSE, { once: true });
+  const cleanupObserver = new MutationObserver(() => {
+    if (!document.body.contains(chatWindow)) {
+      clearSSE();
+      cleanupObserver.disconnect();
+    }
+  });
+  cleanupObserver.observe(document.body, { childList: true, subtree: true });
 
   // ── Input + send ─────────────────────────────────────────────────────────
   function setupInput(toUserId: number): void {
@@ -344,16 +364,6 @@ export async function renderChatPage(
         void sendMessage();
       }
     });
-  }
-
-  // ── HTML escape ──────────────────────────────────────────────────────────
-  function escapeHtml(str: string): string {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/\n/g, '<br>');
   }
 
   // ── Init ─────────────────────────────────────────────────────────────────

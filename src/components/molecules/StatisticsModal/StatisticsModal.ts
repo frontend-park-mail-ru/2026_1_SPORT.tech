@@ -1,6 +1,7 @@
 // src/components/molecules/StatisticsModal/StatisticsModal.ts
 
 import type { ApiClient } from '../../../utils/api';
+import { escapeHtml } from '../../../utils/profilePageData';
 
 export interface StatisticsModalOptions {
   api: ApiClient;
@@ -36,8 +37,8 @@ export async function openStatisticsModal({ api }: StatisticsModalOptions): Prom
 
     const card = (value: string, label: string): string => `
       <div style="flex:1;min-width:120px;background:#FFF5F0;border-radius:12px;padding:16px;">
-        <div style="font-size:22px;font-weight:700;color:#1a2b3c;">${value}</div>
-        <div style="font-size:13px;color:#888;margin-top:4px;">${label}</div>
+        <div style="font-size:22px;font-weight:700;color:#1a2b3c;">${escapeHtml(value)}</div>
+        <div style="font-size:13px;color:#888;margin-top:4px;">${escapeHtml(label)}</div>
       </div>
     `;
 
@@ -60,7 +61,7 @@ export async function openStatisticsModal({ api }: StatisticsModalOptions): Prom
     bodyEl.innerHTML = `
       <div style="text-align:center;padding:24px;">
         <p style="color:#e53e3e;font-weight:600;margin:0 0 8px;">Не удалось загрузить статистику</p>
-        <p style="color:#999;font-size:12px;margin:0;">${msg}</p>
+        <p style="color:#999;font-size:12px;margin:0;">${escapeHtml(msg)}</p>
       </div>
     `;
   }
