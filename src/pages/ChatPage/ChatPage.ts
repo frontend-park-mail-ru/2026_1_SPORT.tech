@@ -6,6 +6,7 @@
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse } from '../../types/auth.types';
 import type { ChatConversation, ChatMessage } from '../../types/api.types';
+import { getFriendlyErrorMessage } from '../../utils/errorMessages';
 import './ChatPage.css';
 
 interface ChatPageParams {
@@ -338,9 +339,9 @@ export async function renderChatPage(
       } catch (err) {
         console.error('Ошибка отправки сообщения:', err);
         const errMsg = err instanceof Error ? err.message : String(err);
-        // Pick a user-friendly message
-        let displayText = 'Не удалось отправить сообщение';
-        if (errMsg.includes('forbidden') || errMsg.includes('PermissionDenied') || errMsg.includes('403')) {
+        const status = (err as { status?: number })?.status;
+        let displayText = getFriendlyErrorMessage(err, 'Не удалось отправить сообщение. Попробуйте ещё раз.');
+        if (status === 403 || /forbidden|PermissionDenied|403|нет доступа/i.test(errMsg)) {
           displayText = 'Нет доступа к чату: проверьте, что у вас активная подписка с опцией «Чат»';
         }
         const errBanner = document.createElement('div');

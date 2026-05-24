@@ -1,6 +1,7 @@
 // src/utils/api.ts
 
 import { API_BASE_URL } from '../config/constants';
+import { getFriendlyErrorMessage } from './errorMessages';
 import type {
   AuthResponse,
   Profile,
@@ -129,6 +130,54 @@ export class ApiClient {
     }
   }
 
+  private readCachedUser(): AuthResponse | null {
+    if (typeof localStorage === 'undefined') return null;
+
+    try {
+      const cached = localStorage.getItem('cached_user');
+      return cached ? JSON.parse(cached) as AuthResponse : null;
+    } catch {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem('cached_user');
+      return null;
+    }
+  }
+
+  private writeCachedUser(response: AuthResponse): void {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem('cached_user', JSON.stringify(this.normalizeStorageUrls(response)));
+  }
+
+  private getCachedOwnProfile(userId: number): Profile | null {
+    const cached = this.readCachedUser();
+    if (!cached?.user || cached.user.user_id !== userId) return null;
+
+    return this.normalizeStorageUrls({
+      ...cached.user,
+      is_me: true
+    } as Profile);
+  }
+
+  private updateCachedUserFromProfile(profile: Profile): void {
+    const cached = this.readCachedUser();
+    if (!cached?.user || cached.user.user_id !== profile.user_id) return;
+
+    this.writeCachedUser({
+      user: {
+        user_id: profile.user_id,
+        username: profile.username,
+        email: profile.email,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        avatar_url: profile.avatar_url,
+        bio: profile.bio,
+        is_trainer: profile.is_trainer,
+        is_admin: profile.is_admin,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at
+      }
+    });
+  }
+
   private writeOfflineCache<T>(cacheKey: string, data: T): void {
     if (typeof localStorage === 'undefined') return;
 
@@ -222,7 +271,7 @@ export class ApiClient {
       if (cached !== null) {
         return cached;
       }
-      throw new TypeError('Offline');
+      throw new TypeError('Нет соединения. Попробуйте повторить, когда сеть появится.');
     }
 
     const headers: Record<string, string> = {};
@@ -260,15 +309,20 @@ export class ApiClient {
       } else {
         const text = await response.text();
         console.error('[API] Non-JSON response:', text.substring(0, 500));
-        throw new Error(`Сервер вернул не JSON (${response.status}): ${text.substring(0, 200)}`);
+        throw new Error(getFriendlyErrorMessage(
+          `Сервер вернул не JSON (${response.status}): ${text.substring(0, 200)}`,
+          'Сервер временно недоступен. Попробуйте позже.'
+        ));
       }
 
       if (!response.ok) {
         const errorData = data as { error?: { message?: string; code?: string } };
         const errorMessage = errorData?.error?.message || `HTTP ${response.status}`;
         console.error('[API] Error:', errorData);
-        const error = new Error(errorMessage);
-        (error as Error & { data: T }).data = data;
+        const error = new Error(getFriendlyErrorMessage(errorMessage, 'Не удалось выполнить запрос. Попробуйте ещё раз.'));
+        (error as Error & { data: T; rawMessage: string; status: number }).data = data;
+        (error as Error & { rawMessage: string }).rawMessage = errorMessage;
+        (error as Error & { status: number }).status = response.status;
         throw error;
       }
 
@@ -283,6 +337,9 @@ export class ApiClient {
         if (cached !== null) {
           return cached;
         }
+      }
+      if (this.isNetworkError(error)) {
+        throw new TypeError(getFriendlyErrorMessage(error, 'Нет соединения. Попробуйте повторить, когда сеть появится.'));
       }
       throw error;
     }
@@ -299,7 +356,7 @@ export class ApiClient {
     // Кэшируем после успешного входа
     if (response) {
       this.clearOfflineCache();
-      localStorage.setItem('cached_user', JSON.stringify(response));
+      this.writeCachedUser(response);
     }
     return response;
   }
@@ -310,46 +367,31 @@ export class ApiClient {
       await this.request('/v1/auth/logout', { method: 'POST' });
     } finally {
       this.csrfToken = null;
-      localStorage.removeItem('cached_user');
+      if (typeof localStorage !== 'undefined') localStorage.removeItem('cached_user');
       this.clearOfflineCache();
     }
   }
 
   async getCurrentUser(): Promise<AuthResponse | null> {
     if (this.isBrowserOffline()) {
-      const cached = localStorage.getItem('cached_user');
-      if (cached) {
-        try {
-          return JSON.parse(cached) as AuthResponse;
-        } catch {
-          localStorage.removeItem('cached_user');
-        }
-      }
-      return null;
+      return this.readCachedUser();
     }
 
     try {
       const user = await this.request<AuthResponse>('/v1/auth/me');
       // Кэшируем данные пользователя для работы в офлайн-режиме
       if (user) {
-        localStorage.setItem('cached_user', JSON.stringify(user));
+        this.writeCachedUser(user);
       }
       return user;
     } catch (err) {
       if (err instanceof TypeError) {
         // Сетевая ошибка (офлайн) — возвращаем закэшированного пользователя
-        const cached = localStorage.getItem('cached_user');
-        if (cached) {
-          try {
-            return JSON.parse(cached) as AuthResponse;
-          } catch {
-            // Повреждённый кэш — удаляем
-            localStorage.removeItem('cached_user');
-          }
-        }
+        const cached = this.readCachedUser();
+        if (cached) return cached;
       } else {
         // HTTP-ошибка (401, 403 и т.д.) — сессия истекла, чистим кэш
-        localStorage.removeItem('cached_user');
+        if (typeof localStorage !== 'undefined') localStorage.removeItem('cached_user');
       }
       return null;
     }
@@ -370,7 +412,7 @@ export class ApiClient {
     });
     if (response) {
       this.clearOfflineCache();
-      localStorage.setItem('cached_user', JSON.stringify(response));
+      this.writeCachedUser(response);
     }
     return response;
   }
@@ -391,7 +433,7 @@ export class ApiClient {
     });
     if (response) {
       this.clearOfflineCache();
-      localStorage.setItem('cached_user', JSON.stringify(response));
+      this.writeCachedUser(response);
     }
     return response;
   }
@@ -399,7 +441,19 @@ export class ApiClient {
   // ========== PROFILE ENDPOINTS ==========
 
   async getProfile(userId: number): Promise<Profile> {
-    return this.request<Profile>(`/v1/profiles/${userId}`);
+    try {
+      const profile = await this.request<Profile>(`/v1/profiles/${userId}`);
+      if (profile.is_me) {
+        this.updateCachedUserFromProfile(profile);
+      }
+      return profile;
+    } catch (error) {
+      if (this.isNetworkError(error)) {
+        const cachedProfile = this.getCachedOwnProfile(userId);
+        if (cachedProfile) return cachedProfile;
+      }
+      throw error;
+    }
   }
 
   async updateMyProfile(data: {
@@ -410,10 +464,12 @@ export class ApiClient {
     trainer_details?: TrainerDetails;
   }): Promise<Profile> {
     await this.ensureCsrfToken();
-    return this.request<Profile>('/v1/profiles/me', {
+    const profile = await this.request<Profile>('/v1/profiles/me', {
       method: 'PATCH',
       body: JSON.stringify(data)
     });
+    this.updateCachedUserFromProfile(profile);
+    return profile;
   }
 
   async getTrainers(params?: {
@@ -529,7 +585,7 @@ export class ApiClient {
       } catch {
         // Если не JSON — используем статус
       }
-      throw new Error(errorMessage);
+      throw new Error(getFriendlyErrorMessage(errorMessage, 'Не удалось загрузить файл. Попробуйте ещё раз.'));
     }
 
     return response.json();
@@ -662,7 +718,7 @@ export class ApiClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({} as { error?: { message?: string } }));
-      throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
+      throw new Error(getFriendlyErrorMessage(errorData?.error?.message || `HTTP ${response.status}`, 'Не удалось загрузить фото. Попробуйте ещё раз.'));
     }
 
     return response.json();

@@ -2,6 +2,7 @@ import Handlebars from 'handlebars';
 import { API_BASE_URL } from './config/constants';
 import { ApiClient } from './utils/api';
 import { escapeHtml, mapProfileData, getUserRoleLabel } from './utils/profilePageData';
+import { getFriendlyErrorMessage } from './utils/errorMessages';
 import type { AuthResponse } from './types/auth.types';
 import type { Router } from './types/router.types';
 import { renderSidebar, setActivePage } from './components/organisms/Sidebar/Sidebar';
@@ -105,7 +106,7 @@ function renderRouteError(message: string, level: 'h2' | 'h3' = 'h3'): string {
   return `
     <div style="color:red;padding:20px">
       <${level}>Ошибка</${level}>
-      <p>${escapeHtml(message)}</p>
+      <p>${escapeHtml(getFriendlyErrorMessage(message))}</p>
     </div>
   `;
 }

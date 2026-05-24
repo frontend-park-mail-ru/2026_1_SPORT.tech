@@ -5,6 +5,7 @@ import type { ApiClient } from '../../utils/api';
 import type { AuthResponse } from '../../types/auth.types';
 import type { DonationItem } from '../../types/api.types';
 import { escapeHtml } from '../../utils/profilePageData';
+import { getFriendlyErrorMessage } from '../../utils/errorMessages';
 
 interface FinancePageParams {
   currentUser: AuthResponse;
@@ -82,7 +83,7 @@ async function loadSummaryCards(api: ApiClient, cardsEl: HTMLElement): Promise<v
       ${card(String(stats.posts_count), 'Публикаций')}
     `;
   } catch (err: unknown) {
-    const msg = (err as Error).message || 'Неизвестная ошибка';
+    const msg = getFriendlyErrorMessage(err, 'Попробуйте повторить позже.');
     console.error('[FinancePage] failed to load stats:', err);
     cardsEl.innerHTML = `
       <div class="finance-page__error">
@@ -150,7 +151,7 @@ async function loadDonations(api: ApiClient, container: HTMLElement, offset: num
       paginationEl.innerHTML = '';
     }
   } catch (err: unknown) {
-    const msg = (err as Error).message || 'Неизвестная ошибка';
+    const msg = getFriendlyErrorMessage(err, 'Попробуйте повторить позже.');
     console.error('[FinancePage] failed to load donations:', err);
     listEl.innerHTML = `
       <div class="finance-page__error">
@@ -290,7 +291,7 @@ async function loadSubscribers(api: ApiClient, container: HTMLElement): Promise<
       });
     });
   } catch (err: unknown) {
-    const msg = (err as Error).message || 'Неизвестная ошибка';
+    const msg = getFriendlyErrorMessage(err, 'Попробуйте повторить позже.');
     console.error('[FinancePage] failed to load subscribers:', err);
     listEl.innerHTML = `
       <div class="finance-page__error">

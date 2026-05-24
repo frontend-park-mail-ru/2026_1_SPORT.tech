@@ -6,6 +6,7 @@
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse } from '../../types/auth.types';
 import type { MeetingBooking, MeetingAvailabilitySlot, MeetingAvailabilityRule, MeetingSlot, Subscription } from '../../types/api.types';
+import { getFriendlyErrorMessage } from '../../utils/errorMessages';
 import './MeetingsPage.css';
 
 interface MeetingsPageParams {
@@ -53,16 +54,17 @@ function toAlignedISO(localValue: string): string | null {
 
 function friendlyError(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err);
-  if (/forbidden|PermissionDenied|403/i.test(message)) {
+  const status = (err as { status?: number })?.status;
+  if (status === 403 || /forbidden|PermissionDenied|403|нет доступа/i.test(message)) {
     return 'Нет доступа: нужна активная подписка с опцией «Календарь»';
   }
-  if (/AlreadyExists|already|taken|409/i.test(message)) {
+  if (status === 409 || /AlreadyExists|already|taken|409/i.test(message)) {
     return 'Слот уже занят или у вас уже есть активная запись к этому тренеру';
   }
   if (/FailedPrecondition|unavailable/i.test(message)) {
     return 'Этот слот недоступен для записи';
   }
-  return 'Не удалось выполнить действие';
+  return getFriendlyErrorMessage(err, 'Не удалось выполнить действие. Попробуйте ещё раз.');
 }
 
 export async function renderMeetingsPage(

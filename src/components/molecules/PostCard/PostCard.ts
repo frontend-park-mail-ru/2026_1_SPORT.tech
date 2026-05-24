@@ -1,6 +1,7 @@
 import type { ApiClient } from '../../../utils/api';
 import type { ContentBlockForPost } from '../../../types/post.types';
 import { openPostFormModal } from '../PostFormModal/PostFormModal';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 
 export interface PostCardData {
   post_id: number;
@@ -303,7 +304,7 @@ export async function renderPostCard(
           if (commentCountEl) commentCountEl.textContent = String(commentsList.length);
           await renderCommentsList(commentsList);
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : 'Не удалось отправить комментарий';
+          const msg = getFriendlyErrorMessage(err, 'Не удалось отправить комментарий. Попробуйте ещё раз.');
           const errDiv = document.createElement('p');
           errDiv.className = 'post-card__comment-error';
           errDiv.textContent = msg;

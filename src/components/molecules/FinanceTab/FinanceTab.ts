@@ -5,6 +5,7 @@
 
 import type { ApiClient } from '../../../utils/api';
 import { escapeHtml } from '../../../utils/profilePageData';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 import './FinanceTab.css';
 
 export interface FinanceTabOptions {
@@ -61,7 +62,7 @@ export async function renderFinanceTab(container: HTMLElement, { api }: FinanceT
       </div>
     `;
   } catch (err: unknown) {
-    const msg = (err as Error).message || 'Неизвестная ошибка';
+    const msg = getFriendlyErrorMessage(err, 'Попробуйте повторить позже.');
     root.innerHTML = `
       <div class="finance-tab__error">
         <div class="finance-tab__error-icon">⚠️</div>

@@ -2,6 +2,7 @@ import type { ApiClient } from '../../../utils/api';
 import type { InputAPI } from '../../atoms/Input/Input';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { Validator } from '../../../utils/validator';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 
 export interface DonationModalOptions {
   api: ApiClient;
@@ -123,9 +124,10 @@ export async function openDonationModal({
       submitBtn.innerHTML = originalBtnHtml;
       submitBtn.disabled = false;
 
-      let errorMessage = 'Не удалось создать платёж. Попробуйте ещё раз.';
-      if (err.data?.error?.message) errorMessage = err.data.error.message;
-      else if (err.message) errorMessage = err.message;
+      const errorMessage = getFriendlyErrorMessage(
+        err.data?.error?.message || err.message,
+        'Не удалось создать платёж. Попробуйте ещё раз.'
+      );
 
       globalErr.textContent = errorMessage;
       globalErr.hidden = false;

@@ -12,6 +12,7 @@ import type { ValidationResult } from '../../../types/validation.types';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { createSportTypesField, loadSportTypes } from '../../organisms/AuthForm/AuthForm';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 import { Validator } from '../../../utils/validator';
 
 export interface ProfileEditModalOptions {
@@ -445,7 +446,7 @@ export async function openProfileEditModal({
         message = err.data.error.message || message;
       }
 
-      globalErr.textContent = message;
+      globalErr.textContent = getFriendlyErrorMessage(message, 'Не удалось сохранить изменения. Попробуйте ещё раз.');
       globalErr.hidden = false;
     } finally {
       saveBtn.setDisabled(false);

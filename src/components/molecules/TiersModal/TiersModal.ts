@@ -6,6 +6,7 @@
 import type { ApiClient } from '../../../utils/api';
 import type { Tier } from '../../../types/api.types';
 import templates from '../../../templates';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 import './TiersModal.css';
 
 export interface TiersModalOptions {
@@ -213,7 +214,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to save tiers:', err);
-      showError(err.message || 'Не удалось сохранить уровни подписки');
+      showError(getFriendlyErrorMessage(err.message, 'Не удалось сохранить уровни подписки. Попробуйте ещё раз.'));
       saveBtn.disabled = false;
       saveBtn.textContent = 'Сохранить';
     }

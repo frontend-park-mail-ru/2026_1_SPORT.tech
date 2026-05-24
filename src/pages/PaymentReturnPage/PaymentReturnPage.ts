@@ -2,6 +2,7 @@ import './PaymentReturnPage.css';
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse, PaymentResponse } from '../../types/api.types';
 import { escapeHtml, formatMonthlyPrice } from '../../utils/profilePageData';
+import { getFriendlyErrorMessage } from '../../utils/errorMessages';
 
 interface PaymentReturnPageParams {
   currentUser?: AuthResponse | null;
@@ -162,7 +163,7 @@ export async function renderPaymentReturnPage(
     await renderSuccess(resultEl, payment, navigateTo, api);
   } catch (error: unknown) {
     const err = error as { message?: string; data?: { error?: { message?: string } } };
-    const msg = err.data?.error?.message || err.message || 'Не удалось подтвердить платёж.';
+    const msg = getFriendlyErrorMessage(err.data?.error?.message || err.message, 'Не удалось подтвердить платёж. Попробуйте позже.');
     renderError(resultEl, msg, navigateTo);
   }
 }

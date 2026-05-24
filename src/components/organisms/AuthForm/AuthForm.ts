@@ -19,6 +19,7 @@ import { Validator } from '../../../utils/validator';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { escapeHtml } from '../../../utils/profilePageData';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 
 export const AUTH_MODES = {
   LOGIN: 'login',
@@ -84,7 +85,7 @@ const SERVER_ERROR_MAP: Record<string, string> = {
 function translateServerError(message: string): string {
   if (!message) return 'Произошла ошибка';
   const key = message.toLowerCase().trim();
-  return SERVER_ERROR_MAP[key] ?? message;
+  return SERVER_ERROR_MAP[key] ?? getFriendlyErrorMessage(message);
 }
 
 let sportTypesPromise: Promise<SportTypeFieldOption[]> | null = null;

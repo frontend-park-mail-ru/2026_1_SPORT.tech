@@ -2,6 +2,7 @@
 
 import type { ApiClient } from '../../../utils/api';
 import { escapeHtml } from '../../../utils/profilePageData';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 
 export interface StatisticsModalOptions {
   api: ApiClient;
@@ -56,7 +57,7 @@ export async function openStatisticsModal({ api }: StatisticsModalOptions): Prom
       </div>
     `;
   } catch (err: unknown) {
-    const msg = (err as Error).message || 'Неизвестная ошибка';
+    const msg = getFriendlyErrorMessage(err, 'Попробуйте повторить позже.');
     console.error('[StatisticsModal] failed to load statistics:', err);
     bodyEl.innerHTML = `
       <div style="text-align:center;padding:24px;">

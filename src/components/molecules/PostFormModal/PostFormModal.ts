@@ -11,6 +11,7 @@ import type { PostBlock } from '../../../types/api.types';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { createSportTypesField, loadSportTypes } from '../../organisms/AuthForm/AuthForm';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 
 export interface PostFormModalOptions {
   api: ApiClient;
@@ -447,7 +448,7 @@ export async function openPostFormModal({
       close();
     } catch (error: unknown) {
       const err = error as { message?: string };
-      globalErr.textContent = err.message || 'Не удалось сохранить публикацию';
+      globalErr.textContent = getFriendlyErrorMessage(err.message, 'Не удалось сохранить публикацию. Попробуйте ещё раз.');
       globalErr.hidden = false;
     } finally {
       saveBtn.setDisabled(false);
