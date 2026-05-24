@@ -46,7 +46,7 @@
 }
 
 .progress-tab__required {
-  color: #E85A2B;
+  color: var(--primary-orange);
 }
 
 .progress-tab__input {
@@ -63,7 +63,7 @@
 }
 
 .progress-tab__input:focus {
-  border-color: #E85A2B;
+  border-color: var(--primary-orange);
   background: #fff;
 }
 
@@ -78,12 +78,12 @@
 
 .progress-tab__form-error {
   font-size: 13px;
-  color: #E85A2B;
+  color: var(--primary-orange);
   min-height: 20px;
 }
 
 .progress-tab__submit {
-  background: #E85A2B;
+  background: var(--primary-orange);
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -185,7 +185,7 @@
 }
 
 .progress-tab__delete-btn:hover {
-  color: #E85A2B;
+  color: var(--primary-orange);
   background: #fff0ec;
 }
 

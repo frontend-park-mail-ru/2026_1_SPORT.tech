@@ -55,50 +55,73 @@ function renderNotificationItem(n: Notification): HTMLElement {
   item.className = `notification-item${n.is_read ? '' : ' notification-item--unread'}`;
   item.dataset.id = String(n.notification_id);
 
-  // Базовый вариант (без актора)
-  item.innerHTML = `
-    <div class="notification-item__dot"></div>
-    <div class="notification-item__icon">${notifIcon(n.type)}</div>
-    <div class="notification-item__content">
-      <div class="notification-item__title">${n.title}</div>
-      <div class="notification-item__body">${n.body}</div>
-    </div>
-    <div class="notification-item__time">${formatTime(n.created_at)}</div>
-  `;
+  if (n.actor_user_id) {
+    // Резервируем место под аватар и имя сразу, чтобы не было layout shift при загрузке
+    item.innerHTML = `
+      <div class="notification-item__dot"></div>
+      <a class="notification-item__avatar-link" href="/profile/${n.actor_user_id}">
+        <div class="notification-item__avatar notification-item__avatar--placeholder"></div>
+      </a>
+      <div class="notification-item__content">
+        <div class="notification-item__actor-name notification-item__actor-name--loading"></div>
+        <div class="notification-item__title">${n.title}</div>
+        <div class="notification-item__body">${n.body}</div>
+      </div>
+      <div class="notification-item__time">${formatTime(n.created_at)}</div>
+    `;
+  } else {
+    item.innerHTML = `
+      <div class="notification-item__dot"></div>
+      <div class="notification-item__icon">${notifIcon(n.type)}</div>
+      <div class="notification-item__content">
+        <div class="notification-item__title">${n.title}</div>
+        <div class="notification-item__body">${n.body}</div>
+      </div>
+      <div class="notification-item__time">${formatTime(n.created_at)}</div>
+    `;
+  }
   return item;
 }
 
 /**
- * Для уведомлений с actor_user_id — подгружаем профиль и добавляем аватар + ссылку.
+ * Для уведомлений с actor_user_id — подгружаем профиль и обновляем уже зарезервированные слоты.
+ * Структура DOM не меняется → нет layout shift.
  */
 async function enrichWithActor(item: HTMLElement, api: ApiClient, actorUserId: number): Promise<void> {
   try {
     const profile = await api.getProfile(actorUserId);
-    const avatarHtml = profile.avatar_url
-      ? `<img src="${profile.avatar_url}" class="notification-item__avatar" alt="${profile.first_name}">`
-      : `<div class="notification-item__avatar notification-item__avatar--initials">${getInitials(profile)}</div>`;
-
     const fullName = `${profile.first_name} ${profile.last_name}`.trim();
 
-    // Вставляем аватар перед content
-    const iconEl = item.querySelector('.notification-item__icon');
-    if (iconEl) iconEl.remove();
+    // Обновляем аватар-слот
+    const avatarSlot = item.querySelector('.notification-item__avatar--placeholder') as HTMLElement | null;
+    if (avatarSlot) {
+      if (profile.avatar_url) {
+        const img = document.createElement('img');
+        img.src = profile.avatar_url;
+        img.className = 'notification-item__avatar';
+        img.alt = profile.first_name || '';
+        // Картинка уже имеет размер через CSS, поэтому загрузка не сдвигает layout
+        avatarSlot.replaceWith(img);
+      } else {
+        avatarSlot.classList.remove('notification-item__avatar--placeholder');
+        avatarSlot.classList.add('notification-item__avatar--initials');
+        avatarSlot.textContent = getInitials(profile);
+      }
+    }
 
-    const contentEl = item.querySelector('.notification-item__content') as HTMLElement;
-    const avatarWrapper = document.createElement('a');
-    avatarWrapper.href = `/profile/${actorUserId}`;
-    avatarWrapper.className = 'notification-item__avatar-link';
-    avatarWrapper.innerHTML = avatarHtml;
-    contentEl.parentNode?.insertBefore(avatarWrapper, contentEl);
-
-    // Добавляем имя перед телом уведомления
-    const bodyEl = item.querySelector('.notification-item__body') as HTMLElement;
-    const nameEl = document.createElement('div');
-    nameEl.className = 'notification-item__actor-name';
-    nameEl.textContent = fullName;
-    bodyEl.parentNode?.insertBefore(nameEl, bodyEl);
+    // Обновляем слот имени
+    const nameEl = item.querySelector('.notification-item__actor-name--loading') as HTMLElement | null;
+    if (nameEl) {
+      nameEl.classList.remove('notification-item__actor-name--loading');
+      nameEl.textContent = fullName;
+    }
   } catch {
-    /* профиль недоступен — оставляем как есть */
+    /* профиль недоступен — убираем плейсхолдеры */
+    const avatarSlot = item.querySelector('.notification-item__avatar--placeholder') as HTMLElement | null;
+    avatarSlot?.classList.remove('notification-item__avatar--placeholder');
+
+    const nameEl = item.querySelector('.notification-item__actor-name--loading') as HTMLElement | null;
+    if (nameEl) nameEl.remove();
   }
 }
 

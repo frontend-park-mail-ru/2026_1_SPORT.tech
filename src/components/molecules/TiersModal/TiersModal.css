@@ -90,7 +90,7 @@
 .tier-card-index {
   font-size: 13px;
   font-weight: 600;
-  color: #E85A2B;
+  color: var(--primary-orange);
 }
 
 .tier-remove-btn {
@@ -103,7 +103,7 @@
 }
 
 .tier-remove-btn:hover {
-  color: #E85A2B;
+  color: var(--primary-orange);
 }
 
 .tier-card-fields {
@@ -136,8 +136,8 @@
 
 .tier-input:focus {
   outline: none;
-  border-color: #E85A2B;
-  box-shadow: 0 0 0 2px rgba(232, 90, 43, 0.1);
+  border-color: var(--primary-orange);
+  box-shadow: 0 0 0 2px rgba(255, 107, 74, 0.1);
 }
 
 /* Add button */
@@ -155,8 +155,8 @@
 }
 
 .tiers-add-btn:hover {
-  border-color: #E85A2B;
-  color: #E85A2B;
+  border-color: var(--primary-orange);
+  color: var(--primary-orange);
   background: #FFF5F2;
 }
 
@@ -175,7 +175,7 @@
   font-weight: 500;
   cursor: pointer;
   background: transparent;
-  color: #E85A2B;
+  color: var(--primary-orange);
 }
 
 .tiers-cancel-btn:hover {
@@ -189,7 +189,7 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  background: #E85A2B;
+  background: var(--primary-orange);
   color: white;
 }
 
@@ -234,7 +234,7 @@
 .tier-chat-toggle input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #E85A2B;
+  accent-color: var(--primary-orange);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -251,6 +251,6 @@
 .tier-chat-toggle__label svg {
   width: 14px;
   height: 14px;
-  stroke: #E85A2B;
+  stroke: var(--primary-orange);
   flex-shrink: 0;
 }

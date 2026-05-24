@@ -113,6 +113,21 @@ img {
     max-width: 100%;
 }
 
+/* Фолбэк для битых аватаров: заполняет контейнер и центрирует инициалы.
+   Подставляется из JS при ошибке загрузки картинки. */
+.avatar-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-orange-light);
+    color: var(--primary-orange);
+    font-weight: var(--font-weight-semibold);
+    border-radius: inherit;
+    line-height: 1;
+}
+
 /* Заголовки используют IBM Plex Sans */
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
@@ -350,7 +365,7 @@ h6 { font-size: var(--font-size-md); }
 /* Во время загрузки страницы держим левый бар оранжевым (как настоящий сайдбар),
    иначе при переходах он мерцает: оранжевый → серый скелетон → оранжевый. */
 .profile-page--loading .profile-page__sidebar {
-    background: #E85A2B;
+    background: var(--primary-orange);
 }
 
 .profile-page--loading .page-skeleton--sidebar {

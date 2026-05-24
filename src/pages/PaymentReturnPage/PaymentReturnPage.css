@@ -30,7 +30,7 @@
   width: 56px;
   height: 56px;
   border: 4px solid #f0f0f0;
-  border-top-color: #E85A2B;
+  border-top-color: var(--primary-orange);
   border-radius: 50%;
   animation: pr-spin 0.9s linear infinite;
   margin: 0 auto 24px;
@@ -85,7 +85,7 @@
 .payment-result__amount {
   font-size: 32px;
   font-weight: 800;
-  color: #E85A2B;
+  color: var(--primary-orange);
   margin: 8px 0 4px;
 }
 
@@ -116,7 +116,7 @@
 .payment-result__sub-price {
   font-size: 18px !important;
   font-weight: 700;
-  color: #E85A2B !important;
+  color: var(--primary-orange) !important;
 }
 
 .payment-result__sub-expires {
@@ -141,7 +141,7 @@
 }
 
 .payment-result__btn--primary {
-  background: #E85A2B;
+  background: var(--primary-orange);
   color: white;
 }
 
@@ -167,15 +167,15 @@
 
 .payment-result__chat-hint {
   font-size: 14px;
-  color: #e85a2b;
+  color: var(--primary-orange);
   margin: 8px 0 0;
   font-weight: 500;
 }
 
 .payment-result__btn--chat {
   background: #fff;
-  color: #e85a2b;
-  border: 1.5px solid #e85a2b;
+  color: var(--primary-orange);
+  border: 1.5px solid var(--primary-orange);
   border-radius: 8px;
   padding: 10px 20px;
   font-size: 15px;

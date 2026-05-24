@@ -225,18 +225,33 @@ export async function renderPostCard(
         try {
           const data = await api.getComments(postId);
           commentsLoaded = true;
-          renderCommentsList(data.comments);
+          await renderCommentsList(data.comments);
         } catch {
           commentsSection.innerHTML = '<p class="post-card__comments-error">Не удалось загрузить комментарии</p>';
         }
       }
     };
 
-    const renderCommentsList = (commentsList: Array<{ comment_id: number; author_user_id: number; body: string; created_at: string }>): void => {
+    const authorNameCache = new Map<number, string>();
+
+    const renderCommentsList = async (commentsList: Array<{ comment_id: number; author_user_id: number; body: string; created_at: string }>): Promise<void> => {
+      const uniqueIds = [...new Set(commentsList.map(c => c.author_user_id))].filter(id => !authorNameCache.has(id));
+      await Promise.all(
+        uniqueIds.map(async (userId) => {
+          try {
+            const profile = await api.getProfile(userId);
+            const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim() || profile.username;
+            authorNameCache.set(userId, name);
+          } catch {
+            authorNameCache.set(userId, `Пользователь #${userId}`);
+          }
+        })
+      );
+
       const listHtml = commentsList.length > 0
         ? commentsList.map(c => `
             <div class="post-card__comment">
-              <div class="post-card__comment-author">Пользователь #${c.author_user_id}</div>
+              <div class="post-card__comment-author">${escapeHtml(authorNameCache.get(c.author_user_id) ?? `Пользователь #${c.author_user_id}`)}</div>
               <div class="post-card__comment-body">${escapeHtml(c.body)}</div>
             </div>
           `).join('')
@@ -269,7 +284,7 @@ export async function renderPostCard(
           input.value = '';
           commentsList.push(resp.comment);
           if (commentCountEl) commentCountEl.textContent = String(commentsList.length);
-          renderCommentsList(commentsList);
+          await renderCommentsList(commentsList);
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : 'Не удалось отправить комментарий';
           const errDiv = document.createElement('p');

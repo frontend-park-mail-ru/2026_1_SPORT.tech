@@ -110,8 +110,20 @@ export async function renderHomePage(
   const filtersDropdown = page.querySelector('#filters-dropdown') as HTMLElement;
   const sportCheckboxesContainer = page.querySelector('#sport-checkboxes') as HTMLElement;
 
-  // Загружаем виды спорта для фильтров
-  const sportTypesResponse = await api.getSportTypes().catch(() => ({ sport_types: [] as SportType[] }));
+  // Скелетон сетки, пока идёт первая загрузка — чтобы не показывать пустоту.
+  const showGridSkeleton = (): void => {
+    grid.innerHTML = Array.from({ length: 6 })
+      .map(() => '<div class="page-skeleton__block trainer-card-skeleton"></div>')
+      .join('');
+    emptyState.hidden = true;
+  };
+  showGridSkeleton();
+
+  // Виды спорта (для подписей и фильтров) и первый список тренеров грузим параллельно.
+  const [sportTypesResponse, initialTrainersResponse] = await Promise.all([
+    api.getSportTypes().catch(() => ({ sport_types: [] as SportType[] })),
+    api.getTrainers({ limit: 50 }).catch(() => ({ trainers: [] }))
+  ]);
   const sportTypes = sportTypesResponse.sport_types || [];
 
   // Строим чекбоксы видов спорта
@@ -131,42 +143,50 @@ export async function renderHomePage(
   // Состояние фильтров
   const getSelectedSportIds = (): number[] => Array.from(sportCheckboxesContainer.querySelectorAll('input:checked')).map(cb => Number((cb as HTMLInputElement).value));
 
-  // Функция загрузки тренеров с сервера
+  // Карта видов спорта (нужна для отображения названий в карточках)
+  const sportNamesById = new Map<number, string>(
+    sportTypes.map(s => [s.sport_type_id, s.name])
+  );
+
+  // Отрисовка готового списка тренеров в сетку
+  const renderTrainers = (response: { trainers?: TrainerListItem[] } | null): void => {
+    const trainers = Array.isArray(response?.trainers)
+      ? response.trainers.filter(t => t.is_trainer)
+      : [];
+
+    if (trainers.length === 0) {
+      grid.innerHTML = '';
+      emptyState.hidden = false;
+      return;
+    }
+
+    grid.innerHTML = trainers.map(t => renderTrainerCard(t, sportNamesById)).join('');
+    emptyState.hidden = true;
+
+    // Вешаем обработчики клика для перехода в профиль
+    grid.querySelectorAll('.trainer-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const trainerId = Number((card as HTMLElement).dataset.trainerId);
+        if (!Number.isFinite(trainerId)) return;
+        window.router.navigateTo(`/profile/${trainerId}`);
+      });
+    });
+  };
+
+  // Функция загрузки тренеров с сервера (при поиске/фильтрах)
   const loadTrainers = async (query: string, sportTypeIds: number[]) => {
+    showGridSkeleton();
     try {
       const response = await api.getTrainers({
         query: query || undefined,
         sport_type_ids: sportTypeIds.length > 0 ? sportTypeIds : undefined,
         limit: 50
       });
-      const trainers = Array.isArray(response?.trainers)
-        ? response.trainers.filter(t => t.is_trainer)
-        : [];
-
-      if (trainers.length === 0) {
-        grid.innerHTML = '';
-        emptyState.hidden = false;
-        return;
-      }
-
-      // Возобновляем карту видов спорта (нужно для отображения названий)
-      const sportNamesById = new Map<number, string>(
-        sportTypes.map(s => [s.sport_type_id, s.name])
-      );
-
-      grid.innerHTML = trainers.map(t => renderTrainerCard(t, sportNamesById)).join('');
-      emptyState.hidden = true;
-
-      // Вешаем обработчики клика для перехода в профиль
-      grid.querySelectorAll('.trainer-card').forEach(card => {
-        card.addEventListener('click', () => {
-          const trainerId = Number((card as HTMLElement).dataset.trainerId);
-          if (!Number.isFinite(trainerId)) return;
-          window.router.navigateTo(`/profile/${trainerId}`);
-        });
-      });
+      renderTrainers(response);
     } catch (error) {
       console.error('Failed to load trainers:', error);
+      grid.innerHTML = '';
+      emptyState.hidden = false;
     }
   };
 
@@ -186,18 +206,24 @@ export async function renderHomePage(
     filtersDropdown.hidden = !filtersDropdown.hidden;
   });
 
-  // Скрываем фильтр при клике вне
-  document.addEventListener('click', (e) => {
+  // Скрываем фильтр при клике вне. Слушатель самоудаляется, когда страница
+  // уже выгружена из DOM (иначе они накапливались бы при каждой навигации).
+  const onDocClick = (e: MouseEvent): void => {
+    if (!document.body.contains(page)) {
+      document.removeEventListener('click', onDocClick);
+      return;
+    }
     if (!filtersDropdown.hidden && !filtersDropdown.contains(e.target as Node) && e.target !== filtersBtn) {
       filtersDropdown.hidden = true;
     }
-  });
+  };
+  document.addEventListener('click', onDocClick);
 
   // При изменении чекбоксов
   sportCheckboxesContainer.addEventListener('change', handleFilterChange);
 
-  // Первичная загрузка
-  loadTrainers('', []);
+  // Первичная отрисовка — данные уже загружены параллельно с видами спорта
+  renderTrainers(initialTrainersResponse);
 
   return page;
 }

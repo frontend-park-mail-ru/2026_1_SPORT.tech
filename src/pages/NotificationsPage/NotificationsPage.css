@@ -32,8 +32,8 @@
 
 .notifications-page__mark-all-btn {
   background: none;
-  border: 1px solid #E85A2B;
-  color: #E85A2B;
+  border: 1px solid var(--primary-orange);
+  color: var(--primary-orange);
   border-radius: 8px;
   padding: 6px 14px;
   font-size: 13px;
@@ -43,7 +43,7 @@
 }
 
 .notifications-page__mark-all-btn:hover {
-  background: #E85A2B;
+  background: var(--primary-orange);
   color: white;
 }
 
@@ -85,7 +85,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #E85A2B;
+  background: var(--primary-orange);
   flex-shrink: 0;
   margin-top: 6px;
   opacity: 0;
@@ -217,9 +217,28 @@
   font-size: 14px;
 }
 
+/* Плейсхолдер до загрузки профиля — занимает то же место, что аватар */
+.notification-item__avatar--placeholder {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s infinite;
+}
+
 .notification-item__actor-name {
   font-size: 13px;
   font-weight: 600;
   color: #1a2b3c;
   margin-bottom: 2px;
+  /* Минимальная высота, чтобы не скакало при заполнении */
+  min-height: 1em;
+}
+
+/* Плейсхолдер строки имени */
+.notification-item__actor-name--loading {
+  width: 30%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s infinite;
+  color: transparent;
 }

@@ -1,6 +1,6 @@
 .sidebar {
   width: 240px;
-  background: #E85A2B;
+  background: var(--primary-orange);
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -108,7 +108,7 @@
 .sidebar__nav-badge {
   margin-left: auto;
   background: white;
-  color: #E85A2B;
+  color: var(--primary-orange);
   border-radius: 10px;
   font-size: 11px;
   font-weight: 700;
@@ -287,7 +287,7 @@
     width: 100%;
     height: auto;
     border-radius: 0 0 20px 20px;
-    box-shadow: 0 14px 34px rgba(232, 90, 43, 0.18);
+    box-shadow: 0 14px 34px rgba(255, 107, 74, 0.18);
   }
 
   .sidebar__content {

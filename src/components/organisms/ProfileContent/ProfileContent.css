@@ -29,12 +29,12 @@
 }
 
 .profile-content__tab:hover {
-  color: #E85A2B;
+  color: var(--primary-orange);
   background: #FFF5F0;
 }
 
 .profile-content__tab--active {
-  color: #E85A2B;
+  color: var(--primary-orange);
   background: #FFF5F0;
   position: relative;
 }
@@ -108,7 +108,7 @@
   min-height: 0;
   padding-right: 8px;
   scrollbar-width: thin;
-  scrollbar-color: #E85A2B #FFE8E3;
+  scrollbar-color: var(--primary-orange) #FFE8E3;
 }
 
 #posts-container.profile-content__posts-container--message {
@@ -128,7 +128,7 @@
 }
 
 #posts-container::-webkit-scrollbar-thumb {
-  background: #E85A2B;
+  background: var(--primary-orange);
   border-radius: 3px;
 }
 
@@ -196,7 +196,7 @@
 
 .profile-content__search-input:focus {
   outline: none;
-  border-color: #E85A2B;
+  border-color: var(--primary-orange);
   background: white;
 }
 
@@ -231,7 +231,7 @@
   min-height: 0; /* Важно для скролла */
   padding-right: 8px;
   scrollbar-width: thin;
-  scrollbar-color: #E85A2B #FFE8E3;
+  scrollbar-color: var(--primary-orange) #FFE8E3;
 }
 
 /* Стилизация скроллбара */
@@ -245,7 +245,7 @@
 }
 
 .profile-content__popular-list::-webkit-scrollbar-thumb {
-  background: #E85A2B;
+  background: var(--primary-orange);
   border-radius: 3px;
 }
 
@@ -284,7 +284,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #E85A2B;
+  color: var(--primary-orange);
   font-size: 12px;
   border: 1px solid #FFD4CC;
 }
@@ -559,7 +559,7 @@
 .profile-content__popular-rank {
   font-size: 12px;
   font-weight: 700;
-  color: #E85A2B;
+  color: var(--primary-orange);
   min-width: 20px;
   text-align: center;
   line-height: 1.4;
@@ -582,7 +582,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #E85A2B;
+  color: var(--primary-orange);
   font-size: 11px;
   font-weight: 600;
 }
@@ -593,8 +593,8 @@
 }
 
 @keyframes highlightPost {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 90, 43, 0); }
-  50% { box-shadow: 0 0 0 4px rgba(232, 90, 43, 0.3); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 74, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(255, 107, 74, 0.3); }
 }
 /* Выпадающее окно фильтров */
 .profile-content__filters {
@@ -650,7 +650,7 @@
 #filter-sport-list .sport-types-field__checkbox {
   width: 16px;
   height: 16px;
-  accent-color: #E85A2B;
+  accent-color: var(--primary-orange);
   cursor: pointer;
 }
 /* Стили для блока подписок */
@@ -755,9 +755,9 @@
   margin-top: 16px;
   padding: 12px 24px;
   background: transparent;
-  border: 2px solid var(--primary-orange, #E85A2B);
+  border: 2px solid var(--primary-orange, var(--primary-orange));
   border-radius: 10px;
-  color: var(--primary-orange, #E85A2B);
+  color: var(--primary-orange, var(--primary-orange));
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -765,7 +765,7 @@
 }
 
 .profile-content__load-more-btn:hover:not(:disabled) {
-  background: var(--primary-orange, #E85A2B);
+  background: var(--primary-orange, var(--primary-orange));
   color: #fff;
 }
 

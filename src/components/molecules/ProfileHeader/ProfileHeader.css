@@ -40,7 +40,7 @@
   height: 120px;
   border-radius: 50%;
   border: 4px solid white;
-  background: #E85A2B; /* Заменил var(--base-purple) на конкретный цвет */
+  background: var(--primary-orange); /* Заменил var(--base-purple) на конкретный цвет */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -63,7 +63,7 @@
   right: 8px;
   width: 32px;
   height: 32px;
-  background: #E85A2B;
+  background: var(--primary-orange);
   border: 2px solid white;
   border-radius: 50%;
   display: flex;
@@ -130,7 +130,7 @@
 
 .profile-header__stat:hover {
   background: #FFF5F0;
-  color: #E85A2B;
+  color: var(--primary-orange);
 }
 
 .profile-header__stat:active {
@@ -140,12 +140,12 @@
 .profile-header__stat svg {
   width: 18px;
   height: 18px;
-  color: #E85A2B;
+  color: var(--primary-orange);
   transition: all 0.2s;
 }
 
 .profile-header__stat:hover svg {
-  color: #E85A2B;
+  color: var(--primary-orange);
 }
 /* Выравнивание текстовой кнопки "Отмена" с основной кнопкой */
 .post-form-modal__actions .button--text-orange {
@@ -256,8 +256,8 @@
 
 .profile-header__chat-btn {
   background: #fff;
-  color: #e85a2b;
-  border: 1.5px solid #e85a2b;
+  color: var(--primary-orange);
+  border: 1.5px solid var(--primary-orange);
   border-radius: 8px;
   padding: 8px 16px;
   font-size: 14px;

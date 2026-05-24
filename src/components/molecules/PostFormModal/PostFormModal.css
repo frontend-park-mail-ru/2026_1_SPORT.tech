@@ -226,7 +226,7 @@
 }
 
 #post-form-sport-field .sport-types-field__checkbox {
-  accent-color: #E85A2B;
+  accent-color: var(--primary-orange);
 }
 /* Стили для чекбоксов видов спорта в форме поста */
 #post-form-sport-field .sport-types-field {
@@ -281,7 +281,7 @@
 #post-form-sport-field .sport-types-field__checkbox {
   width: 16px;
   height: 16px;
-  accent-color: #E85A2B;
+  accent-color: var(--primary-orange);
   cursor: pointer;
 }
 /* Стили для select уровня подписки */
@@ -377,7 +377,7 @@
   right: 8px;
   width: 24px;
   height: 24px;
-  background: #E85A2B;
+  background: var(--primary-orange);
   color: white;
   border: none;
   border-radius: 50%;
@@ -415,7 +415,7 @@
 }
 
 .post-form__add-block-btn:hover {
-  border-color: #E85A2B;
-  color: #E85A2B;
+  border-color: var(--primary-orange);
+  color: var(--primary-orange);
   background: #FFF5F0;
 }

@@ -324,52 +324,57 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
     const postsData = await api.getUserPosts(userId);
     const postList: PostListItem[] = Array.isArray(postsData?.posts) ? postsData.posts : [];
     const likedPosts: PostListItem[] = postList.filter((post: PostListItem) => post.is_liked);
-    const fullPosts: LikedPost[] = [];
 
-    for (const post of likedPosts) {
-      try {
-        const fullPost = await api.getPost(post.post_id);
-        const authorProfile = await api.getProfile(post.trainer_id).catch((): Profile => ({
-          user_id: post.trainer_id,
-          username: '',
-          email: '',
-          first_name: '',
-          last_name: '',
-          avatar_url: null,
-          bio: null,
-          is_trainer: true,
-          is_admin: false,
-          is_me: false,
-          created_at: '',
-          updated_at: ''
-        }));
+    // Грузим все понравившиеся посты параллельно (раньше был последовательный
+    // for с двумя запросами на каждый пост — N+1, секунды ожидания).
+    const settled = await Promise.all(
+      likedPosts.map(async (post): Promise<LikedPost | null> => {
+        try {
+          const [fullPost, authorProfile] = await Promise.all([
+            api.getPost(post.post_id),
+            api.getProfile(post.trainer_id).catch((): Profile => ({
+              user_id: post.trainer_id,
+              username: '',
+              email: '',
+              first_name: '',
+              last_name: '',
+              avatar_url: null,
+              bio: null,
+              is_trainer: true,
+              is_admin: false,
+              is_me: false,
+              created_at: '',
+              updated_at: ''
+            }))
+          ]);
 
-        const textContent = extractTextFromBlocks(fullPost?.blocks);
-        const attachments = extractAttachmentsFromBlocks(fullPost?.blocks);
+          const textContent = extractTextFromBlocks(fullPost?.blocks);
+          const attachments = extractAttachmentsFromBlocks(fullPost?.blocks);
 
-        fullPosts.push({
-          post_id: post.post_id,
-          title: post.title,
-          content: formatPostContent(textContent),
-          raw_text: textContent,
-          authorName: `${authorProfile.first_name || ''} ${authorProfile.last_name || ''}`.trim() || 'Автор',
-          authorRole: authorProfile.is_trainer ? 'Тренер' : 'Клиент',
-          authorAvatar: authorProfile.avatar_url || null,
-          likes: post.likes_count || 0,
-          liked: true,
-          comments: post.comments_count || 0,
-          can_view: post.can_view,
-          created_at: post.created_at,
-          min_tier_id: post.min_tier_id ?? null,
-          attachments: attachments,
-          isOwner: false
-        });
-      } catch {
-        continue;
-      }
-    }
+          return {
+            post_id: post.post_id,
+            title: post.title,
+            content: formatPostContent(textContent),
+            raw_text: textContent,
+            authorName: `${authorProfile.first_name || ''} ${authorProfile.last_name || ''}`.trim() || 'Автор',
+            authorRole: authorProfile.is_trainer ? 'Тренер' : 'Клиент',
+            authorAvatar: authorProfile.avatar_url || null,
+            likes: post.likes_count || 0,
+            liked: true,
+            comments: post.comments_count || 0,
+            can_view: post.can_view,
+            created_at: post.created_at,
+            min_tier_id: post.min_tier_id ?? null,
+            attachments: attachments,
+            isOwner: false
+          };
+        } catch {
+          return null;
+        }
+      })
+    );
 
-    return fullPosts;
+    return settled.filter((p): p is LikedPost => p !== null);
   } catch (error: unknown) {
     console.error('Failed to load liked posts:', error);
     return [];
@@ -500,7 +505,7 @@ async function renderSubscriptionsSection(
           card.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${tier.description ? '8px' : '0'};">
               <strong style="font-size:15px;">${escapeHtml(tier.name)}</strong>
-              <span style="color:#E85A2B;font-weight:700;font-size:16px;">${formatMonthlyPrice(tier.price)}</span>
+              <span style="color:var(--primary-orange);font-weight:700;font-size:16px;">${formatMonthlyPrice(tier.price)}</span>
             </div>
             ${tier.description ? `<p style="color:#666;font-size:13px;margin:0;">${escapeHtml(tier.description)}</p>` : ''}
           `;
@@ -548,7 +553,7 @@ async function renderSubscriptionsSection(
           card.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${tier.description ? '8px' : '0'};">
               <strong style="font-size:15px;">${escapeHtml(tier.name)}</strong>
-              <span style="color:#E85A2B;font-weight:700;font-size:16px;">${formatMonthlyPrice(tier.price)}</span>
+              <span style="color:var(--primary-orange);font-weight:700;font-size:16px;">${formatMonthlyPrice(tier.price)}</span>
             </div>
             ${tier.description ? `<p style="color:#666;font-size:13px;margin:0;">${escapeHtml(tier.description)}</p>` : ''}
           `;
@@ -614,14 +619,14 @@ async function renderSubscriptionsSection(
                 <div style="font-weight:600;font-size:15px;color:#1a2b3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(trainerName)}</div>
                 <div style="font-size:12px;color:#999;">Тренер</div>
               </div>
-              <span style="color:#E85A2B;font-weight:700;font-size:15px;flex-shrink:0;">${formatMonthlyPrice(sub.price)}</span>
+              <span style="color:var(--primary-orange);font-weight:700;font-size:15px;flex-shrink:0;">${formatMonthlyPrice(sub.price)}</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f0f0f0;">
               <div>
                 <div style="font-size:13px;color:#555;font-weight:500;">${escapeHtml(sub.tier_name)}</div>
                 <div style="font-size:12px;color:#999;margin-top:2px;">Истекает: ${expiresDate}</div>
               </div>
-              <span style="font-size:12px;color:#E85A2B;font-weight:600;">Перейти →</span>
+              <span style="font-size:12px;color:var(--primary-orange);font-weight:600;">Перейти →</span>
             </div>
           `;
           card.addEventListener('mouseenter', () => { card.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'; });
@@ -924,7 +929,7 @@ export async function renderProfileContent(
           checkbox.type = 'checkbox';
           checkbox.value = id;
           checkbox.checked = activeFilters.has(id);
-          checkbox.style.cssText = 'accent-color:#E85A2B;width:16px;height:16px;flex-shrink:0;';
+          checkbox.style.cssText = 'accent-color:var(--primary-orange);width:16px;height:16px;flex-shrink:0;';
 
           checkbox.addEventListener('click', (event: Event) => {
             event.stopPropagation();
@@ -950,12 +955,19 @@ export async function renderProfileContent(
       }
     });
 
-    document.addEventListener('click', (e: Event) => {
+    // Слушатель самоудаляется, когда компонент уже выгружен из DOM,
+    // иначе они накапливались бы при каждом переходе в профиль.
+    const onDocClick = (e: Event): void => {
+      if (!document.body.contains(element)) {
+        document.removeEventListener('click', onDocClick);
+        return;
+      }
       if (activeDropdown && !activeDropdown.contains(e.target as Node) && e.target !== filtersElement) {
         activeDropdown.remove();
         activeDropdown = null;
       }
-    });
+    };
+    document.addEventListener('click', onDocClick);
   }
 
   element.querySelectorAll('.profile-content__tab').forEach((tab: Element) => {

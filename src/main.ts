@@ -103,6 +103,9 @@ function setPageTitle(suffix?: string | null): void {
 
 function createRouter(api: ApiClient): Router {
   let currentUserPromise: Promise<AuthResponse | null> | null = null;
+  // Монотонный счётчик навигаций: если за время асинхронной загрузки страницы
+  // пользователь успел перейти дальше, «устаревший» рендер не должен затирать DOM.
+  let routingSeq = 0;
 
   function setCurrentUser(user: AuthResponse | null): void {
     currentUserPromise = Promise.resolve(user);
@@ -120,6 +123,9 @@ function createRouter(api: ApiClient): Router {
   }
 
   function navigateTo(path: string): void {
+    // Повторный клик по уже открытому маршруту не должен дёргать полный
+    // ре-рендер (мерцание скелетоном).
+    if (path === window.location.pathname) return;
     history.pushState({}, '', path);
     void handleRouting();
   }
@@ -178,7 +184,7 @@ function createRouter(api: ApiClient): Router {
     }
   }
 
-  async function showHomePage(app: HTMLElement, currentUser: AuthResponse): Promise<void> {
+  async function showHomePage(app: HTMLElement, currentUser: AuthResponse, isStale: () => boolean): Promise<void> {
     setPageTitle('Главная');
     const content = ensureShell(app);
     const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
@@ -189,6 +195,7 @@ function createRouter(api: ApiClient): Router {
     renderContentSkeleton(content);
     try {
       const { renderHomePage } = await import('./pages/HomePage/HomePage');
+      if (isStale()) return;
       await renderHomePage(api, content, {});
     } catch (error: unknown) {
       const err = error as Error;
@@ -200,6 +207,7 @@ function createRouter(api: ApiClient): Router {
   async function showProfilePage(
     app: HTMLElement,
     currentUser: AuthResponse,
+    isStale: () => boolean,
     viewedUserId?: number
   ): Promise<void> {
     const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
@@ -212,10 +220,12 @@ function createRouter(api: ApiClient): Router {
     renderContentSkeleton(content);
     try {
       const profileData = await api.getProfile(userId);
+      if (isStale()) return;
       const mappedData = mapProfileData(profileData, currentUser);
       setPageTitle(mappedData.profile.isOwnProfile ? 'Мой профиль' : mappedData.profile.name);
 
       const { renderProfilePage } = await import('./pages/ProfilePage/ProfilePage');
+      if (isStale()) return;
       await renderProfilePage(api, content, {
         profile: mappedData.profile,
         currentUser: mappedData.currentUser,
@@ -233,15 +243,17 @@ function createRouter(api: ApiClient): Router {
     }
   }
 
-  async function showNotificationsPage(app: HTMLElement, currentUser: AuthResponse): Promise<void> {
+  async function showNotificationsPage(app: HTMLElement, currentUser: AuthResponse, isStale: () => boolean): Promise<void> {
     setPageTitle('Уведомления');
     const content = ensureShell(app);
     const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
 
     void syncSidebar(app, currentUser, 'notifications', onLogout);
 
+    renderContentSkeleton(content);
     try {
       const { renderNotificationsPage } = await import('./pages/NotificationsPage/NotificationsPage');
+      if (isStale()) return;
       await renderNotificationsPage(api, content, { currentUser, onLogout });
     } catch (error: unknown) {
       const err = error as Error;
@@ -250,7 +262,7 @@ function createRouter(api: ApiClient): Router {
     }
   }
 
-  async function showFinancePage(app: HTMLElement, currentUser: AuthResponse): Promise<void> {
+  async function showFinancePage(app: HTMLElement, currentUser: AuthResponse, isStale: () => boolean): Promise<void> {
     setPageTitle('Финансы');
     const content = ensureShell(app);
     const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
@@ -260,6 +272,7 @@ function createRouter(api: ApiClient): Router {
     renderContentSkeleton(content);
     try {
       const { renderFinancePage } = await import('./pages/FinancePage/FinancePage');
+      if (isStale()) return;
       await renderFinancePage(api, content, { currentUser });
     } catch (error: unknown) {
       const err = error as Error;
@@ -268,7 +281,7 @@ function createRouter(api: ApiClient): Router {
     }
   }
 
-  async function showChatPage(app: HTMLElement, currentUser: AuthResponse, initialUserId?: number): Promise<void> {
+  async function showChatPage(app: HTMLElement, currentUser: AuthResponse, isStale: () => boolean, initialUserId?: number): Promise<void> {
     setPageTitle('Чат');
     const content = ensureShell(app);
     const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
@@ -278,6 +291,7 @@ function createRouter(api: ApiClient): Router {
     renderContentSkeleton(content);
     try {
       const { renderChatPage } = await import('./pages/ChatPage/ChatPage');
+      if (isStale()) return;
       await renderChatPage(api, content, { currentUser, initialUserId });
     } catch (error: unknown) {
       const err = error as Error;
@@ -286,15 +300,17 @@ function createRouter(api: ApiClient): Router {
     }
   }
 
-  async function showPaymentReturnPage(app: HTMLElement, currentUser: AuthResponse): Promise<void> {
+  async function showPaymentReturnPage(app: HTMLElement, currentUser: AuthResponse, isStale: () => boolean): Promise<void> {
     setPageTitle('Оплата');
     const content = ensureShell(app);
     const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
 
     void syncSidebar(app, currentUser, '', onLogout);
 
+    renderContentSkeleton(content);
     try {
       const { renderPaymentReturnPage } = await import('./pages/PaymentReturnPage/PaymentReturnPage');
+      if (isStale()) return;
       await renderPaymentReturnPage(api, content, { currentUser, onLogout });
     } catch (error: unknown) {
       const err = error as Error;
@@ -308,12 +324,16 @@ function createRouter(api: ApiClient): Router {
     const app = document.getElementById('app');
     if (!app) return;
 
+    const seq = ++routingSeq;
+    const isStale = (): boolean => seq !== routingSeq;
+
     let currentUser: AuthResponse | null;
     try {
       currentUser = await getCurrentUser();
     } catch {
       currentUser = null;
     }
+    if (isStale()) return;
 
     const isAuthenticated = !!currentUser;
     const path = window.location.pathname;
@@ -336,25 +356,25 @@ function createRouter(api: ApiClient): Router {
 
     // Все маршруты ниже — только для аутентифицированных
     if (path === '/') {
-      await showHomePage(app, currentUser!);
+      await showHomePage(app, currentUser!, isStale);
     } else if (path === '/profile') {
-      await showProfilePage(app, currentUser!);
+      await showProfilePage(app, currentUser!, isStale);
     } else if (viewedProfileMatch) {
-      await showProfilePage(app, currentUser!, Number(viewedProfileMatch[1]));
+      await showProfilePage(app, currentUser!, isStale, Number(viewedProfileMatch[1]));
     } else if (path === '/notifications') {
-      await showNotificationsPage(app, currentUser!);
+      await showNotificationsPage(app, currentUser!, isStale);
     } else if (path === '/finance') {
       if (!currentUser!.user.is_trainer) {
         navigateTo('/');
         return;
       }
-      await showFinancePage(app, currentUser!);
+      await showFinancePage(app, currentUser!, isStale);
     } else if (path === '/chat') {
-      await showChatPage(app, currentUser!);
+      await showChatPage(app, currentUser!, isStale);
     } else if (chatWithMatch) {
-      await showChatPage(app, currentUser!, Number(chatWithMatch[1]));
+      await showChatPage(app, currentUser!, isStale, Number(chatWithMatch[1]));
     } else if (path === '/payment/return') {
-      await showPaymentReturnPage(app, currentUser!);
+      await showPaymentReturnPage(app, currentUser!, isStale);
     } else if (path === '/payment/cancel') {
       navigateTo('/');
     } else {
@@ -367,12 +387,46 @@ function createRouter(api: ApiClient): Router {
 
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
 
+/**
+ * Глобальный фолбэк для битых картинок: вместо браузерной «сломанной картинки»
+ * показываем инициалы (берём из alt, где у аватаров лежит имя) либо нейтральный
+ * плейсхолдер. Событие `error` не всплывает, поэтому слушаем в фазе захвата.
+ */
+function installBrokenImageFallback(): void {
+  document.addEventListener('error', (event: Event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLImageElement)) return;
+    if (target.dataset.fallbackApplied) return;
+    target.dataset.fallbackApplied = '1';
+
+    const name = (target.getAttribute('alt') || '').trim();
+    if (name) {
+      const initials = name
+        .split(' ')
+        .filter(Boolean)
+        .map(part => part[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || '?';
+      const fallback = document.createElement('span');
+      fallback.className = 'avatar-fallback';
+      fallback.textContent = initials;
+      target.replaceWith(fallback);
+    } else {
+      // Контентное медиа без имени — просто прячем, плейсхолдер блока остаётся.
+      target.style.visibility = 'hidden';
+    }
+  }, true);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const app = document.getElementById('app');
   if (!app) {
     console.error('App container not found');
     return;
   }
+
+  installBrokenImageFallback();
 
   // Регистрируем Service Worker для офлайн-поддержки
   if ('serviceWorker' in navigator) {

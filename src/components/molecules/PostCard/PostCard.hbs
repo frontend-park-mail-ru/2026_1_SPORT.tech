@@ -30,7 +30,7 @@
   <h3 class="post-card__title">{{title}}</h3>
 
   <!-- Короткая версия -->
-  <div class="post-card__body post-card__body--short">
+  <div class="post-card__body post-card__body--short{{#unless can_view}} post-card__body--locked{{/unless}}">
     <div class="post-card__content">
       <div class="post-card__text-block">{{{content}}}</div>
     </div>

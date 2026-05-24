@@ -33,7 +33,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #E85A2B;
+  background: var(--primary-orange);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -79,7 +79,7 @@
   display: inline-block;
   padding: 2px 10px;
   background: #FFF5F0;
-  color: #E85A2B;
+  color: var(--primary-orange);
   border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
@@ -103,6 +103,11 @@
 /* Контент с блоками */
 .post-card__body--short {
   position: relative;
+}
+
+/* Нет доступа — скрываем градиент, чтобы он не наезжал на заголовок */
+.post-card__body--short.post-card__body--locked::after {
+  display: none;
 }
 
 .post-card__body--short::after {
@@ -130,7 +135,7 @@
   background: #FFF5F0;
   border: 1px solid #FFD4CC;
   border-radius: 20px;
-  color: #E85A2B;
+  color: var(--primary-orange);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -141,9 +146,9 @@
 }
 
 .post-card__expand-btn:hover {
-  background: #E85A2B;
+  background: var(--primary-orange);
   color: white;
-  border-color: #E85A2B;
+  border-color: var(--primary-orange);
 }
 
 .post-card__expand-btn svg {
@@ -173,10 +178,18 @@
 /* Медиа блок */
 .post-card__media-block {
   margin: 12px 0;
+  /* Резервируем место под медиа, пока оно грузится: убирает рывок ленты (CLS)
+     и белую вспышку — вместо неё нейтральный плейсхолдер. */
+  min-height: 180px;
+  background: var(--background-light);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .post-card__media-block img,
 .post-card__media-block video {
+  display: block;
+  width: 100%;
   max-width: 100%;
   border-radius: 8px;
 }
@@ -205,11 +218,11 @@
 }
 
 .post-card__action:hover:not(:disabled) {
-  color: #E85A2B;
+  color: var(--primary-orange);
 }
 
 .post-card__action--liked {
-  color: #E85A2B;
+  color: var(--primary-orange);
 }
 
 .post-card__action:disabled {
@@ -245,7 +258,7 @@
 }
 
 .post-card__icon-btn:hover {
-  color: #E85A2B;
+  color: var(--primary-orange);
 }
 
 /* Кнопка разворачивания/сворачивания */
@@ -257,7 +270,7 @@
   background: #FFF5F0;
   border: 1px solid #FFD4CC;
   border-radius: 20px;
-  color: #E85A2B;
+  color: var(--primary-orange);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -268,9 +281,9 @@
 }
 
 .post-card__collapse-btn:hover {
-  background: #E85A2B;
+  background: var(--primary-orange);
   color: white;
-  border-color: #E85A2B;
+  border-color: var(--primary-orange);
 }
 
 @media (max-width: 768px) {
@@ -370,7 +383,7 @@
 }
 
 .post-card__comment-error {
-  color: #e85a2b;
+  color: var(--primary-orange);
   font-size: 12px;
   margin: 4px 0 0;
 }
