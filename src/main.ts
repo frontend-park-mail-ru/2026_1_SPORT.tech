@@ -96,7 +96,7 @@ function createLogoutHandler(
 }
 
 function setPageTitle(suffix?: string | null): void {
-  document.title = suffix ? `Sporteon — ${suffix}` : 'Sporteon';
+  document.title = suffix ? `Sporteon - ${suffix}` : 'Sporteon';
 }
 
 // ─── Router ──────────────────────────────────────────────────────────────────
