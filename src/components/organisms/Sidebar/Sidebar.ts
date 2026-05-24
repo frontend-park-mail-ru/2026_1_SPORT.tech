@@ -32,6 +32,38 @@ export function setActivePage(sidebarEl: HTMLElement, page: string): void {
   });
 }
 
+/** Событие, которым страницы сообщают сайдбару актуальное число непрочитанных. */
+export const NOTIF_UNREAD_EVENT = 'notifications:unread';
+
+/** Текущий смонтированный сайдбар — на него навешивается обновление бейджа. */
+let activeSidebarEl: HTMLElement | null = null;
+let unreadListenerInstalled = false;
+
+/**
+ * Создаёт/обновляет/удаляет бейдж непрочитанных на пункте «Уведомления».
+ * При count === 0 бейдж удаляется, поэтому счётчик пропадает без перезагрузки.
+ */
+export function updateNotificationBadge(sidebarEl: HTMLElement, count: number): void {
+  const notifLink = sidebarEl.querySelector('[data-page="notifications"]');
+  if (!notifLink) return;
+  let badge = notifLink.querySelector('.sidebar__nav-badge') as HTMLElement | null;
+  if (count > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'sidebar__nav-badge';
+      notifLink.appendChild(badge);
+    }
+    badge.textContent = count > 99 ? '99+' : String(count);
+  } else if (badge) {
+    badge.remove();
+  }
+}
+
+/** Сообщить сайдбару новое число непрочитанных (из любой страницы). */
+export function emitUnreadCount(count: number): void {
+  document.dispatchEvent(new CustomEvent(NOTIF_UNREAD_EVENT, { detail: { count } }));
+}
+
 export async function renderSidebar(
   container: HTMLElement,
   params: SidebarParams
@@ -151,24 +183,23 @@ export async function renderSidebar(
 
   container.appendChild(element);
 
+  // Сайдбар живёт всю сессию; страницы шлют сюда актуальный счётчик непрочитанных.
+  activeSidebarEl = element;
+  if (!unreadListenerInstalled) {
+    document.addEventListener(NOTIF_UNREAD_EVENT, (e: Event) => {
+      const count = (e as CustomEvent<{ count: number }>).detail?.count ?? 0;
+      if (activeSidebarEl) updateNotificationBadge(activeSidebarEl, count);
+    });
+    unreadListenerInstalled = true;
+  }
+
   if (currentUser) {
     // Load unread notification badge
     void (async () => {
       try {
         const data = await api.getNotifications({ limit: 50 });
         const unreadCount = (data.notifications || []).filter(n => !n.is_read).length;
-        if (unreadCount > 0) {
-          const notifLink = element.querySelector('[data-page="notifications"]');
-          if (notifLink) {
-            let badge = notifLink.querySelector('.sidebar__nav-badge') as HTMLElement | null;
-            if (!badge) {
-              badge = document.createElement('span');
-              badge.className = 'sidebar__nav-badge';
-              notifLink.appendChild(badge);
-            }
-            badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
-          }
-        }
+        updateNotificationBadge(element, unreadCount);
       } catch { /* ignore */ }
     })();
 

@@ -2,6 +2,7 @@ import './NotificationsPage.css';
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse, Profile } from '../../types/api.types';
 import type { Notification } from '../../types/api.types';
+import { emitUnreadCount } from '../../components/organisms/Sidebar/Sidebar';
 
 interface NotificationsPageParams {
   currentUser?: AuthResponse | null;
@@ -172,6 +173,7 @@ export async function renderNotificationsPage(
               await api.markNotificationRead(n.notification_id);
               notifications[idx] = { ...n, is_read: true };
               item.classList.remove('notification-item--unread');
+              emitUnreadCount(notifications.filter(x => !x.is_read).length);
             } catch { /* ignore */ }
           }
         });
@@ -190,6 +192,7 @@ export async function renderNotificationsPage(
       await Promise.all(unread.map(n => api.markNotificationRead(n.notification_id)));
       notifications = notifications.map(n => ({ ...n, is_read: true }));
       renderList();
+      emitUnreadCount(0);
     } catch { /* ignore */ } finally {
       markAllBtn.disabled = false;
     }
