@@ -29,6 +29,7 @@ interface Window {
   router: {
     handleRouting: () => Promise<void>;
     navigateTo: (path: string) => void;
+    reload: () => Promise<void>;
     setCurrentUser: (user: unknown) => void;
     getCurrentUser: (options?: { force: boolean }) => Promise<unknown>;
   };

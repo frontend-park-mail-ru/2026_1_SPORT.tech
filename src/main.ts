@@ -130,6 +130,16 @@ function createRouter(api: ApiClient): Router {
     void handleRouting();
   }
 
+  // Принудительно перерисовать текущий маршрут со свежими данными пользователя.
+  // Нужно, когда путь не меняется (например, правка профиля/смена аватара на
+  // /profile), поэтому navigateTo тут бесполезен. Сбрасываем кэш currentUser и
+  // сайдбар, чтобы новый avatar_url подхватился и в шапке, и в боковом меню.
+  async function reload(): Promise<void> {
+    await getCurrentUser({ force: true });
+    sidebarElement = null;
+    await handleRouting();
+  }
+
   /**
    * Инициализирует сайдбар один раз. При повторных вызовах только обновляет
    * активную вкладку — DOM не пересоздаётся, мерцания нет.
@@ -382,7 +392,7 @@ function createRouter(api: ApiClient): Router {
     }
   }
 
-  return { handleRouting, navigateTo, setCurrentUser, getCurrentUser };
+  return { handleRouting, navigateTo, reload, setCurrentUser, getCurrentUser };
 }
 
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
@@ -396,6 +406,10 @@ function installBrokenImageFallback(): void {
   document.addEventListener('error', (event: Event) => {
     const target = event.target;
     if (!(target instanceof HTMLImageElement)) return;
+    // Пустой src="" тоже стреляет `error` в браузере, хотя это не «битая»
+    // картинка, а просто отсутствие фото. Подменять её инициалами нельзя —
+    // иначе поверх настоящего плейсхолдера встаёт фантомный фолбэк.
+    if (!target.getAttribute('src')) return;
     if (target.dataset.fallbackApplied) return;
     target.dataset.fallbackApplied = '1';
 

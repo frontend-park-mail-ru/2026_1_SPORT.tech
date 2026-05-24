@@ -152,7 +152,7 @@ export async function renderProfileHeader(
         openProfileEditModal({
           api,
           currentUser: { user: userData },
-          onUpdated: () => window.router.navigateTo('/profile')
+          onUpdated: () => { void window.router.reload(); }
         });
       }
     });
@@ -187,7 +187,7 @@ export async function renderProfileHeader(
     openProfileEditModal({
       api,
       currentUser: { user: userData },
-      onUpdated: () => window.router.navigateTo('/profile')
+      onUpdated: () => { void window.router.reload(); }
     });
   });
 
