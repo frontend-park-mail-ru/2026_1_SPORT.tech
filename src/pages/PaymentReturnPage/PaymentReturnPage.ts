@@ -3,6 +3,7 @@ import type { ApiClient } from '../../utils/api';
 import type { AuthResponse, PaymentResponse } from '../../types/api.types';
 import { escapeHtml, formatMonthlyPrice } from '../../utils/profilePageData';
 import { getFriendlyErrorMessage } from '../../utils/errorMessages';
+import { emitSubscriptionsChanged } from '../../components/organisms/Sidebar/Sidebar';
 
 interface PaymentReturnPageParams {
   currentUser?: AuthResponse | null;
@@ -160,6 +161,9 @@ export async function renderPaymentReturnPage(
   try {
     const payment = await api.confirmPayment(paymentId, confirmationToken);
     localStorage.removeItem('sporteon_pending_payment');
+    if (payment.subscription) {
+      emitSubscriptionsChanged();
+    }
     await renderSuccess(resultEl, payment, navigateTo, api);
   } catch (error: unknown) {
     const err = error as { message?: string; data?: { error?: { message?: string } } };

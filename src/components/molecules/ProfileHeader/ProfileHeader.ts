@@ -3,6 +3,7 @@
 import type { ApiClient } from '../../../utils/api';
 import { renderButton } from '../../atoms/Button/Button';
 import type { ButtonAPI } from '../../atoms/Button/Button';
+import { emitSubscriptionsChanged } from '../../organisms/Sidebar/Sidebar';
 import { openProfileEditModal } from '../ProfileEditModal/ProfileEditModal';
 
 export interface ProfileHeaderConfig {
@@ -125,6 +126,7 @@ export async function renderProfileHeader(
         existingSubscription,
         onSubscribed: async () => {
           // Обновить текст кнопки, кнопку чата и остальную часть страницы
+          emitSubscriptionsChanged();
           await updateSubscriptionUI();
           if (onSubscribed) await onSubscribed();
         }

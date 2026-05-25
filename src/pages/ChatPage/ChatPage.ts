@@ -15,6 +15,10 @@ interface ChatPageParams {
   initialUserId?: number; // открыть диалог сразу
 }
 
+interface ChatReadEventPayload {
+  message_ids?: number[];
+}
+
 // Format a timestamp to HH:MM
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -176,7 +180,12 @@ export async function renderChatPage(
       other_user_id: Number(c.other_user_id),
       unread_count: Number(c.unread_count || 0),
       last_message: c.last_message
-        ? { ...c.last_message, message_id: Number(c.last_message.message_id) }
+        ? {
+          ...c.last_message,
+          message_id: Number(c.last_message.message_id),
+          sender_user_id: Number(c.last_message.sender_user_id),
+          receiver_user_id: Number(c.last_message.receiver_user_id)
+        }
         : c.last_message
     }));
   }
@@ -193,12 +202,19 @@ export async function renderChatPage(
       if (lastId > lastRenderedMessageId) {
         await loadMessages(activeConvUserId);
       }
+      if (
+        activeConv?.last_message
+        && Number(activeConv.last_message.sender_user_id) === myUserId
+        && activeConv.last_message.is_read
+      ) {
+        markOutgoingMessagesReadThrough(lastId);
+      }
     }
 
     // Пропускаем перерисовку, если ничего не изменилось — иначе каждый снапшот
     // будет мигать списком и сбрасывать наведение/скролл.
     const signature = conversations
-      .map(c => `${c.other_user_id}:${c.last_message?.message_id ?? 0}:${c.unread_count}`)
+      .map(c => `${c.other_user_id}:${c.last_message?.message_id ?? 0}:${c.unread_count}:${c.last_message?.is_read ? 1 : 0}`)
       .join('|') + `#${activeConvUserId ?? 0}`;
     if (signature === lastConvSignature) return;
     lastConvSignature = signature;
@@ -287,9 +303,10 @@ export async function renderChatPage(
 
     chatWindow.innerHTML = `
       <div class="chat-window__header">
-        <div class="chat-window__header-avatar">${avatarHtml}</div>
-        <div class="chat-window__header-name">${escapeHtml(info.name)}</div>
-        <span class="chat-window__header-link" data-profile-id="${userId}">Перейти к профилю</span>
+        <button class="chat-window__profile" type="button" data-profile-id="${userId}">
+          <span class="chat-window__header-avatar">${avatarHtml}</span>
+          <span class="chat-window__header-name">${escapeHtml(info.name)}</span>
+        </button>
       </div>
       <div class="chat-messages" id="chat-messages-area">
         <div class="chat-loader"><div class="chat-loader__spinner"></div></div>
@@ -304,8 +321,7 @@ export async function renderChatPage(
       </div>
     `;
 
-    // Profile link
-    const profileLink = chatWindow.querySelector('.chat-window__header-link') as HTMLElement;
+    const profileLink = chatWindow.querySelector('.chat-window__profile') as HTMLButtonElement | null;
     profileLink?.addEventListener('click', () => {
       window.router.navigateTo(`/profile/${userId}`);
     });
@@ -313,6 +329,28 @@ export async function renderChatPage(
     await loadMessages(userId);
     setupInput(userId);
     setupSSE(userId);
+  }
+
+  function renderMessageMeta(meta: HTMLElement, time: string, isRead: boolean): void {
+    meta.textContent = `${time}${isRead ? ' ✓✓' : ''}`;
+  }
+
+  function markMessageRead(messageId: number): void {
+    const msgEl = chatWindow.querySelector(`.chat-msg[data-message-id="${messageId}"][data-outgoing="true"]`) as HTMLElement | null;
+    const meta = msgEl?.querySelector('.chat-msg__meta') as HTMLElement | null;
+    if (!msgEl || !meta) return;
+
+    msgEl.dataset.read = 'true';
+    renderMessageMeta(meta, meta.dataset.time || '', true);
+  }
+
+  function markOutgoingMessagesReadThrough(lastReadMessageId: number): void {
+    chatWindow.querySelectorAll('.chat-msg[data-outgoing="true"]').forEach(el => {
+      const messageId = Number((el as HTMLElement).dataset.messageId || 0);
+      if (messageId > 0 && messageId <= lastReadMessageId) {
+        markMessageRead(messageId);
+      }
+    });
   }
 
   // ── Append a single message node to the area ────────────────────────────
@@ -327,20 +365,24 @@ export async function renderChatPage(
     }
 
     const isOut = Number(msg.sender_user_id) === myUserId;
+    const messageId = Number(msg.message_id);
     const msgEl = document.createElement('div');
     msgEl.className = `chat-msg chat-msg--${isOut ? 'out' : 'in'}`;
+    msgEl.dataset.messageId = String(messageId);
+    msgEl.dataset.outgoing = isOut ? 'true' : 'false';
+    msgEl.dataset.read = msg.is_read ? 'true' : 'false';
     const bubble = document.createElement('div');
     bubble.className = 'chat-msg__bubble';
     appendMessageBody(bubble, msg.body);
 
     const meta = document.createElement('div');
     meta.className = 'chat-msg__meta';
-    meta.textContent = `${formatTime(msg.created_at)}${isOut && msg.is_read ? ' ✓✓' : ''}`;
+    meta.dataset.time = formatTime(msg.created_at);
+    renderMessageMeta(meta, meta.dataset.time, isOut && msg.is_read);
 
     msgEl.append(bubble, meta);
     area.appendChild(msgEl);
 
-    const messageId = Number(msg.message_id);
     if (!isOut && !msg.is_read && myUserId > 0 && messageId > 0 && !readAttempted.has(messageId)) {
       readAttempted.add(messageId);
       api.markChatMessageRead(msg.message_id).catch(() => {/* ignore */});
@@ -434,6 +476,22 @@ export async function renderChatPage(
       if (isAtBottom) area.scrollTop = area.scrollHeight;
     };
 
+    es.addEventListener('read', (event: MessageEvent) => {
+      if (activeConvUserId !== userId) { clearSSE(); return; }
+
+      let payload: ChatReadEventPayload;
+      try {
+        payload = JSON.parse(event.data) as ChatReadEventPayload;
+      } catch {
+        return;
+      }
+
+      (payload.message_ids || []).forEach(id => {
+        const messageId = Number(id);
+        if (Number.isFinite(messageId)) markMessageRead(messageId);
+      });
+    });
+
     es.onerror = () => {
       if (activeConvUserId !== userId) {
         clearSSE();
@@ -498,11 +556,27 @@ export async function renderChatPage(
       chatWindow.querySelector('.chat-send-error')?.remove();
 
       try {
-        await api.sendChatMessage(toUserId, body);
+        const sentMessage = await api.sendChatMessage(toUserId, body);
         field.value = '';
         field.style.height = 'auto';
-        await loadMessages(toUserId);
-        // Список и его порядок обновит ближайший SSE-снапшот.
+
+        const area = chatWindow.querySelector('#chat-messages-area') as HTMLElement | null;
+        if (area) {
+          const placeholder = area.querySelector('p');
+          if (placeholder) area.innerHTML = '';
+          const messageId = Number(sentMessage.message_id);
+          if (messageId > lastRenderedMessageId) {
+            appendMessageNode(area, sentMessage);
+            lastRenderedMessageId = messageId;
+            area.scrollTop = area.scrollHeight;
+          }
+        }
+
+        const nextConversations = conversations.filter(c => c.other_user_id !== toUserId);
+        await applyConversations([
+          { other_user_id: toUserId, last_message: sentMessage, unread_count: 0 },
+          ...nextConversations
+        ]);
       } catch (err) {
         console.error('Ошибка отправки сообщения:', err);
         const errMsg = err instanceof Error ? err.message : String(err);

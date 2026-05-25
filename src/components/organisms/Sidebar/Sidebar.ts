@@ -53,6 +53,7 @@ export const NOTIF_UNREAD_EVENT = 'notifications:unread';
 
 /** Текущий смонтированный сайдбар — на него навешивается обновление бейджа. */
 let activeSidebarEl: HTMLElement | null = null;
+let activeSidebarApi: ApiClient | null = null;
 let unreadListenerInstalled = false;
 let badgePollingStarted = false;
 let chatStreamStarted = false;
@@ -108,6 +109,14 @@ export function updateChatBadge(sidebarEl: HTMLElement, count: number): void {
 /** Сообщить сайдбару новое число непрочитанных сообщений (из любой страницы). */
 export function emitChatUnread(count: number): void {
   document.dispatchEvent(new CustomEvent(CHAT_UNREAD_EVENT, { detail: { count } }));
+}
+
+/** Событие, которым страницы сообщают сайдбару, что список подписок изменился. */
+export const SUBSCRIPTIONS_CHANGED_EVENT = 'subscriptions:changed';
+
+/** Сообщить сайдбару, что нужно перечитать список активных подписок. */
+export function emitSubscriptionsChanged(): void {
+  document.dispatchEvent(new CustomEvent(SUBSCRIPTIONS_CHANGED_EVENT));
 }
 
 /** Событие со свежим снапшотом списка диалогов (приходит из SSE). */
@@ -172,6 +181,58 @@ function startChatConversationsStream(api: ApiClient): void {
   chatEventSource.onerror = () => {
     startChatConversationsFallback(api);
   };
+}
+
+async function refreshSidebarSubscriptions(api: ApiClient, sidebarEl = activeSidebarEl): Promise<void> {
+  const listEl = sidebarEl?.querySelector('.sidebar__users-list') as HTMLElement | null;
+  if (!listEl) return;
+
+  try {
+    const subsData = await api.getMySubscriptions();
+    const activeSubs = (subsData.subscriptions || []).filter(s => s.active);
+
+    listEl.innerHTML = '';
+
+    if (activeSubs.length === 0) {
+      listEl.innerHTML = '<p style="color:rgba(255,255,255,0.5);font-size:12px;padding:8px;text-align:center;margin:0;">Вы пока ни на кого не подписаны</p>';
+      return;
+    }
+
+    const profiles = await Promise.all(
+      activeSubs.map(s => api.getProfile(s.trainer_id).catch(() => null))
+    );
+
+    activeSubs.forEach((sub, idx) => {
+      const profile = profiles[idx];
+      const name = profile
+        ? `${profile.first_name} ${profile.last_name}`.trim() || profile.username
+        : `Тренер #${sub.trainer_id}`;
+      const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+      const safeName = escapeHtml(name);
+      const safeInitials = escapeHtml(initials);
+      const safeAvatarUrl = profile?.avatar_url ? escapeHtml(profile.avatar_url) : '';
+      const safeTierName = escapeHtml(sub.tier_name);
+
+      const item = document.createElement('div');
+      item.className = 'sidebar__user-item';
+      item.dataset.userId = String(sub.trainer_id);
+      item.innerHTML = `
+        <div class="sidebar__user-avatar">
+          ${profile?.avatar_url
+    ? `<img src="${safeAvatarUrl}" alt="${safeName}">`
+    : safeInitials}
+        </div>
+        <div class="sidebar__user-info">
+          <div class="sidebar__user-name">${safeName}</div>
+          <div class="sidebar__user-role">${safeTierName}</div>
+        </div>
+      `;
+      item.addEventListener('click', () => {
+        window.router.navigateTo(`/profile/${sub.trainer_id}`);
+      });
+      listEl.appendChild(item);
+    });
+  } catch { /* ignore */ }
 }
 
 export async function renderSidebar(
@@ -328,6 +389,7 @@ export async function renderSidebar(
 
   // Сайдбар живёт всю сессию; страницы шлют сюда актуальный счётчик непрочитанных.
   activeSidebarEl = element;
+  activeSidebarApi = api;
   if (!unreadListenerInstalled) {
     document.addEventListener(NOTIF_UNREAD_EVENT, (e: Event) => {
       const count = (e as CustomEvent<{ count: number }>).detail?.count ?? 0;
@@ -336,6 +398,11 @@ export async function renderSidebar(
     document.addEventListener(CHAT_UNREAD_EVENT, (e: Event) => {
       const count = (e as CustomEvent<{ count: number }>).detail?.count ?? 0;
       if (activeSidebarEl) updateChatBadge(activeSidebarEl, count);
+    });
+    document.addEventListener(SUBSCRIPTIONS_CHANGED_EVENT, () => {
+      if (activeSidebarApi) {
+        void refreshSidebarSubscriptions(activeSidebarApi);
+      }
     });
     unreadListenerInstalled = true;
   }
@@ -364,57 +431,7 @@ export async function renderSidebar(
       chatStreamStarted = true;
     }
 
-    // Load subscriptions into sidebar
-    void (async () => {
-      const listEl = element.querySelector('.sidebar__users-list') as HTMLElement | null;
-      if (!listEl) return;
-      try {
-        const subsData = await api.getMySubscriptions();
-        const activeSubs = (subsData.subscriptions || []).filter(s => s.active);
-
-        listEl.innerHTML = '';
-
-        if (activeSubs.length === 0) {
-          listEl.innerHTML = '<p style="color:rgba(255,255,255,0.5);font-size:12px;padding:8px;text-align:center;margin:0;">Вы пока ни на кого не подписаны</p>';
-          return;
-        }
-
-        const profiles = await Promise.all(
-          activeSubs.map(s => api.getProfile(s.trainer_id).catch(() => null))
-        );
-
-        activeSubs.forEach((sub, idx) => {
-          const profile = profiles[idx];
-          const name = profile
-            ? `${profile.first_name} ${profile.last_name}`.trim() || profile.username
-            : `Тренер #${sub.trainer_id}`;
-          const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-          const safeName = escapeHtml(name);
-          const safeInitials = escapeHtml(initials);
-          const safeAvatarUrl = profile?.avatar_url ? escapeHtml(profile.avatar_url) : '';
-          const safeTierName = escapeHtml(sub.tier_name);
-
-          const item = document.createElement('div');
-          item.className = 'sidebar__user-item';
-          item.dataset.userId = String(sub.trainer_id);
-          item.innerHTML = `
-            <div class="sidebar__user-avatar">
-              ${profile?.avatar_url
-        ? `<img src="${safeAvatarUrl}" alt="${safeName}">`
-        : safeInitials}
-            </div>
-            <div class="sidebar__user-info">
-              <div class="sidebar__user-name">${safeName}</div>
-              <div class="sidebar__user-role">${safeTierName}</div>
-            </div>
-          `;
-          item.addEventListener('click', () => {
-            window.router.navigateTo(`/profile/${sub.trainer_id}`);
-          });
-          listEl.appendChild(item);
-        });
-      } catch { /* ignore */ }
-    })();
+    void refreshSidebarSubscriptions(api, element);
   }
 
   return element;
