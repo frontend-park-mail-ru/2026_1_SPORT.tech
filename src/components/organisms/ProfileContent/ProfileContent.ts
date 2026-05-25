@@ -789,15 +789,150 @@ export async function renderProfileContent(
   const wrapperHtml = document.createElement('div');
   wrapperHtml.innerHTML = html.trim();
   const element = wrapperHtml.firstElementChild as HTMLElement;
+  const tabsElement = element.querySelector('.profile-content__tabs') as HTMLElement | null;
   const sectionTitleEl = element.querySelector('.profile-content__section-title') as HTMLElement;
   const filtersElement = element.querySelector('.profile-content__filters') as HTMLElement | null;
   const addButtonContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
+  const postsPanel = element.querySelector('#posts-panel') as HTMLElement | null;
   const postsContainer = element.querySelector('#posts-container') as HTMLElement;
   const subsContainer = element.querySelector('#subscriptions-container') as HTMLElement | null;
   const progressContainer = element.querySelector('#progress-container') as HTMLElement | null;
   const searchBlock = element.querySelector('.profile-content__search') as HTMLElement | null;
   const searchInput = searchBlock?.querySelector('.profile-content__search-input') as HTMLInputElement | null;
   const sidebarRight = element.querySelector('.profile-content__sidebar-right') as HTMLElement | null;
+  const tabTransitionMs = 260;
+
+  type TabPanelKey = 'posts' | 'subscriptions' | 'progress';
+
+  const panelByKey: Record<TabPanelKey, HTMLElement | null> = {
+    posts: postsPanel ?? postsContainer,
+    subscriptions: subsContainer,
+    progress: progressContainer
+  };
+
+  const getTabPanelKey = (tabId: string): TabPanelKey => {
+    if (tabId === 'progress') return 'progress';
+    if (tabId === 'subscriptions') return 'subscriptions';
+    return 'posts';
+  };
+
+  const prefersReducedMotion = (): boolean => (
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  );
+
+  let activePanel = panelByKey[getTabPanelKey(currentTab)] ?? postsContainer;
+  let panelTransitionToken = 0;
+
+  function clearPanelAnimationClasses(panel: HTMLElement): void {
+    panel.classList.remove(
+      'profile-content__tab-panel--enter',
+      'profile-content__tab-panel--exit',
+      'profile-content__tab-panel--active',
+      'profile-content__tab-panel--refresh'
+    );
+  }
+
+  function initializeTabPanels(): void {
+    Object.values(panelByKey).forEach(panel => {
+      if (!panel) return;
+      clearPanelAnimationClasses(panel);
+      panel.hidden = panel !== activePanel;
+      panel.style.display = '';
+    });
+    activePanel.hidden = false;
+    activePanel.classList.add('profile-content__tab-panel--active');
+  }
+
+  function updateTabIndicator(): void {
+    if (!tabsElement) return;
+    const activeTabElement = tabsElement.querySelector('.profile-content__tab--active') as HTMLElement | null;
+    if (!activeTabElement) return;
+
+    tabsElement.style.setProperty('--tab-indicator-left', `${activeTabElement.offsetLeft}px`);
+    tabsElement.style.setProperty('--tab-indicator-width', `${activeTabElement.offsetWidth}px`);
+    tabsElement.style.setProperty('--tab-indicator-opacity', '1');
+  }
+
+  function setActiveTabButton(tabId: string): void {
+    element.querySelectorAll('.profile-content__tab').forEach((tabButton: Element) => {
+      const button = tabButton as HTMLElement;
+      const isActive = button.dataset.tab === tabId;
+      button.classList.toggle('profile-content__tab--active', isActive);
+      button.setAttribute('aria-selected', String(isActive));
+    });
+    window.requestAnimationFrame(updateTabIndicator);
+  }
+
+  function showTabPanel(tabId: string, animate = true): boolean {
+    const nextPanel = panelByKey[getTabPanelKey(tabId)] ?? postsContainer;
+    const previousPanel = activePanel.hidden ? null : activePanel;
+    const shouldAnimate = animate && Boolean(previousPanel) && previousPanel !== nextPanel && !prefersReducedMotion();
+    panelTransitionToken += 1;
+    const token = panelTransitionToken;
+
+    Object.values(panelByKey).forEach(panel => {
+      if (!panel || panel === previousPanel || panel === nextPanel) return;
+      panel.hidden = true;
+      panel.style.display = '';
+      clearPanelAnimationClasses(panel);
+    });
+
+    if (previousPanel === nextPanel) {
+      nextPanel.hidden = false;
+      nextPanel.style.display = '';
+      clearPanelAnimationClasses(nextPanel);
+      nextPanel.classList.add('profile-content__tab-panel--active');
+      activePanel = nextPanel;
+      return false;
+    }
+
+    if (previousPanel) {
+      previousPanel.classList.remove('profile-content__tab-panel--active', 'profile-content__tab-panel--enter');
+      if (shouldAnimate) {
+        previousPanel.classList.add('profile-content__tab-panel--exit');
+      } else {
+        previousPanel.hidden = true;
+        previousPanel.style.display = '';
+        clearPanelAnimationClasses(previousPanel);
+      }
+    }
+
+    nextPanel.hidden = false;
+    nextPanel.style.display = '';
+    clearPanelAnimationClasses(nextPanel);
+
+    if (shouldAnimate) {
+      nextPanel.classList.add('profile-content__tab-panel--enter');
+      window.requestAnimationFrame(() => {
+        if (token !== panelTransitionToken) return;
+        nextPanel.classList.remove('profile-content__tab-panel--enter');
+        nextPanel.classList.add('profile-content__tab-panel--active');
+      });
+      window.setTimeout(() => {
+        if (token !== panelTransitionToken || !previousPanel) return;
+        previousPanel.hidden = true;
+        previousPanel.style.display = '';
+        clearPanelAnimationClasses(previousPanel);
+      }, tabTransitionMs);
+    } else {
+      nextPanel.classList.add('profile-content__tab-panel--active');
+    }
+
+    activePanel = nextPanel;
+    return true;
+  }
+
+  function animateCurrentPanelRefresh(panel: HTMLElement): void {
+    if (prefersReducedMotion()) return;
+    panel.classList.remove('profile-content__tab-panel--refresh');
+    void panel.offsetWidth;
+    panel.classList.add('profile-content__tab-panel--refresh');
+    window.setTimeout(() => {
+      panel.classList.remove('profile-content__tab-panel--refresh');
+    }, tabTransitionMs);
+  }
+
+  initializeTabPanels();
 
   if (!isTrainer) {
     if (filtersElement) filtersElement.style.display = 'none';
@@ -984,14 +1119,18 @@ export async function renderProfileContent(
       const htmlTab = tab as HTMLElement;
       const tabId = htmlTab.dataset.tab as string;
 
-      element.querySelectorAll('.profile-content__tab').forEach((t: Element) => {
-        t.classList.remove('profile-content__tab--active');
-      });
-      htmlTab.classList.add('profile-content__tab--active');
+      if (tabId === currentTab) {
+        setActiveTabButton(tabId);
+        return;
+      }
 
-      if (postsContainer) postsContainer.style.display = 'none';
-      if (subsContainer) subsContainer.style.display = 'none';
-      if (progressContainer) progressContainer.style.display = 'none';
+      setActiveTabButton(tabId);
+      const panelChanged = showTabPanel(tabId);
+      const currentPanel = panelByKey[getTabPanelKey(tabId)] ?? postsContainer;
+      if (!panelChanged) {
+        animateCurrentPanelRefresh(currentPanel);
+      }
+      currentTab = tabId;
 
       toggleSearchVisibility(false);
       // Правая колонка (Популярные публикации) — только для тренеров
@@ -1003,7 +1142,6 @@ export async function renderProfileContent(
         if (addButtonContainer) addButtonContainer.style.display = 'none';
         sectionTitleEl.textContent = 'История замеров';
         if (progressContainer) {
-          progressContainer.style.display = 'block';
           progressContainer.innerHTML = '';
           void renderProgressTab(progressContainer, {
             api,
@@ -1016,7 +1154,6 @@ export async function renderProfileContent(
         if (filtersElement) filtersElement.style.display = 'none';
         if (addButtonContainer) addButtonContainer.style.display = 'none';
         sectionTitleEl.textContent = aboutLabel;
-        if (postsContainer) postsContainer.style.display = 'block';
         if (isTrainer) {
           void showTrainerAbout(postsContainer, api, viewedUserId);
         } else {
@@ -1031,14 +1168,12 @@ export async function renderProfileContent(
         if (addButtonContainer) addButtonContainer.style.display = 'none';
         sectionTitleEl.textContent = 'Уровни подписки';
         if (subsContainer) {
-          subsContainer.style.display = 'block';
           void renderSubscriptionsSection(subsContainer, api, isTrainer, isOwnProfile, viewedUserId);
         }
       } else if (tabId === 'publications' && !isTrainer) {
         if (filtersElement) filtersElement.style.display = 'none';
         if (addButtonContainer) addButtonContainer.style.display = 'none';
         sectionTitleEl.textContent = 'Понравившиеся';
-        if (postsContainer) postsContainer.style.display = 'block';
         toggleSearchVisibility(true);
         showPostsSkeleton(postsContainer);
         allPosts = (await loadLikedPosts(api, viewedUserId)) as PostWithAuthor[];
@@ -1051,7 +1186,6 @@ export async function renderProfileContent(
           addButtonContainer.style.display = (canAddPost && tabId === 'publications') ? 'block' : 'none';
         }
         sectionTitleEl.textContent = sectionTitles[tabId] || 'Публикации';
-        if (postsContainer) postsContainer.style.display = 'block';
         toggleSearchVisibility(true);
         if (tabId === 'main' || tabId === 'publications') {
           if (statsContainer) {
@@ -1093,19 +1227,30 @@ export async function renderProfileContent(
 
   // Добавляем элемент в DOM сразу — данные грузятся асинхронно
   container.appendChild(element);
+  window.requestAnimationFrame(updateTabIndicator);
+
+  const onWindowResize = (): void => {
+    if (!document.body.contains(element)) {
+      window.removeEventListener('resize', onWindowResize);
+      return;
+    }
+    updateTabIndicator();
+  };
+  window.addEventListener('resize', onWindowResize);
 
   // Популярные публикации тренера (сортировка по лайкам на бэке)
   if (isTrainer) {
     void loadPopularPosts(element, api, viewedUserId);
   }
 
+  toggleSearchVisibility(false);
+  toggleSidebarVisibility(isTrainer);
+
   if (currentTab === 'progress' && progressContainer) {
     toggleSidebarVisibility(false);
-    progressContainer.style.display = 'block';
     void renderProgressTab(progressContainer, { api, userId: viewedUserId, isOwnProfile });
   } else if (currentTab === 'about') {
     toggleSidebarVisibility(false);
-    if (postsContainer) postsContainer.style.display = 'block';
     if (isTrainer) {
       void showTrainerAbout(postsContainer, api, viewedUserId);
     } else {
@@ -1117,11 +1262,9 @@ export async function renderProfileContent(
   } else if (currentTab === 'subscriptions') {
     toggleSidebarVisibility(false);
     if (subsContainer) {
-      subsContainer.style.display = 'block';
       void renderSubscriptionsSection(subsContainer, api, isTrainer, isOwnProfile, viewedUserId);
     }
   } else {
-    if (postsContainer) postsContainer.style.display = 'block';
     toggleSearchVisibility(true);
     showPostsSkeleton(postsContainer);
 
