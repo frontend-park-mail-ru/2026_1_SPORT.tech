@@ -446,6 +446,26 @@ function showPostsSkeleton(container: HTMLElement): void {
   container.innerHTML = card + card + card;
 }
 
+function showAboutSkeleton(container: HTMLElement): void {
+  setPostsContainerMessageState(container, false);
+  container.innerHTML = `
+    <div class="trainer-about">
+      <div class="trainer-about__section">
+        <div class="page-skeleton__block" style="height:18px;width:160px;margin-bottom:14px;border-radius:6px;"></div>
+        <div class="page-skeleton__block" style="height:18px;width:70%;border-radius:6px;"></div>
+      </div>
+      <div class="trainer-about__section">
+        <div class="page-skeleton__block" style="height:18px;width:140px;margin-bottom:14px;border-radius:6px;"></div>
+        <div class="page-skeleton__block" style="height:18px;width:54%;border-radius:6px;"></div>
+      </div>
+      <div class="trainer-about__section">
+        <div class="page-skeleton__block" style="height:18px;width:120px;margin-bottom:14px;border-radius:6px;"></div>
+        <div class="page-skeleton__block" style="height:42px;width:100%;border-radius:8px;"></div>
+      </div>
+    </div>
+  `;
+}
+
 async function renderSubscriptionsSection(
   container: HTMLElement,
   api: ApiClient,
@@ -871,7 +891,7 @@ export async function renderProfileContent(
     const token = panelTransitionToken;
 
     Object.values(panelByKey).forEach(panel => {
-      if (!panel || panel === previousPanel || panel === nextPanel) return;
+      if (!panel || panel === nextPanel) return;
       panel.hidden = true;
       panel.style.display = '';
       clearPanelAnimationClasses(panel);
@@ -887,14 +907,9 @@ export async function renderProfileContent(
     }
 
     if (previousPanel) {
-      previousPanel.classList.remove('profile-content__tab-panel--active', 'profile-content__tab-panel--enter');
-      if (shouldAnimate) {
-        previousPanel.classList.add('profile-content__tab-panel--exit');
-      } else {
-        previousPanel.hidden = true;
-        previousPanel.style.display = '';
-        clearPanelAnimationClasses(previousPanel);
-      }
+      previousPanel.hidden = true;
+      previousPanel.style.display = '';
+      clearPanelAnimationClasses(previousPanel);
     }
 
     nextPanel.hidden = false;
@@ -908,12 +923,6 @@ export async function renderProfileContent(
         nextPanel.classList.remove('profile-content__tab-panel--enter');
         nextPanel.classList.add('profile-content__tab-panel--active');
       });
-      window.setTimeout(() => {
-        if (token !== panelTransitionToken || !previousPanel) return;
-        previousPanel.hidden = true;
-        previousPanel.style.display = '';
-        clearPanelAnimationClasses(previousPanel);
-      }, tabTransitionMs);
     } else {
       nextPanel.classList.add('profile-content__tab-panel--active');
     }
@@ -1125,11 +1134,8 @@ export async function renderProfileContent(
       }
 
       setActiveTabButton(tabId);
-      const panelChanged = showTabPanel(tabId);
       const currentPanel = panelByKey[getTabPanelKey(tabId)] ?? postsContainer;
-      if (!panelChanged) {
-        animateCurrentPanelRefresh(currentPanel);
-      }
+      showTabPanel(tabId);
       currentTab = tabId;
 
       toggleSearchVisibility(false);
@@ -1157,6 +1163,7 @@ export async function renderProfileContent(
         if (isTrainer) {
           void showTrainerAbout(postsContainer, api, viewedUserId);
         } else {
+          showAboutSkeleton(postsContainer);
           void api.getProfile(viewedUserId).then(p => showClientAbout(postsContainer, p, isOwnProfile)).catch(() => {
             setPostsContainerMessageState(postsContainer, true);
             postsContainer.innerHTML = '<div class="profile-content__empty"><p>Не удалось загрузить профиль</p></div>';
@@ -1199,6 +1206,8 @@ export async function renderProfileContent(
           refreshVisiblePosts();
         }
       }
+
+      animateCurrentPanelRefresh(currentPanel);
     });
   });
 
@@ -1254,7 +1263,8 @@ export async function renderProfileContent(
     if (isTrainer) {
       void showTrainerAbout(postsContainer, api, viewedUserId);
     } else {
-      void api.getProfile(viewedUserId).then(p => showClientAbout(postsContainer, p)).catch(() => {
+      showAboutSkeleton(postsContainer);
+      void api.getProfile(viewedUserId).then(p => showClientAbout(postsContainer, p, isOwnProfile)).catch(() => {
         setPostsContainerMessageState(postsContainer, true);
         postsContainer.innerHTML = '<div class="profile-content__empty"><p>Не удалось загрузить профиль</p></div>';
       });

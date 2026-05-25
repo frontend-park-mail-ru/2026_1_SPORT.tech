@@ -14,6 +14,7 @@
     </div>
     
     <nav class="sidebar__nav">
+      <span class="sidebar__nav-indicator" aria-hidden="true"></span>
       {{#each navItems}}
       <a href="{{url}}" class="sidebar__nav-item {{#if active}}sidebar__nav-item--active{{/if}}" data-page="{{id}}">
         {{{icon}}}

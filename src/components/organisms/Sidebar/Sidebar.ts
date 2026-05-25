@@ -32,6 +32,20 @@ export function setActivePage(sidebarEl: HTMLElement, page: string): void {
     const itemPage = (item as HTMLElement).dataset.page;
     item.classList.toggle('sidebar__nav-item--active', itemPage === page);
   });
+  window.requestAnimationFrame(() => updateSidebarNavIndicator(sidebarEl));
+}
+
+function updateSidebarNavIndicator(sidebarEl: HTMLElement): void {
+  const nav = sidebarEl.querySelector('.sidebar__nav') as HTMLElement | null;
+  const activeItem = sidebarEl.querySelector('.sidebar__nav-item--active') as HTMLElement | null;
+  if (!nav || !activeItem) return;
+
+  nav.style.setProperty('--nav-indicator-left', `${activeItem.offsetLeft}px`);
+  nav.style.setProperty('--nav-indicator-top', `${activeItem.offsetTop}px`);
+  nav.style.setProperty('--nav-indicator-width', `${activeItem.offsetWidth}px`);
+  nav.style.setProperty('--nav-indicator-height', `${activeItem.offsetHeight}px`);
+  nav.style.setProperty('--nav-indicator-opacity', '1');
+  nav.classList.add('sidebar__nav--indicator-ready');
 }
 
 /** Событие, которым страницы сообщают сайдбару актуальное число непрочитанных. */
@@ -301,6 +315,16 @@ export async function renderSidebar(
   }
 
   container.appendChild(element);
+  window.requestAnimationFrame(() => updateSidebarNavIndicator(element));
+
+  const onWindowResize = (): void => {
+    if (!document.body.contains(element)) {
+      window.removeEventListener('resize', onWindowResize);
+      return;
+    }
+    updateSidebarNavIndicator(element);
+  };
+  window.addEventListener('resize', onWindowResize);
 
   // Сайдбар живёт всю сессию; страницы шлют сюда актуальный счётчик непрочитанных.
   activeSidebarEl = element;

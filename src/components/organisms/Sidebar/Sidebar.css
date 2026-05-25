@@ -81,6 +81,34 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  position: relative;
+  --nav-indicator-left: 12px;
+  --nav-indicator-top: 4px;
+  --nav-indicator-width: 0px;
+  --nav-indicator-height: 0px;
+  --nav-indicator-opacity: 0;
+}
+
+.sidebar__nav-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--nav-indicator-width);
+  height: var(--nav-indicator-height);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+    0 8px 18px rgba(126, 37, 14, 0.12);
+  opacity: var(--nav-indicator-opacity);
+  pointer-events: none;
+  transform: translate(var(--nav-indicator-left), var(--nav-indicator-top));
+  transition:
+    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.18s ease;
+  z-index: 0;
 }
 
 .sidebar__nav-item {
@@ -91,15 +119,29 @@
   color: rgba(255, 255, 255, 0.9);
   text-decoration: none;
   border-radius: 8px;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
   cursor: pointer;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
-.sidebar__nav-item:hover,
+.sidebar__nav-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  transform: translateX(2px);
+}
+
 .sidebar__nav-item--active {
   background: rgba(255, 255, 255, 0.15);
   color: white;
+}
+
+.sidebar__nav--indicator-ready .sidebar__nav-item--active {
+  background: transparent;
 }
 
 .sidebar__nav-item svg {
@@ -325,6 +367,14 @@
     background: rgba(255, 255, 255, 0.08);
   }
 
+  .sidebar__nav-item:hover {
+    transform: translateY(-1px);
+  }
+
+  .sidebar__nav--indicator-ready .sidebar__nav-item--active {
+    background: transparent;
+  }
+
   .sidebar__users {
     min-height: 0;
     padding: 16px;
@@ -418,5 +468,16 @@
 @media (max-width: 480px) {
   .sidebar__user-item {
     min-width: 164px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar__nav-indicator,
+  .sidebar__nav-item {
+    transition: none;
+  }
+
+  .sidebar__nav-item:hover {
+    transform: none;
   }
 }
