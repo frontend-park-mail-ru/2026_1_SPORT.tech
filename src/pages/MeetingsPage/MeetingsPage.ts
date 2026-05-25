@@ -322,6 +322,9 @@ export async function renderMeetingsPage(
     } else if (mode === 'trainer') {
       contextEl.innerHTML = 'Ваше расписание — открывайте часы для записи и назначайте занятия клиентам';
       contextEl.hidden = false;
+    } else if (mode === 'client') {
+      contextEl.innerHTML = 'Оформите подписку на тренера с опцией «Календарь», чтобы записаться на занятия.';
+      contextEl.hidden = false;
     } else {
       contextEl.hidden = true;
     }
@@ -358,30 +361,28 @@ export async function renderMeetingsPage(
     let placed: PlacedBooking[] = [];
 
     if (mode === 'client') {
-      if (!selectedTrainerId) {
-        gridEl.innerHTML = '<div class="cal__loading">Оформите подписку на тренера с опцией «Календарь», чтобы записаться.</div>';
-        await renderUpcoming();
-        return;
+      // Назначенные/свои встречи показываем на сетке всегда — даже без выбранного
+      // тренева. Свободные слоты подгружаем только когда тренер выбран.
+      placed = await placeBookings(() => true, inWeek, widen);
+      if (selectedTrainerId) {
+        let slots: MeetingAvailabilitySlot[] = [];
+        try {
+          const data = await api.getTrainerAvailability(selectedTrainerId, {
+            from: ymd(addDays(weekStart, -1)),
+            to: ymd(addDays(weekStart, 7)),
+          });
+          slots = data.slots || [];
+        } catch (err) {
+          showBanner(friendlyError(err));
+          slots = [];
+        }
+        for (const s of slots) {
+          const ms = hourMs(s.starts_at);
+          if (!inWeek(ms)) continue;
+          free.add(ms);
+          widen(new Date(ms).getHours());
+        }
       }
-      let slots: MeetingAvailabilitySlot[] = [];
-      try {
-        const data = await api.getTrainerAvailability(selectedTrainerId, {
-          from: ymd(addDays(weekStart, -1)),
-          to: ymd(addDays(weekStart, 7)),
-        });
-        slots = data.slots || [];
-      } catch (err) {
-        gridEl.innerHTML = `<div class="cal__loading cal__loading--error">${escapeHtml(friendlyError(err))}</div>`;
-        await renderUpcoming();
-        return;
-      }
-      for (const s of slots) {
-        const ms = hourMs(s.starts_at);
-        if (!inWeek(ms)) continue;
-        free.add(ms);
-        widen(new Date(ms).getHours());
-      }
-      placed = await placeBookings(b => b.role === 'client' && b.other_user_id === selectedTrainerId, inWeek, widen);
     } else {
       const tzOffsetH = -new Date().getTimezoneOffset() / 60;
       try {
@@ -400,7 +401,7 @@ export async function renderMeetingsPage(
           widen(new Date(ms).getHours());
         }
       } catch { /* ignore */ }
-      placed = await placeBookings(b => b.role === 'trainer', inWeek, widen);
+      placed = await placeBookings(() => true, inWeek, widen);
     }
 
     hourLo = Math.max(0, hourLo);
@@ -519,7 +520,8 @@ export async function renderMeetingsPage(
       const top = Math.max(p.startHour, hourLo);
       const bottom = Math.min(p.startHour + p.span - 1, hourHi);
       const block = document.createElement('button');
-      block.className = `cal__event${mode === 'client' ? ' cal__event--mine' : ' cal__event--booked'}`;
+      const isClientRole = p.booking.role === 'client';
+      block.className = `cal__event${isClientRole ? ' cal__event--mine' : ' cal__event--booked'}`;
       block.style.gridColumn = String(p.dayIndex + 2);
       block.style.gridRow = `${top - hourLo + 2} / ${bottom - hourLo + 3}`;
       const time = `${pad(new Date(p.booking.starts_at).getHours())}:00`;
@@ -706,7 +708,7 @@ export async function renderMeetingsPage(
     content.innerHTML = `
       <div class="cal-pop__title">${escapeHtml(p.name)}</div>
       <div class="cal-pop__line">${escapeHtml(fullDayLabel(start))}, ${pad(start.getHours())}:00 — ${pad(end.getHours())}:00</div>
-      <div class="cal-pop__line">${mode === 'client' ? 'Вы записаны как клиент' : 'Запись вашего клиента'}</div>
+      <div class="cal-pop__line">${b.role === 'client' ? 'Вы записаны как клиент' : 'Запись вашего клиента'}</div>
       ${b.note ? `<div class="cal-pop__note">${escapeHtml(b.note)}</div>` : ''}
     `;
     const row = document.createElement('div');

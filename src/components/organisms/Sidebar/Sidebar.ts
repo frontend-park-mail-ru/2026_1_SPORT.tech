@@ -65,6 +65,31 @@ export function emitUnreadCount(count: number): void {
   document.dispatchEvent(new CustomEvent(NOTIF_UNREAD_EVENT, { detail: { count } }));
 }
 
+/** Событие, которым страницы сообщают сайдбару число непрочитанных сообщений. */
+export const CHAT_UNREAD_EVENT = 'chat:unread';
+
+/** Создаёт/обновляет/удаляет бейдж непрочитанных сообщений на пункте «Чат». */
+export function updateChatBadge(sidebarEl: HTMLElement, count: number): void {
+  const chatLink = sidebarEl.querySelector('[data-page="chat"]');
+  if (!chatLink) return;
+  let badge = chatLink.querySelector('.sidebar__nav-badge') as HTMLElement | null;
+  if (count > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'sidebar__nav-badge';
+      chatLink.appendChild(badge);
+    }
+    badge.textContent = count > 99 ? '99+' : String(count);
+  } else if (badge) {
+    badge.remove();
+  }
+}
+
+/** Сообщить сайдбару новое число непрочитанных сообщений (из любой страницы). */
+export function emitChatUnread(count: number): void {
+  document.dispatchEvent(new CustomEvent(CHAT_UNREAD_EVENT, { detail: { count } }));
+}
+
 export async function renderSidebar(
   container: HTMLElement,
   params: SidebarParams
@@ -214,6 +239,10 @@ export async function renderSidebar(
       const count = (e as CustomEvent<{ count: number }>).detail?.count ?? 0;
       if (activeSidebarEl) updateNotificationBadge(activeSidebarEl, count);
     });
+    document.addEventListener(CHAT_UNREAD_EVENT, (e: Event) => {
+      const count = (e as CustomEvent<{ count: number }>).detail?.count ?? 0;
+      if (activeSidebarEl) updateChatBadge(activeSidebarEl, count);
+    });
     unreadListenerInstalled = true;
   }
 
@@ -226,6 +255,17 @@ export async function renderSidebar(
         updateNotificationBadge(element, unreadCount);
       } catch { /* ignore */ }
     })();
+
+    // Бейдж непрочитанных сообщений + периодический опрос (живёт всю сессию).
+    const refreshChatBadge = async (): Promise<void> => {
+      try {
+        const data = await api.listChatConversations();
+        const total = (data.conversations || []).reduce((sum, c) => sum + (c.unread_count || 0), 0);
+        updateChatBadge(element, total);
+      } catch { /* ignore */ }
+    };
+    void refreshChatBadge();
+    window.setInterval(() => { void refreshChatBadge(); }, 15000);
 
     // Load subscriptions into sidebar
     void (async () => {

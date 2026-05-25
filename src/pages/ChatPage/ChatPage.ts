@@ -7,6 +7,7 @@ import type { ApiClient } from '../../utils/api';
 import type { AuthResponse } from '../../types/auth.types';
 import type { ChatConversation, ChatMessage } from '../../types/api.types';
 import { getFriendlyErrorMessage } from '../../utils/errorMessages';
+import { emitChatUnread } from '../../components/organisms/Sidebar/Sidebar';
 import './ChatPage.css';
 
 interface ChatPageParams {
@@ -56,7 +57,7 @@ export async function renderChatPage(
   const template = (window as any).Handlebars.templates['ChatPage.hbs'];
   container.innerHTML = template({});
 
-  const myUserId = params.currentUser.user?.user_id ?? 0;
+  const myUserId = Number(params.currentUser.user?.user_id ?? 0);
 
   const convList = container.querySelector('#conversation-list') as HTMLElement;
   const chatWindow = container.querySelector('#chat-window') as HTMLElement;
@@ -66,6 +67,7 @@ export async function renderChatPage(
   let conversations: ChatConversation[] = [];
   let lastRenderedMessageId = 0;
   let lastRenderedDateLabel = '';
+  let lastConvSignature = '';
   // Map userId → profile name/avatar (cached)
   const profileCache = new Map<number, { name: string; avatar?: string | null }>();
 
@@ -93,6 +95,28 @@ export async function renderChatPage(
     } catch {
       conversations = [];
     }
+
+    // Держим бейдж в сайдбаре актуальным.
+    const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+    emitChatUnread(totalUnread);
+
+    // Подстраховка: если в открытом диалоге появилось сообщение, которого ещё
+    // нет на экране (например, SSE не доставил), — догружаем его без F5.
+    if (activeConvUserId != null) {
+      const activeConv = conversations.find(c => c.other_user_id === activeConvUserId);
+      const lastId = Number(activeConv?.last_message?.message_id ?? 0);
+      if (lastId > lastRenderedMessageId) {
+        await loadMessages(activeConvUserId);
+      }
+    }
+
+    // Пропускаем перерисовку, если ничего не изменилось — иначе поллинг будет
+    // мигать списком и сбрасывать наведение/скролл.
+    const signature = conversations
+      .map(c => `${c.other_user_id}:${c.last_message?.message_id ?? 0}:${c.unread_count}`)
+      .join('|') + `#${activeConvUserId ?? 0}`;
+    if (signature === lastConvSignature) return;
+    lastConvSignature = signature;
 
     if (conversations.length === 0) {
       convList.innerHTML = `
@@ -216,7 +240,7 @@ export async function renderChatPage(
       lastRenderedDateLabel = dateLabel;
     }
 
-    const isOut = msg.sender_user_id === myUserId;
+    const isOut = Number(msg.sender_user_id) === myUserId;
     const msgEl = document.createElement('div');
     msgEl.className = `chat-msg chat-msg--${isOut ? 'out' : 'in'}`;
     msgEl.innerHTML = `
@@ -254,7 +278,8 @@ export async function renderChatPage(
 
     for (const msg of messages) {
       appendMessageNode(area, msg);
-      if (msg.message_id > lastRenderedMessageId) lastRenderedMessageId = msg.message_id;
+      const id = Number(msg.message_id);
+      if (id > lastRenderedMessageId) lastRenderedMessageId = id;
     }
     area.scrollTop = area.scrollHeight;
   }
@@ -280,14 +305,14 @@ export async function renderChatPage(
         return;
       }
 
-      if (msg.message_id <= lastRenderedMessageId) return;
+      if (Number(msg.message_id) <= lastRenderedMessageId) return;
 
       const placeholder = area.querySelector('p');
       if (placeholder) area.innerHTML = '';
 
       const isAtBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 80;
       appendMessageNode(area, msg);
-      lastRenderedMessageId = msg.message_id;
+      lastRenderedMessageId = Number(msg.message_id);
       if (isAtBottom) area.scrollTop = area.scrollHeight;
     };
 
@@ -303,11 +328,24 @@ export async function renderChatPage(
     }
   }
 
-  // Закрываем поток при навигации
-  window.addEventListener('popstate', clearSSE, { once: true });
+  // Поллинг списка диалогов: подтягивает новые сообщения/диалоги без F5.
+  let convPollTimer: number | undefined;
+  function clearPoll(): void {
+    if (convPollTimer !== undefined) {
+      window.clearInterval(convPollTimer);
+      convPollTimer = undefined;
+    }
+  }
+  function cleanupChat(): void {
+    clearSSE();
+    clearPoll();
+  }
+
+  // Закрываем поток и поллинг при навигации
+  window.addEventListener('popstate', cleanupChat, { once: true });
   const cleanupObserver = new MutationObserver(() => {
     if (!document.body.contains(chatWindow)) {
-      clearSSE();
+      cleanupChat();
       cleanupObserver.disconnect();
     }
   });
@@ -381,4 +419,6 @@ export async function renderChatPage(
   if (params.initialUserId) {
     await openConversation(params.initialUserId);
   }
+
+  convPollTimer = window.setInterval(() => { void renderConversations(); }, 5000);
 }

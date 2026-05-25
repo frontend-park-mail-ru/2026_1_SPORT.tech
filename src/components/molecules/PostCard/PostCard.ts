@@ -197,7 +197,6 @@ export async function renderPostCard(
           ? (response.likes_count ?? 0)
           : (wasLiked ? Math.max(0, currentCount - 1) : currentCount + 1);
         setLikeUi(newLiked, newCount);
-        if (onPostsUpdated) await onPostsUpdated();
       } catch (error) { console.error('Like error:', error); }
       finally { likeBtn.disabled = false; }
     });
