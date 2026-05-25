@@ -456,6 +456,14 @@ export class ApiClient {
     }
   }
 
+  async getProfileByUsername(username: string): Promise<Profile> {
+    const profile = await this.request<Profile>(`/v1/profiles/by-username/${encodeURIComponent(username)}`);
+    if (profile.is_me) {
+      this.updateCachedUserFromProfile(profile);
+    }
+    return profile;
+  }
+
   async updateMyProfile(data: {
     username?: string;
     first_name?: string;

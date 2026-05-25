@@ -261,6 +261,16 @@
   box-sizing: border-box;
 }
 
+.cal-pop__muted { color: #868e96; }
+.cal-pop__error {
+  font-size: 12px;
+  color: #e03131;
+  background: #fff0f0;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-top: 2px;
+}
+
 .cal-pop__btn {
   flex: 1;
   margin-top: 10px;

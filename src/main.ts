@@ -230,19 +230,23 @@ function createRouter(api: ApiClient): Router {
     app: HTMLElement,
     currentUser: AuthResponse,
     isStale: () => boolean,
-    viewedUserId?: number
+    viewed?: number | string
   ): Promise<void> {
     const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
-    const userId = viewedUserId ?? currentUser?.user?.user_id;
-    if (!userId) { navigateTo('/auth'); return; }
+    if (viewed === undefined && !currentUser?.user?.user_id) { navigateTo('/auth'); return; }
 
     const content = ensureShell(app);
     void syncSidebar(app, currentUser, 'profile', onLogout);
 
     renderContentSkeleton(content);
     try {
-      const profileData = await api.getProfile(userId);
+      const profileData = typeof viewed === 'string'
+        ? await api.getProfileByUsername(viewed)
+        : await api.getProfile(viewed ?? currentUser.user.user_id);
       if (isStale()) return;
+      if (typeof viewed === 'number' && profileData.username) {
+        history.replaceState(history.state, '', `/profile/${encodeURIComponent(profileData.username)}`);
+      }
       const mappedData = mapProfileData(profileData, currentUser);
       setPageTitle(mappedData.profile.isOwnProfile ? 'Мой профиль' : mappedData.profile.name);
 
@@ -255,7 +259,7 @@ function createRouter(api: ApiClient): Router {
         posts: [],
         activeTab: 'publications',
         popularPosts: [],
-        viewedUserId: userId,
+        viewedUserId: profileData.user_id,
         onLogout,
       });
     } catch (error: unknown) {
@@ -378,7 +382,7 @@ function createRouter(api: ApiClient): Router {
 
     const isAuthenticated = !!currentUser;
     const path = window.location.pathname;
-    const viewedProfileMatch = path.match(/^\/profile\/(\d+)$/);
+    const viewedProfileMatch = path.match(/^\/profile\/([^/]+)$/);
     const chatWithMatch = path.match(/^\/chat\/(\d+)$/);
     const meetingsWithMatch = path.match(/^\/meetings\/(\d+)$/);
 
@@ -402,7 +406,8 @@ function createRouter(api: ApiClient): Router {
     } else if (path === '/profile') {
       await showProfilePage(app, currentUser!, isStale);
     } else if (viewedProfileMatch) {
-      await showProfilePage(app, currentUser!, isStale, Number(viewedProfileMatch[1]));
+      const slug = decodeURIComponent(viewedProfileMatch[1]);
+      await showProfilePage(app, currentUser!, isStale, /^\d+$/.test(slug) ? Number(slug) : slug);
     } else if (path === '/notifications') {
       await showNotificationsPage(app, currentUser!, isStale);
     } else if (path === '/finance') {

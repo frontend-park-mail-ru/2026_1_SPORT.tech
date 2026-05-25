@@ -7,7 +7,7 @@
 
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse } from '../../types/auth.types';
-import type { MeetingBooking, MeetingAvailabilitySlot, Subscription } from '../../types/api.types';
+import type { MeetingBooking, MeetingAvailabilitySlot, Subscription, Subscriber } from '../../types/api.types';
 import { getFriendlyErrorMessage } from '../../utils/errorMessages';
 import './MeetingsPage.css';
 
@@ -118,7 +118,6 @@ export async function renderMeetingsPage(
   container.innerHTML = template({});
 
   const root = container.querySelector('#meetings-root') as HTMLElement;
-  const myUserId = params.currentUser.user?.user_id ?? 0;
   const isTrainer = !!params.currentUser.user?.is_trainer;
 
   // ── Состояние ──
@@ -126,6 +125,7 @@ export async function renderMeetingsPage(
   let selectedTrainerId = params.initialTrainerId ?? 0;
   let weekStart = startOfWeek(new Date());
   const trainerNames = new Map<number, string>();
+  const clients: { id: number; name: string }[] = [];
 
   const profileCache = new Map<number, string>();
   async function profileName(userId: number): Promise<string> {
@@ -154,6 +154,23 @@ export async function renderMeetingsPage(
     if (!selectedTrainerId && trainerNames.size > 0) {
       selectedTrainerId = trainerNames.keys().next().value as number;
     }
+  }
+
+  // ── Клиенты тренера (активные подписчики) ──
+  async function loadClients(): Promise<void> {
+    if (!isTrainer) return;
+    let subscribers: Subscriber[] = [];
+    try {
+      const data = await api.getMySubscribers();
+      subscribers = (data.subscribers || []).filter(s => s.active);
+    } catch { /* ignore */ }
+    const seen = new Set<number>();
+    for (const s of subscribers) {
+      if (seen.has(s.client_id)) continue;
+      seen.add(s.client_id);
+      clients.push({ id: s.client_id, name: await profileName(s.client_id) });
+    }
+    clients.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
   }
 
   // ── Поповер ──
@@ -565,35 +582,72 @@ export async function renderMeetingsPage(
     assignLabel.textContent = 'Назначить занятие клиенту';
     content.appendChild(assignLabel);
 
+    if (clients.length === 0) {
+      const hint = document.createElement('div');
+      hint.className = 'cal-pop__line cal-pop__muted';
+      hint.textContent = 'Нет активных клиентов с подпиской.';
+      content.appendChild(hint);
+      openPopover(anchor, content);
+      return;
+    }
+
     const assignForm = document.createElement('div');
     assignForm.className = 'cal-pop__form';
-    assignForm.innerHTML = `
-      <input class="cal-pop__input" id="cal-assign-client" type="number" min="1" placeholder="ID клиента">
-      <select class="cal-pop__input" id="cal-assign-duration">
-        ${Array.from({ length: 8 }, (_, i) => `<option value="${i + 1}">${i + 1} ч</option>`).join('')}
-      </select>
-      <input class="cal-pop__input" id="cal-assign-note" type="text" maxlength="1000" placeholder="Заметка (необязательно)">
-    `;
+
+    const clientSelect = document.createElement('select');
+    clientSelect.className = 'cal-pop__input';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Выберите клиента';
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    clientSelect.appendChild(placeholder);
+    for (const c of clients) {
+      const opt = document.createElement('option');
+      opt.value = String(c.id);
+      opt.textContent = c.name;
+      clientSelect.appendChild(opt);
+    }
+
+    const durationSelect = document.createElement('select');
+    durationSelect.className = 'cal-pop__input';
+    durationSelect.innerHTML = Array.from({ length: 8 }, (_, i) => `<option value="${i + 1}">${i + 1} ч</option>`).join('');
+
+    const noteInput = document.createElement('input');
+    noteInput.className = 'cal-pop__input';
+    noteInput.type = 'text';
+    noteInput.maxLength = 1000;
+    noteInput.placeholder = 'Заметка (необязательно)';
+
+    const errEl = document.createElement('div');
+    errEl.className = 'cal-pop__error';
+    errEl.hidden = true;
+    const showError = (msg: string): void => { errEl.textContent = msg; errEl.hidden = false; };
+    const hideError = (): void => { errEl.hidden = true; };
+    clientSelect.addEventListener('change', hideError);
+
     const assignBtn = document.createElement('button');
     assignBtn.className = 'cal-pop__btn';
     assignBtn.textContent = 'Назначить';
     assignBtn.addEventListener('click', async () => {
-      const clientId = Number((assignForm.querySelector('#cal-assign-client') as HTMLInputElement).value);
-      const duration = Number((assignForm.querySelector('#cal-assign-duration') as HTMLSelectElement).value);
-      const note = (assignForm.querySelector('#cal-assign-note') as HTMLInputElement).value.trim();
-      if (!clientId) { showBanner('Укажите ID клиента'); return; }
-      if (clientId === myUserId) { showBanner('Нельзя назначить занятие самому себе'); return; }
+      const clientId = Number(clientSelect.value);
+      const duration = Number(durationSelect.value);
+      const note = noteInput.value.trim();
+      if (!clientId) { showError('Выберите клиента из списка'); clientSelect.focus(); return; }
       assignBtn.disabled = true;
+      hideError();
       try {
         await api.assignMeeting({ client_user_id: clientId, starts_at: cellDate.toISOString(), duration_hours: duration, note: note || undefined });
         closePopover();
+        showBanner('Занятие назначено клиенту.', 'ok');
         await renderWeek();
       } catch (err) {
         assignBtn.disabled = false;
-        showBanner(friendlyError(err));
+        showError(friendlyError(err));
       }
     });
-    assignForm.appendChild(assignBtn);
+
+    assignForm.append(clientSelect, durationSelect, noteInput, errEl, assignBtn);
     content.appendChild(assignForm);
 
     openPopover(anchor, content);
@@ -706,6 +760,6 @@ export async function renderMeetingsPage(
     upcomingEl.appendChild(list);
   }
 
-  await loadTrainers();
+  await Promise.all([loadTrainers(), loadClients()]);
   await renderWeek();
 }
