@@ -125,7 +125,7 @@ export async function renderMeetingsPage(
   let selectedTrainerId = params.initialTrainerId ?? 0;
   let weekStart = startOfWeek(new Date());
   const trainerNames = new Map<number, string>();
-  const clients: { id: number; name: string }[] = [];
+  const clients: { id: number; name: string; tierName: string; calendarEnabled: boolean }[] = [];
 
   const profileCache = new Map<number, string>();
   async function profileName(userId: number): Promise<string> {
@@ -164,11 +164,25 @@ export async function renderMeetingsPage(
       const data = await api.getMySubscribers();
       subscribers = (data.subscribers || []).filter(s => s.active);
     } catch { /* ignore */ }
+
+    const calendarTierIds = new Set<number>();
+    try {
+      const data = await api.getTiers();
+      for (const tier of data.tiers || []) {
+        if (tier.calendar_enabled) calendarTierIds.add(tier.tier_id);
+      }
+    } catch { /* ignore */ }
+
     const seen = new Set<number>();
     for (const s of subscribers) {
       if (seen.has(s.client_id)) continue;
       seen.add(s.client_id);
-      clients.push({ id: s.client_id, name: await profileName(s.client_id) });
+      clients.push({
+        id: s.client_id,
+        name: await profileName(s.client_id),
+        tierName: s.tier_name,
+        calendarEnabled: calendarTierIds.has(s.tier_id),
+      });
     }
     clients.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
   }
@@ -623,7 +637,7 @@ export async function renderMeetingsPage(
     for (const c of clients) {
       const opt = document.createElement('option');
       opt.value = String(c.id);
-      opt.textContent = c.name;
+      opt.textContent = c.calendarEnabled ? c.name : `${c.name} — тариф «${c.tierName}» без «Календаря»`;
       clientSelect.appendChild(opt);
     }
 
@@ -642,7 +656,16 @@ export async function renderMeetingsPage(
     errEl.hidden = true;
     const showError = (msg: string): void => { errEl.textContent = msg; errEl.hidden = false; };
     const hideError = (): void => { errEl.hidden = true; };
-    clientSelect.addEventListener('change', hideError);
+    const calendarHint = (tierName: string): string =>
+      `У клиента тариф «${tierName}» без опции «Календарь». Включите её в настройках тарифа (Профиль → Тарифы) — после этого можно назначать занятия.`;
+    clientSelect.addEventListener('change', () => {
+      const selected = clients.find(c => c.id === Number(clientSelect.value));
+      if (selected && !selected.calendarEnabled) {
+        showError(calendarHint(selected.tierName));
+      } else {
+        hideError();
+      }
+    });
 
     const assignBtn = document.createElement('button');
     assignBtn.className = 'cal-pop__btn';
@@ -652,6 +675,8 @@ export async function renderMeetingsPage(
       const duration = Number(durationSelect.value);
       const note = noteInput.value.trim();
       if (!clientId) { showError('Выберите клиента из списка'); clientSelect.focus(); return; }
+      const selected = clients.find(c => c.id === clientId);
+      if (selected && !selected.calendarEnabled) { showError(calendarHint(selected.tierName)); return; }
       assignBtn.disabled = true;
       hideError();
       try {

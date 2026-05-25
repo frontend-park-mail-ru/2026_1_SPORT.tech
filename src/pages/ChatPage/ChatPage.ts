@@ -70,6 +70,9 @@ export async function renderChatPage(
   let lastConvSignature = '';
   // Map userId → profile name/avatar (cached)
   const profileCache = new Map<number, { name: string; avatar?: string | null }>();
+  // Сообщения, для которых уже отправлен запрос «прочитано» — чтобы повторные
+  // ре-рендеры (поллинг/SSE) не слали тот же PATCH снова и снова.
+  const readAttempted = new Set<number>();
 
   // ── Load profile name/avatar for a user ─────────────────────────────────
   async function getProfileInfo(userId: number): Promise<{ name: string; avatar?: string | null }> {
@@ -249,7 +252,9 @@ export async function renderChatPage(
     `;
     area.appendChild(msgEl);
 
-    if (!isOut && !msg.is_read) {
+    const messageId = Number(msg.message_id);
+    if (!isOut && !msg.is_read && myUserId > 0 && messageId > 0 && !readAttempted.has(messageId)) {
+      readAttempted.add(messageId);
       api.markChatMessageRead(msg.message_id).catch(() => {/* ignore */});
     }
   }

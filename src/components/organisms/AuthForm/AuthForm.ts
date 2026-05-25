@@ -369,7 +369,7 @@ export async function renderAuthForm(
         {
           type: INPUT_TYPES.WITHOUTS as InputType,
           name: 'username',
-          label: 'Никнейм (отображаемое имя)',
+          label: 'Имя пользователя',
           placeholder: 'john_doe',
           required: true
         },
@@ -601,6 +601,18 @@ export async function renderAuthForm(
         maxlength: fieldConfig.maxlength,
         onChange: (value: string) => validateField(fieldConfig.name, value)
       });
+
+      if (fieldConfig.name === 'username') {
+        const helpText = document.createElement('small');
+        helpText.textContent = '@john_doe — для входа и ссылки на профиль';
+        helpText.style.cssText = `
+          font-size: var(--font-size-xs);
+          color: var(--text-placeholder);
+          margin-top: 2px;
+          display: block;
+        `;
+        fieldContainer.appendChild(helpText);
+      }
 
       inputs.set(fieldConfig.name, fieldContainer);
       inputsApi.set(fieldConfig.name, inputApi);

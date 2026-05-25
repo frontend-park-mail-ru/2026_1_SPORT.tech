@@ -39,6 +39,7 @@ export const NOTIF_UNREAD_EVENT = 'notifications:unread';
 /** Текущий смонтированный сайдбар — на него навешивается обновление бейджа. */
 let activeSidebarEl: HTMLElement | null = null;
 let unreadListenerInstalled = false;
+let badgePollingStarted = false;
 
 /**
  * Создаёт/обновляет/удаляет бейдж непрочитанных на пункте «Уведомления».
@@ -247,25 +248,32 @@ export async function renderSidebar(
   }
 
   if (currentUser) {
-    // Load unread notification badge
-    void (async () => {
+    // Бейджи уведомлений и сообщений опрашиваются периодически, поэтому
+    // обновляются без F5. Опросы целятся в текущий смонтированный сайдбар
+    // (activeSidebarEl), а интервалы ставятся один раз за сессию.
+    const refreshNotificationBadge = async (): Promise<void> => {
       try {
         const data = await api.getNotifications({ limit: 50 });
         const unreadCount = (data.notifications || []).filter(n => !n.is_read).length;
-        updateNotificationBadge(element, unreadCount);
+        if (activeSidebarEl) updateNotificationBadge(activeSidebarEl, unreadCount);
       } catch { /* ignore */ }
-    })();
-
-    // Бейдж непрочитанных сообщений + периодический опрос (живёт всю сессию).
+    };
     const refreshChatBadge = async (): Promise<void> => {
       try {
         const data = await api.listChatConversations();
         const total = (data.conversations || []).reduce((sum, c) => sum + (c.unread_count || 0), 0);
-        updateChatBadge(element, total);
+        if (activeSidebarEl) updateChatBadge(activeSidebarEl, total);
       } catch { /* ignore */ }
     };
+
+    void refreshNotificationBadge();
     void refreshChatBadge();
-    window.setInterval(() => { void refreshChatBadge(); }, 15000);
+
+    if (!badgePollingStarted) {
+      window.setInterval(() => { void refreshNotificationBadge(); }, 15000);
+      window.setInterval(() => { void refreshChatBadge(); }, 15000);
+      badgePollingStarted = true;
+    }
 
     // Load subscriptions into sidebar
     void (async () => {
