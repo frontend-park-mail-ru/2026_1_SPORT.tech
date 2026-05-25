@@ -80,6 +80,7 @@
 
 .profile-header__details {
   flex: 1;
+  min-width: 0;
 }
 
 .profile-header__name {
@@ -87,6 +88,7 @@
   font-weight: 700;
   color: #1A2B3C;
   margin-bottom: 4px;
+  overflow-wrap: anywhere;
 }
 
 .profile-header__role {

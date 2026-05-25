@@ -9,6 +9,7 @@ import type {
   PostListItem,
   PostBlockInput,
   PostLikeResponse,
+  PostLike,
   TrainerListItem,
   TrainerDetails,
   SportType,
@@ -616,6 +617,10 @@ export class ApiClient {
     return this.request<PostLikeResponse>(`/v1/posts/${postId}/likes`, {
       method: 'DELETE'
     });
+  }
+
+  async listPostLikes(postId: number): Promise<{ likes: PostLike[] }> {
+    return this.request<{ likes: PostLike[] }>(`/v1/posts/${postId}/likes`);
   }
 
   async searchPosts(params: {

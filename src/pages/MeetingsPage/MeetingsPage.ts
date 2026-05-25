@@ -230,6 +230,7 @@ export async function renderMeetingsPage(
         <span class="cal__week-label" id="cal-week-label"></span>
       </div>
     </div>
+    <div class="cal__context" id="cal-context" hidden></div>
     <div class="cal__legend" id="cal-legend"></div>
     <div class="cal__grid-wrap"><div class="cal__grid" id="cal-grid"></div></div>
     <div class="cal__upcoming" id="cal-upcoming"></div>
@@ -239,6 +240,7 @@ export async function renderMeetingsPage(
   const bannerEl = page.querySelector('#cal-banner') as HTMLElement;
   const toolbarLeft = page.querySelector('#cal-toolbar-left') as HTMLElement;
   const weekLabelEl = page.querySelector('#cal-week-label') as HTMLElement;
+  const contextEl = page.querySelector('#cal-context') as HTMLElement;
   const legendEl = page.querySelector('#cal-legend') as HTMLElement;
   const gridEl = page.querySelector('#cal-grid') as HTMLElement;
   const upcomingEl = page.querySelector('#cal-upcoming') as HTMLElement;
@@ -312,6 +314,19 @@ export async function renderMeetingsPage(
     }
   }
 
+  function renderContext(): void {
+    if (mode === 'client' && selectedTrainerId) {
+      const name = trainerNames.get(selectedTrainerId) ?? 'тренера';
+      contextEl.innerHTML = `Свободные слоты тренера <strong>${escapeHtml(name)}</strong> — кликните по времени, чтобы записаться`;
+      contextEl.hidden = false;
+    } else if (mode === 'trainer') {
+      contextEl.innerHTML = 'Ваше расписание — открывайте часы для записи и назначайте занятия клиентам';
+      contextEl.hidden = false;
+    } else {
+      contextEl.hidden = true;
+    }
+  }
+
   function renderLegend(): void {
     legendEl.innerHTML = mode === 'client'
       ? `<span class="cal__chip cal__chip--free"></span> свободно — клик, чтобы записаться
@@ -325,6 +340,7 @@ export async function renderMeetingsPage(
   async function renderWeek(): Promise<void> {
     closePopover();
     renderToolbarLeft();
+    renderContext();
     renderLegend();
     weekLabelEl.textContent = weekLabel(weekStart);
     gridEl.innerHTML = '<div class="cal__loading">Загрузка…</div>';

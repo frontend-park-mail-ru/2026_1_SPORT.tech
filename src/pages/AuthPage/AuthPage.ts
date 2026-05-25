@@ -19,6 +19,7 @@ interface RegisterData {
   password_repeat: string;
   first_name: string;
   last_name: string;
+  bio?: string;
   trainer_details?: {
     education_degree?: string;
     career_since_date: string;
@@ -93,8 +94,16 @@ export async function renderAuthPage(
     });
 
     if (response?.user) {
-      localStorage.setItem('user', JSON.stringify(response.user));
-      window.router?.setCurrentUser(response);
+      const bio = data.bio?.trim();
+      const authResponse = { user: response.user };
+
+      if (bio) {
+        const updatedProfile = await api.updateMyProfile({ bio });
+        authResponse.user = { ...authResponse.user, ...updatedProfile };
+      }
+
+      localStorage.setItem('user', JSON.stringify(authResponse.user));
+      window.router?.setCurrentUser(authResponse);
       window.router.navigateTo('/');
     }
   }

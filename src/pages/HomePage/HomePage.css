@@ -121,6 +121,7 @@
   display: flex;
   gap: 14px;
   align-items: center;
+  min-width: 0;
 }
 
 .trainer-card__avatar {
@@ -154,6 +155,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
 }
 
 .trainer-card__name {
@@ -161,6 +163,12 @@
   font-size: 20px;
   line-height: 1.2;
   color: #1a2b3c;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .trainer-card__badge {
@@ -179,6 +187,10 @@
   margin: 6px 0 0;
   color: #6f8494;
   font-size: 13px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .trainer-card__bio {

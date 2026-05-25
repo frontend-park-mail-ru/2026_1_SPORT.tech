@@ -155,6 +155,21 @@ export async function renderSidebar(
     'meetings': '/meetings'
   };
 
+  const logo = element.querySelector('.sidebar__logo') as HTMLElement | null;
+  if (logo) {
+    logo.setAttribute('role', 'button');
+    logo.setAttribute('tabindex', '0');
+    logo.addEventListener('click', () => {
+      window.router.navigateTo('/');
+    });
+    logo.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        window.router.navigateTo('/');
+      }
+    });
+  }
+
   element.querySelectorAll('.sidebar__nav-item').forEach((item: Element) => {
     item.addEventListener('click', (e: Event) => {
       e.preventDefault();

@@ -43,6 +43,13 @@
   padding: 0 20px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   flex-shrink: 0;
+  cursor: pointer;
+  border-radius: 0 0 8px 8px;
+}
+
+.sidebar__logo:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.75);
+  outline-offset: -6px;
 }
 
 .sidebar__logo-icon {

@@ -1,7 +1,7 @@
 import type { ApiClient } from '../../../utils/api';
 import type { InputAPI } from '../../atoms/Input/Input';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
-import { Validator } from '../../../utils/validator';
+import { MIN_DONATION_AMOUNT_RUB, MAX_DONATION_AMOUNT_RUB, Validator } from '../../../utils/validator';
 import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 
 export interface DonationModalOptions {
@@ -28,11 +28,15 @@ export async function openDonationModal({
   const amountApi: InputAPI = await renderInput(amountHost, {
     type: INPUT_TYPES.WITHOUTS,
     label: 'Сумма (₽)',
-    placeholder: 'Например, 500',
+    placeholder: `От ${MIN_DONATION_AMOUNT_RUB}`,
     name: 'amount',
     required: true,
+    message: `Минимальная сумма — ${MIN_DONATION_AMOUNT_RUB} ₽`,
     onChange: () => amountApi.setNormal()
   });
+  amountApi.input.inputMode = 'numeric';
+  amountApi.input.min = String(MIN_DONATION_AMOUNT_RUB);
+  amountApi.input.max = String(MAX_DONATION_AMOUNT_RUB);
 
   const messageApi: InputAPI = await renderInput(messageHost, {
     type: INPUT_TYPES.WITHOUTS,

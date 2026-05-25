@@ -67,6 +67,11 @@
   background: #fff;
 }
 
+.progress-tab__input--error {
+  border-color: var(--error-red);
+  background: var(--error-light);
+}
+
 .progress-tab__form-footer {
   display: flex;
   align-items: center;

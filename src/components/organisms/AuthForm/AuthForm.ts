@@ -15,7 +15,12 @@ import type { InputAPI, InputType } from '../../atoms/Input/Input';
 import type { ButtonAPI } from '../../atoms/Button/Button';
 import type { SportTypeFieldApi, SportTypeFieldOption } from '../../../types/components.types';
 import type { ValidationResult } from '../../../types/validation.types';
-import { Validator } from '../../../utils/validator';
+import {
+  MAX_PASSWORD_LENGTH,
+  MAX_PUBLIC_NAME_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  Validator
+} from '../../../utils/validator';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { escapeHtml } from '../../../utils/profilePageData';
@@ -36,6 +41,7 @@ interface FieldConfig {
   placeholder: string;
   required: boolean;
   showEye?: boolean;
+  maxlength?: number;
 }
 
 interface ModeConfig {
@@ -123,7 +129,7 @@ export function createSportTypesField(
   wrapper.className = 'sport-types-field sport-types-field--normal';
   wrapper.innerHTML = `
     <label class="sport-types-field__label">
-      ${label}${required ? ' *' : ''}
+      ${escapeHtml(label)}${required ? '<span class="input-field__required" aria-hidden="true"> *</span>' : ''}
     </label>
     <button type="button" class="sport-types-field__trigger" aria-expanded="false">
       <span class="sport-types-field__trigger-text">${placeholder}</span>
@@ -292,14 +298,16 @@ export async function renderAuthForm(
           name: 'first_name',
           label: 'Имя',
           placeholder: 'Введите имя',
-          required: true
+          required: true,
+          maxlength: MAX_PUBLIC_NAME_LENGTH
         },
         {
           type: INPUT_TYPES.NAME as InputType,
           name: 'last_name',
           label: 'Фамилия',
           placeholder: 'Введите фамилию',
-          required: true
+          required: true,
+          maxlength: MAX_PUBLIC_NAME_LENGTH
         },
         {
           type: INPUT_TYPES.WITHOUTS as InputType,
@@ -319,9 +327,10 @@ export async function renderAuthForm(
           type: INPUT_TYPES.PASSWORD as InputType,
           name: 'password',
           label: 'Пароль',
-          placeholder: 'Минимум 8 символов',
+          placeholder: `От ${MIN_PASSWORD_LENGTH} до ${MAX_PASSWORD_LENGTH} символов`,
           required: true,
-          showEye: true
+          showEye: true,
+          maxlength: MAX_PASSWORD_LENGTH
         },
         {
           type: INPUT_TYPES.PASSWORD as InputType,
@@ -329,7 +338,8 @@ export async function renderAuthForm(
           label: 'Подтверждение пароля',
           placeholder: 'Повторите пароль',
           required: true,
-          showEye: true
+          showEye: true,
+          maxlength: MAX_PASSWORD_LENGTH
         }
       ]
     },
@@ -345,14 +355,16 @@ export async function renderAuthForm(
           name: 'first_name',
           label: 'Имя',
           placeholder: 'Введите имя',
-          required: true
+          required: true,
+          maxlength: MAX_PUBLIC_NAME_LENGTH
         },
         {
           type: INPUT_TYPES.NAME as InputType,
           name: 'last_name',
           label: 'Фамилия',
           placeholder: 'Введите фамилию',
-          required: true
+          required: true,
+          maxlength: MAX_PUBLIC_NAME_LENGTH
         },
         {
           type: INPUT_TYPES.WITHOUTS as InputType,
@@ -372,9 +384,10 @@ export async function renderAuthForm(
           type: INPUT_TYPES.PASSWORD as InputType,
           name: 'password',
           label: 'Пароль',
-          placeholder: 'Минимум 8 символов',
+          placeholder: `От ${MIN_PASSWORD_LENGTH} до ${MAX_PASSWORD_LENGTH} символов`,
           required: true,
-          showEye: true
+          showEye: true,
+          maxlength: MAX_PASSWORD_LENGTH
         },
         {
           type: INPUT_TYPES.PASSWORD as InputType,
@@ -382,7 +395,8 @@ export async function renderAuthForm(
           label: 'Подтверждение пароля',
           placeholder: 'Повторите пароль',
           required: true,
-          showEye: true
+          showEye: true,
+          maxlength: MAX_PASSWORD_LENGTH
         },
         {
           type: INPUT_TYPES.WITHOUTS as InputType,
@@ -543,6 +557,7 @@ export async function renderAuthForm(
         placeholder: fieldConfig.placeholder,
         name: fieldConfig.name,
         required: fieldConfig.required,
+        maxlength: fieldConfig.maxlength,
         onChange: (value: string) => validateField(fieldConfig.name, value)
       });
 
@@ -583,6 +598,7 @@ export async function renderAuthForm(
         name: fieldConfig.name,
         required: fieldConfig.required,
         showEye: fieldConfig.showEye,
+        maxlength: fieldConfig.maxlength,
         onChange: (value: string) => validateField(fieldConfig.name, value)
       });
 

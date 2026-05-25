@@ -1,6 +1,7 @@
 import type { ApiClient } from '../../../utils/api';
 import type { ContentBlockForPost } from '../../../types/post.types';
 import { openPostFormModal } from '../PostFormModal/PostFormModal';
+import { openLikesModal } from '../LikesModal/LikesModal';
 import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 
 export interface PostCardData {
@@ -167,7 +168,18 @@ export async function renderPostCard(
     likeCountEl.textContent = String(nextCount);
     const svg = likeBtn.querySelector('svg');
     if (svg) svg.setAttribute('fill', nextLiked ? 'currentColor' : 'none');
+    likeCountEl.classList.toggle('post-card__like-count--clickable', nextCount > 0);
   };
+
+  if (likeCountEl && api && finalCanView) {
+    likeCountEl.classList.toggle('post-card__like-count--clickable', likes > 0);
+    likeCountEl.title = 'Кто оценил';
+    likeCountEl.addEventListener('click', (e: Event) => {
+      e.stopPropagation();
+      const count = parseInt(likeCountEl.textContent || '0', 10) || 0;
+      if (count > 0) void openLikesModal({ api, postId });
+    });
+  }
 
   if (likeBtn && api && finalCanView) {
     likeBtn.addEventListener('click', async (e: Event) => {
@@ -250,29 +262,39 @@ export async function renderPostCard(
       }
     };
 
-    const authorNameCache = new Map<number, string>();
+    const authorCache = new Map<number, { name: string; avatar: string | null }>();
 
     const renderCommentsList = async (commentsList: Array<{ comment_id: number; author_user_id: number; body: string; created_at: string }>): Promise<void> => {
-      const uniqueIds = [...new Set(commentsList.map(c => c.author_user_id))].filter(id => !authorNameCache.has(id));
+      const uniqueIds = [...new Set(commentsList.map(c => c.author_user_id))].filter(id => !authorCache.has(id));
       await Promise.all(
         uniqueIds.map(async (userId) => {
           try {
             const profile = await api.getProfile(userId);
             const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim() || profile.username;
-            authorNameCache.set(userId, name);
+            authorCache.set(userId, { name, avatar: profile.avatar_url ?? null });
           } catch {
-            authorNameCache.set(userId, `Пользователь #${userId}`);
+            authorCache.set(userId, { name: `Пользователь #${userId}`, avatar: null });
           }
         })
       );
 
       const listHtml = commentsList.length > 0
-        ? commentsList.map(c => `
+        ? commentsList.map(c => {
+          const info = authorCache.get(c.author_user_id) ?? { name: `Пользователь #${c.author_user_id}`, avatar: null };
+          const initials = info.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+          const avatarInner = info.avatar
+            ? `<img src="${escapeHtml(info.avatar)}" alt="${escapeHtml(info.name)}">`
+            : escapeHtml(initials);
+          return `
             <div class="post-card__comment">
-              <div class="post-card__comment-author">${escapeHtml(authorNameCache.get(c.author_user_id) ?? `Пользователь #${c.author_user_id}`)}</div>
-              <div class="post-card__comment-body">${escapeHtml(c.body)}</div>
+              <button type="button" class="post-card__comment-avatar" data-comment-profile="${c.author_user_id}" title="${escapeHtml(info.name)}">${avatarInner}</button>
+              <div class="post-card__comment-main">
+                <button type="button" class="post-card__comment-author" data-comment-profile="${c.author_user_id}">${escapeHtml(info.name)}</button>
+                <div class="post-card__comment-body">${escapeHtml(c.body)}</div>
+              </div>
             </div>
-          `).join('')
+          `;
+        }).join('')
         : '<p class="post-card__comments-empty">Комментариев пока нет</p>';
 
       commentsSection.innerHTML = `
@@ -319,6 +341,14 @@ export async function renderPostCard(
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendComment(); }
       });
       input?.addEventListener('click', (e: Event) => e.stopPropagation());
+
+      commentsSection.querySelectorAll('[data-comment-profile]').forEach(el => {
+        el.addEventListener('click', (e: Event) => {
+          e.stopPropagation();
+          const id = (el as HTMLElement).dataset.commentProfile;
+          if (id) window.router.navigateTo(`/profile/${id}`);
+        });
+      });
     };
 
     commentBtn.addEventListener('click', async (e: Event) => {

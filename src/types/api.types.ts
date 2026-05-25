@@ -70,6 +70,11 @@ export interface PostLikeResponse {
   likes_count: number;
 }
 
+export interface PostLike {
+  user_id: number;
+  created_at: string;
+}
+
 export interface TrainerSport {
   sport_type_id: number;
   experience_years: number;

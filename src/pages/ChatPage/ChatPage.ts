@@ -158,9 +158,16 @@ export async function renderChatPage(
   async function openConversation(userId: number): Promise<void> {
     activeConvUserId = userId;
 
+    // Открытие диалога помечает входящие прочитанными — сразу гасим бейдж в
+    // списке, не дожидаясь следующего перерендера (renderConversations).
+    const conv = conversations.find(c => c.other_user_id === userId);
+    if (conv) conv.unread_count = 0;
+
     // Update active highlight in list
     convList.querySelectorAll('.chat-conv-item').forEach(el => {
-      el.classList.toggle('chat-conv-item--active', (el as HTMLElement).dataset.userId === String(userId));
+      const isActive = (el as HTMLElement).dataset.userId === String(userId);
+      el.classList.toggle('chat-conv-item--active', isActive);
+      if (isActive) el.querySelector('.chat-conv-item__badge')?.remove();
     });
 
     const info = await getProfileInfo(userId);

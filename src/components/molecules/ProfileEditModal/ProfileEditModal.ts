@@ -13,7 +13,7 @@ import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { createSportTypesField, loadSportTypes } from '../../organisms/AuthForm/AuthForm';
 import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
-import { Validator } from '../../../utils/validator';
+import { MAX_PUBLIC_NAME_LENGTH, Validator } from '../../../utils/validator';
 
 export interface ProfileEditModalOptions {
   api: ApiClient;
@@ -88,8 +88,8 @@ export async function openProfileEditModal({
 
   const baseFields: FieldConfig[] = [
     { name: 'username', label: 'Имя пользователя', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 30, placeholder: 'john_doe' },
-    { name: 'first_name', label: 'Имя', type: INPUT_TYPES.NAME as InputType, required: true, maxlength: 100, placeholder: 'Введите имя' },
-    { name: 'last_name', label: 'Фамилия', type: INPUT_TYPES.NAME as InputType, required: true, maxlength: 100, placeholder: 'Введите фамилию' },
+    { name: 'first_name', label: 'Имя', type: INPUT_TYPES.NAME as InputType, required: true, maxlength: MAX_PUBLIC_NAME_LENGTH, placeholder: 'Введите имя' },
+    { name: 'last_name', label: 'Фамилия', type: INPUT_TYPES.NAME as InputType, required: true, maxlength: MAX_PUBLIC_NAME_LENGTH, placeholder: 'Введите фамилию' },
     { name: 'bio', label: 'О себе', type: INPUT_TYPES.WITHOUTS as InputType, required: false, maxlength: 1000, placeholder: 'Расскажите о себе' }
   ];
 
