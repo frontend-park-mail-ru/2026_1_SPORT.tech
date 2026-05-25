@@ -351,6 +351,17 @@
   margin-top: 2px;
 }
 
+.cal-pop__notice {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #5c3d10;
+  background: #fff8f1;
+  border: 1px solid #ffd8a8;
+  border-radius: 8px;
+  padding: 7px 9px;
+  margin-top: 2px;
+}
+
 .cal-pop__btn {
   flex: 1;
   margin-top: 10px;

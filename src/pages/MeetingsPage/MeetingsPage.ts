@@ -708,14 +708,20 @@ export async function renderMeetingsPage(
     const errEl = document.createElement('div');
     errEl.className = 'cal-pop__error';
     errEl.hidden = true;
-    const showError = (msg: string): void => { errEl.textContent = msg; errEl.hidden = false; };
+    const setFeedback = (msg: string, kind: 'error' | 'notice'): void => {
+      errEl.className = kind === 'notice' ? 'cal-pop__notice' : 'cal-pop__error';
+      errEl.textContent = msg;
+      errEl.hidden = false;
+    };
+    const showError = (msg: string): void => setFeedback(msg, 'error');
+    const showNotice = (msg: string): void => setFeedback(msg, 'notice');
     const hideError = (): void => { errEl.hidden = true; };
     const calendarHint = (tierName: string): string =>
       `У клиента тариф «${tierName}» без опции «Календарь». Включите её в настройках тарифа (Профиль → Тарифы) — после этого можно назначать занятия.`;
     clientSelect.addEventListener('change', () => {
       const selected = clients.find(c => c.id === Number(clientSelect.value));
       if (selected && !selected.calendarEnabled) {
-        showError(calendarHint(selected.tierName));
+        showNotice(calendarHint(selected.tierName));
       } else {
         hideError();
       }
@@ -730,7 +736,7 @@ export async function renderMeetingsPage(
       const note = noteInput.value.trim();
       if (!clientId) { showError('Выберите клиента из списка'); clientSelect.focus(); return; }
       const selected = clients.find(c => c.id === clientId);
-      if (selected && !selected.calendarEnabled) { showError(calendarHint(selected.tierName)); return; }
+      if (selected && !selected.calendarEnabled) { showNotice(calendarHint(selected.tierName)); return; }
       assignBtn.disabled = true;
       hideError();
       try {
@@ -740,7 +746,11 @@ export async function renderMeetingsPage(
         await renderWeek();
       } catch (err) {
         assignBtn.disabled = false;
-        showError(friendlyError(err));
+        if (isCalendarAccessError(err) && selected) {
+          showNotice(calendarHint(selected.tierName));
+        } else {
+          showError(friendlyError(err));
+        }
       }
     });
 
