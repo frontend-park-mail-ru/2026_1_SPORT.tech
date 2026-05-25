@@ -4,6 +4,7 @@
  */
 
 import type { ApiClient } from '../../../utils/api';
+import type { ChatConversationsSnapshot } from '../../../types/api.types';
 import { escapeHtml } from '../../../utils/profilePageData';
 
 interface SidebarUser {
@@ -40,6 +41,9 @@ export const NOTIF_UNREAD_EVENT = 'notifications:unread';
 let activeSidebarEl: HTMLElement | null = null;
 let unreadListenerInstalled = false;
 let badgePollingStarted = false;
+let chatStreamStarted = false;
+let chatEventSource: EventSource | null = null;
+let lastChatSnapshot: ChatConversationsSnapshot | null = null;
 
 /**
  * Создаёт/обновляет/удаляет бейдж непрочитанных на пункте «Уведомления».
@@ -89,6 +93,34 @@ export function updateChatBadge(sidebarEl: HTMLElement, count: number): void {
 /** Сообщить сайдбару новое число непрочитанных сообщений (из любой страницы). */
 export function emitChatUnread(count: number): void {
   document.dispatchEvent(new CustomEvent(CHAT_UNREAD_EVENT, { detail: { count } }));
+}
+
+/** Событие со свежим снапшотом списка диалогов (приходит из SSE). */
+export const CHAT_CONVERSATIONS_EVENT = 'chat:conversations';
+
+/** Последний снапшот диалогов — чтобы страница чата отрисовалась сразу при монтировании. */
+export function getChatSnapshot(): ChatConversationsSnapshot | null {
+  return lastChatSnapshot;
+}
+
+/**
+ * Единый на сессию SSE-поток обновлений списка диалогов и счётчика непрочитанных.
+ * Заменяет поллинг: сервер сам шлёт новый снапшот при изменении. EventSource
+ * переподключается автоматически.
+ */
+function startChatConversationsStream(): void {
+  chatEventSource = new EventSource('/api/v1/chat/conversations/stream', { withCredentials: true });
+  chatEventSource.onmessage = (event: MessageEvent) => {
+    let snapshot: ChatConversationsSnapshot;
+    try {
+      snapshot = JSON.parse(event.data) as ChatConversationsSnapshot;
+    } catch {
+      return;
+    }
+    lastChatSnapshot = snapshot;
+    if (activeSidebarEl) updateChatBadge(activeSidebarEl, snapshot.unread_total || 0);
+    document.dispatchEvent(new CustomEvent(CHAT_CONVERSATIONS_EVENT, { detail: snapshot }));
+  };
 }
 
 export async function renderSidebar(
@@ -248,9 +280,9 @@ export async function renderSidebar(
   }
 
   if (currentUser) {
-    // Бейджи уведомлений и сообщений опрашиваются периодически, поэтому
-    // обновляются без F5. Опросы целятся в текущий смонтированный сайдбар
-    // (activeSidebarEl), а интервалы ставятся один раз за сессию.
+    // Бейдж уведомлений опрашивается периодически, бейдж сообщений приходит из
+    // SSE. И опрос, и поток целятся в текущий смонтированный сайдбар
+    // (activeSidebarEl) и стартуют один раз за сессию.
     const refreshNotificationBadge = async (): Promise<void> => {
       try {
         const data = await api.getNotifications({ limit: 50 });
@@ -258,21 +290,17 @@ export async function renderSidebar(
         if (activeSidebarEl) updateNotificationBadge(activeSidebarEl, unreadCount);
       } catch { /* ignore */ }
     };
-    const refreshChatBadge = async (): Promise<void> => {
-      try {
-        const data = await api.listChatConversations();
-        const total = (data.conversations || []).reduce((sum, c) => sum + (c.unread_count || 0), 0);
-        if (activeSidebarEl) updateChatBadge(activeSidebarEl, total);
-      } catch { /* ignore */ }
-    };
-
     void refreshNotificationBadge();
-    void refreshChatBadge();
 
     if (!badgePollingStarted) {
       window.setInterval(() => { void refreshNotificationBadge(); }, 15000);
-      window.setInterval(() => { void refreshChatBadge(); }, 15000);
       badgePollingStarted = true;
+    }
+
+    // Счётчик непрочитанных сообщений приходит из SSE, а не из поллинга.
+    if (!chatStreamStarted) {
+      startChatConversationsStream();
+      chatStreamStarted = true;
     }
 
     // Load subscriptions into sidebar

@@ -178,6 +178,11 @@ export interface ChatConversation {
   unread_count: number;
 }
 
+export interface ChatConversationsSnapshot {
+  conversations: ChatConversation[];
+  unread_total: number;
+}
+
 export interface Subscription {
   subscription_id: number;
   trainer_id: number;

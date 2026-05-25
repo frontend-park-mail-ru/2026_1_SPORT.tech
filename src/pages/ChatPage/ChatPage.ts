@@ -5,9 +5,9 @@
 
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse } from '../../types/auth.types';
-import type { ChatConversation, ChatMessage } from '../../types/api.types';
+import type { ChatConversation, ChatMessage, ChatConversationsSnapshot } from '../../types/api.types';
 import { getFriendlyErrorMessage } from '../../utils/errorMessages';
-import { emitChatUnread } from '../../components/organisms/Sidebar/Sidebar';
+import { getChatSnapshot, emitChatUnread, CHAT_CONVERSATIONS_EVENT } from '../../components/organisms/Sidebar/Sidebar';
 import './ChatPage.css';
 
 interface ChatPageParams {
@@ -90,18 +90,21 @@ export async function renderChatPage(
     }
   }
 
-  // ── Render conversations list ────────────────────────────────────────────
-  async function renderConversations(): Promise<void> {
-    try {
-      const data = await api.listChatConversations();
-      conversations = data.conversations || [];
-    } catch {
-      conversations = [];
-    }
+  // SSE шлёт id числами, а REST-фолбэк — строками; приводим к числам в одной точке.
+  function normalizeConversations(incoming: ChatConversation[]): ChatConversation[] {
+    return (incoming || []).map(c => ({
+      ...c,
+      other_user_id: Number(c.other_user_id),
+      unread_count: Number(c.unread_count || 0),
+      last_message: c.last_message
+        ? { ...c.last_message, message_id: Number(c.last_message.message_id) }
+        : c.last_message
+    }));
+  }
 
-    // Держим бейдж в сайдбаре актуальным.
-    const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
-    emitChatUnread(totalUnread);
+  // ── Render conversations list from a snapshot ────────────────────────────
+  async function applyConversations(incoming: ChatConversation[]): Promise<void> {
+    conversations = normalizeConversations(incoming);
 
     // Подстраховка: если в открытом диалоге появилось сообщение, которого ещё
     // нет на экране (например, SSE не доставил), — догружаем его без F5.
@@ -113,8 +116,8 @@ export async function renderChatPage(
       }
     }
 
-    // Пропускаем перерисовку, если ничего не изменилось — иначе поллинг будет
-    // мигать списком и сбрасывать наведение/скролл.
+    // Пропускаем перерисовку, если ничего не изменилось — иначе каждый снапшот
+    // будет мигать списком и сбрасывать наведение/скролл.
     const signature = conversations
       .map(c => `${c.other_user_id}:${c.last_message?.message_id ?? 0}:${c.unread_count}`)
       .join('|') + `#${activeConvUserId ?? 0}`;
@@ -186,9 +189,10 @@ export async function renderChatPage(
     activeConvUserId = userId;
 
     // Открытие диалога помечает входящие прочитанными — сразу гасим бейдж в
-    // списке, не дожидаясь следующего перерендера (renderConversations).
+    // списке и в сайдбаре, не дожидаясь подтверждающего SSE-снапшота.
     const conv = conversations.find(c => c.other_user_id === userId);
     if (conv) conv.unread_count = 0;
+    emitChatUnread(conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0));
 
     // Update active highlight in list
     convList.querySelectorAll('.chat-conv-item').forEach(el => {
@@ -333,17 +337,14 @@ export async function renderChatPage(
     }
   }
 
-  // Поллинг списка диалогов: подтягивает новые сообщения/диалоги без F5.
-  let convPollTimer: number | undefined;
-  function clearPoll(): void {
-    if (convPollTimer !== undefined) {
-      window.clearInterval(convPollTimer);
-      convPollTimer = undefined;
-    }
+  // Список диалогов и счётчик приходят из общего SSE-потока (его держит сайдбар).
+  function onConversationsSnapshot(e: Event): void {
+    const snapshot = (e as CustomEvent<ChatConversationsSnapshot>).detail;
+    if (snapshot) void applyConversations(snapshot.conversations);
   }
   function cleanupChat(): void {
     clearSSE();
-    clearPoll();
+    document.removeEventListener(CHAT_CONVERSATIONS_EVENT, onConversationsSnapshot);
   }
 
   // Закрываем поток и поллинг при навигации
@@ -385,7 +386,7 @@ export async function renderChatPage(
         field.value = '';
         field.style.height = 'auto';
         await loadMessages(toUserId);
-        await renderConversations();
+        // Список и его порядок обновит ближайший SSE-снапшот.
       } catch (err) {
         console.error('Ошибка отправки сообщения:', err);
         const errMsg = err instanceof Error ? err.message : String(err);
@@ -418,12 +419,22 @@ export async function renderChatPage(
   }
 
   // ── Init ─────────────────────────────────────────────────────────────────
-  await renderConversations();
+  // Рисуем из кэша снапшота (его уже получил сайдбар); если кэша нет — один
+  // REST-запрос, дальше список живёт на SSE-событиях.
+  const cached = getChatSnapshot();
+  if (cached) {
+    await applyConversations(cached.conversations);
+  } else {
+    try {
+      const data = await api.listChatConversations();
+      await applyConversations(data.conversations || []);
+    } catch { /* список наполнится из SSE */ }
+  }
+
+  document.addEventListener(CHAT_CONVERSATIONS_EVENT, onConversationsSnapshot);
 
   // If a specific user was requested (e.g. from profile page "написать")
   if (params.initialUserId) {
     await openConversation(params.initialUserId);
   }
-
-  convPollTimer = window.setInterval(() => { void renderConversations(); }, 5000);
 }
