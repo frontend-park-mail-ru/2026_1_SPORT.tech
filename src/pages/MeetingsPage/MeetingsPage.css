@@ -5,255 +5,326 @@
 }
 
 .meetings-page__inner {
-  max-width: 860px;
+  max-width: 1040px;
   margin: 0 auto;
+}
+
+.cal {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
-.meetings-card {
-  background: #fff;
-  border: 1px solid #e9ecef;
-  border-radius: 14px;
-  padding: 20px;
-}
-
-.meetings-card__title {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0 0 4px;
-  color: #212529;
-}
-
-.meetings-card__hint {
+/* ── Баннер ── */
+.cal__banner {
+  border-radius: 8px;
+  padding: 10px 14px;
   font-size: 13px;
-  color: #868e96;
-  margin: 0 0 16px;
+  font-weight: 500;
 }
+.cal__banner--error { background: #fff0f0; color: #e03131; }
+.cal__banner--ok { background: #ebfbee; color: #2f9e44; }
 
-.meetings-list {
+/* ── Тулбар ── */
+.cal__toolbar {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.meeting-item {
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-  background: #f8f9fa;
 }
 
-.meeting-item--past {
-  opacity: 0.6;
-}
-
-.meeting-item__main {
+.cal__toolbar-left {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.meeting-item__when {
-  font-weight: 600;
-  color: #212529;
-  font-size: 14px;
+.cal__toolbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.meeting-item__who {
-  font-size: 13px;
+.cal__nav-btn,
+.cal__today {
+  height: 34px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
   color: #495057;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, border-color 0.12s;
 }
+.cal__nav-btn { width: 34px; font-size: 18px; line-height: 1; }
+.cal__today { padding: 0 14px; font-size: 13px; font-weight: 600; }
+.cal__nav-btn:hover,
+.cal__today:hover { background: #f1f3f5; border-color: #ced4da; }
 
-.meeting-item__note {
-  font-size: 12px;
-  color: #868e96;
-  font-style: italic;
-}
-
-.meeting-badge {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
+.cal__week-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #212529;
   margin-left: 6px;
 }
 
-.meeting-badge--trainer { background: #e7f5ff; color: #1971c2; }
-.meeting-badge--client { background: #ebfbee; color: #2f9e44; }
-.meeting-badge--cancelled { background: #fff0f0; color: #e03131; }
-
-.meetings-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: flex-end;
+.cal__modes {
+  display: inline-flex;
+  background: #f1f3f5;
+  border-radius: 9px;
+  padding: 3px;
 }
-
-.meetings-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.meetings-field label {
-  font-size: 12px;
+.cal__mode {
+  border: none;
+  background: transparent;
+  padding: 7px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
   color: #868e96;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cal__mode--active {
+  background: #fff;
+  color: #212529;
+  box-shadow: 0 1px 3px rgba(33, 37, 41, 0.12);
 }
 
-.meetings-field select,
-.meetings-field input {
-  padding: 8px 10px;
+.cal__select {
+  height: 34px;
+  padding: 0 10px;
   border: 1px solid #ced4da;
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
+  background: #fff;
 }
 
-.meetings-btn {
-  padding: 9px 16px;
+.cal__muted { font-size: 13px; color: #adb5bd; }
+
+/* ── Легенда ── */
+.cal__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  font-size: 12px;
+  color: #868e96;
+}
+.cal__chip {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  vertical-align: -2px;
+  margin-right: 2px;
+}
+.cal__chip--free { background: #d3f9d8; border: 1px solid #8ce99a; }
+.cal__chip--mine { background: #228be6; }
+.cal__chip--open { background: #e7f5ff; border: 1px solid #74c0fc; }
+.cal__chip--booked { background: #40c057; }
+
+/* ── Сетка ── */
+.cal__grid-wrap {
+  overflow-x: auto;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  background: #fff;
+}
+.cal__grid {
+  display: grid;
+  min-width: 720px;
+}
+
+.cal__corner {
+  border-right: 1px solid #e9ecef;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.cal__dayhead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border-bottom: 1px solid #e9ecef;
+  border-right: 1px solid #f1f3f5;
+}
+.cal__dayhead-wd { font-size: 11px; color: #868e96; text-transform: uppercase; font-weight: 600; }
+.cal__dayhead-num { font-size: 15px; font-weight: 700; color: #343a40; }
+.cal__dayhead--today .cal__dayhead-num {
+  background: #228be6;
+  color: #fff;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.cal__hourlabel {
+  display: flex;
+  align-items: start;
+  justify-content: flex-end;
+  padding: 2px 8px 0 0;
+  font-size: 11px;
+  color: #adb5bd;
+  border-right: 1px solid #e9ecef;
+  transform: translateY(-6px);
+}
+
+.cal__cell {
+  border-right: 1px solid #f1f3f5;
+  border-bottom: 1px solid #f1f3f5;
+}
+.cal__cell--addable { cursor: pointer; }
+.cal__cell--addable:hover { background: #f8f9fa; box-shadow: inset 0 0 0 1px #dee2e6; }
+.cal__cell--open {
+  background: #e7f5ff;
+  cursor: pointer;
+}
+.cal__cell--open:hover { background: #d0ebff; }
+.cal__cell--free {
+  background: #d3f9d8;
+  cursor: pointer;
+}
+.cal__cell--free:hover { background: #b2f2bb; }
+
+.cal__event {
+  margin: 3px;
+  border-radius: 7px;
+  border: none;
+  padding: 5px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+  color: #fff;
+  font-family: inherit;
+  z-index: 1;
+}
+.cal__event--mine { background: #228be6; }
+.cal__event--mine:hover { background: #1c7ed6; }
+.cal__event--booked { background: #40c057; }
+.cal__event--booked:hover { background: #37b24d; }
+.cal__event-time { font-size: 11px; font-weight: 700; opacity: 0.9; }
+.cal__event-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.cal__loading {
+  padding: 40px 20px;
+  text-align: center;
+  color: #adb5bd;
+  font-size: 14px;
+}
+.cal__loading--error { color: #e03131; }
+
+/* ── Поповер ── */
+.cal-pop {
+  position: fixed;
+  z-index: 1000;
+  width: 280px;
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(33, 37, 41, 0.18);
+}
+.cal-pop__body { padding: 14px; }
+.cal-pop__title { font-size: 15px; font-weight: 700; color: #212529; margin-bottom: 4px; }
+.cal-pop__line { font-size: 13px; color: #495057; margin-bottom: 2px; }
+.cal-pop__label { font-size: 12px; color: #868e96; margin: 10px 0 6px; }
+.cal-pop__note {
+  font-size: 12px;
+  color: #868e96;
+  font-style: italic;
+  margin-top: 6px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.cal-pop__divider { height: 1px; background: #f1f3f5; margin: 12px 0; }
+.cal-pop__row { display: flex; gap: 8px; margin-top: 10px; }
+.cal-pop__form { display: flex; flex-direction: column; gap: 8px; }
+.cal-pop__input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.cal-pop__btn {
+  flex: 1;
+  margin-top: 10px;
+  padding: 9px 12px;
   border: none;
   border-radius: 8px;
   background: #228be6;
   color: #fff;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
+  font-family: inherit;
 }
-
-.meetings-btn:hover { background: #1c7ed6; }
-.meetings-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.meetings-btn--ghost {
-  background: transparent;
-  color: #e03131;
-  padding: 6px 10px;
-  font-size: 13px;
-}
-.meetings-btn--ghost:hover { background: #fff0f0; }
-
-.booking {
-  display: flex;
-  gap: 24px;
-  margin-top: 16px;
-  align-items: flex-start;
-}
-
-.booking__cal {
-  flex: 0 0 300px;
-  max-width: 300px;
-}
-
-.booking__slots {
-  flex: 1 1 auto;
-  min-width: 0;
-  border-left: 1px solid #e9ecef;
-  padding-left: 24px;
-  align-self: stretch;
-}
-
-.booking__day-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #212529;
-  text-transform: capitalize;
-  margin-bottom: 12px;
-}
-
-@media (max-width: 640px) {
-  .booking {
-    flex-direction: column;
-    gap: 16px;
-  }
-  .booking__cal {
-    flex-basis: auto;
-    max-width: none;
-    width: 100%;
-  }
-  .booking__slots {
-    border-left: none;
-    border-top: 1px solid #e9ecef;
-    padding-left: 0;
-    padding-top: 16px;
-    width: 100%;
-  }
-}
-
-.slot-day {
-  margin-top: 14px;
-}
-
-.slot-day__label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #495057;
-  margin-bottom: 6px;
-}
-
-.slot-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.slot-chip {
-  padding: 7px 12px;
-  border: 1px solid #74c0fc;
-  border-radius: 8px;
-  background: #e7f5ff;
-  color: #1971c2;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.slot-chip:hover { background: #d0ebff; }
-.slot-chip:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.rule-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.rule-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
+.cal-pop__btn:hover { background: #1c7ed6; }
+.cal-pop__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cal-pop__form .cal-pop__btn { margin-top: 2px; }
+.cal-pop__btn--soft {
   background: #f1f3f5;
-  border-radius: 8px;
-  font-size: 13px;
   color: #343a40;
 }
-
-.rule-tag button {
-  border: none;
-  background: transparent;
-  color: #e03131;
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.meetings-empty {
-  font-size: 13px;
-  color: #adb5bd;
-  padding: 8px 0;
-}
-
-.meetings-error {
+.cal-pop__btn--soft:hover { background: #e9ecef; }
+.cal-pop__btn--danger {
   background: #fff0f0;
   color: #e03131;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 13px;
-  margin-top: 10px;
+}
+.cal-pop__btn--danger:hover { background: #ffe3e3; }
+
+/* ── Ближайшие встречи ── */
+.cal__upcoming {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 18px;
+}
+.cal__upcoming-title { font-size: 16px; font-weight: 700; color: #212529; margin: 0 0 12px; }
+.cal__upcoming-list { display: flex; flex-direction: column; gap: 8px; }
+.cal__upcoming-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  background: #f8f9fa;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cal__upcoming-item:hover { background: #f1f3f5; border-color: #dee2e6; }
+.cal__upcoming-when { font-size: 14px; font-weight: 600; color: #212529; }
+.cal__upcoming-who { font-size: 13px; color: #495057; }
+.cal__badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  margin-left: 4px;
+}
+.cal__badge--trainer { background: #e7f5ff; color: #1971c2; }
+.cal__badge--client { background: #ebfbee; color: #2f9e44; }
+
+@media (max-width: 600px) {
+  .meetings-page { padding: 14px; }
+  .cal__toolbar { flex-direction: column; align-items: stretch; }
+  .cal__week-label { margin-left: 0; }
 }

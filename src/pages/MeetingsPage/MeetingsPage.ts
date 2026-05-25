@@ -1,14 +1,14 @@
 /**
- * @fileoverview Страница календаря — записи на занятия и расписание тренера
+ * @fileoverview Календарь встреч — недельная сетка (дни × часы) в стиле
+ * Google Calendar. Тренер задаёт рабочие часы прямо на сетке, клиент
+ * записывается кликом по свободному часу. Дальше стороны общаются в чате.
  * @module pages/MeetingsPage
  */
 
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse } from '../../types/auth.types';
-import type { MeetingBooking, MeetingAvailabilitySlot, MeetingAvailabilityRule, MeetingSlot, Subscription } from '../../types/api.types';
+import type { MeetingBooking, MeetingAvailabilitySlot, Subscription } from '../../types/api.types';
 import { getFriendlyErrorMessage } from '../../utils/errorMessages';
-import { createCalendar, dayKey } from '../../components/atoms/Calendar/Calendar';
-import { createDateTimePicker } from '../../components/molecules/DateTimePicker/DateTimePicker';
 import './MeetingsPage.css';
 
 interface MeetingsPageParams {
@@ -16,7 +16,16 @@ interface MeetingsPageParams {
   initialTrainerId?: number;
 }
 
-const WEEKDAYS = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+type Mode = 'trainer' | 'client';
+
+const WEEKDAYS_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+const MONTHS_GEN = [
+  'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+];
+
+const DEFAULT_HOUR_LO = 7;
+const DEFAULT_HOUR_HI = 22;
 
 function escapeHtml(str: string): string {
   return str
@@ -27,26 +36,54 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+function pad(n: number): string {
+  return String(n).padStart(2, '0');
 }
 
-function formatTimeRange(startIso: string, endIso: string): string {
-  const start = new Date(startIso);
-  const end = new Date(endIso);
-  const time = (d: Date) => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-  return `${time(start)}–${time(end)}`;
+function startOfDay(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
 }
 
-function dayLabel(iso: string): string {
-  return new Date(iso).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
+function startOfWeek(d: Date): Date {
+  const x = startOfDay(d);
+  const dow = (x.getDay() + 6) % 7; // понедельник = 0
+  x.setDate(x.getDate() - dow);
+  return x;
 }
 
-function alignedISOFromDate(date: Date | null): string | null {
-  if (!date || isNaN(date.getTime())) return null;
-  const aligned = new Date(date);
-  aligned.setMinutes(0, 0, 0);
-  return aligned.toISOString();
+function addDays(d: Date, n: number): Date {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function hourMs(iso: string): number {
+  const d = new Date(iso);
+  d.setMinutes(0, 0, 0);
+  return d.getTime();
+}
+
+function sameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function weekLabel(start: Date): string {
+  const end = addDays(start, 6);
+  if (start.getMonth() === end.getMonth()) {
+    return `${start.getDate()}–${end.getDate()} ${MONTHS_GEN[end.getMonth()]} ${end.getFullYear()}`;
+  }
+  return `${start.getDate()} ${MONTHS_GEN[start.getMonth()]} – ${end.getDate()} ${MONTHS_GEN[end.getMonth()]} ${end.getFullYear()}`;
+}
+
+function fullDayLabel(d: Date): string {
+  const s = d.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function friendlyError(err: unknown): string {
@@ -64,6 +101,14 @@ function friendlyError(err: unknown): string {
   return getFriendlyErrorMessage(err, 'Не удалось выполнить действие. Попробуйте ещё раз.');
 }
 
+interface PlacedBooking {
+  booking: MeetingBooking;
+  dayIndex: number;
+  startHour: number;
+  span: number;
+  name: string;
+}
+
 export async function renderMeetingsPage(
   api: ApiClient,
   container: HTMLElement,
@@ -75,6 +120,12 @@ export async function renderMeetingsPage(
   const root = container.querySelector('#meetings-root') as HTMLElement;
   const myUserId = params.currentUser.user?.user_id ?? 0;
   const isTrainer = !!params.currentUser.user?.is_trainer;
+
+  // ── Состояние ──
+  let mode: Mode = params.initialTrainerId ? 'client' : (isTrainer ? 'trainer' : 'client');
+  let selectedTrainerId = params.initialTrainerId ?? 0;
+  let weekStart = startOfWeek(new Date());
+  const trainerNames = new Map<number, string>();
 
   const profileCache = new Map<number, string>();
   async function profileName(userId: number): Promise<string> {
@@ -88,22 +139,533 @@ export async function renderMeetingsPage(
     return name;
   }
 
-  async function renderAll(): Promise<void> {
-    root.innerHTML = '';
-    await renderBookSection();
-    await renderMyMeetingsSection();
-    if (isTrainer) {
-      await renderScheduleSection();
-      renderAssignSection();
+  // ── Подписки клиента (список тренеров) ──
+  async function loadTrainers(): Promise<void> {
+    let subscriptions: Subscription[] = [];
+    try {
+      const data = await api.getMySubscriptions();
+      subscriptions = (data.subscriptions || []).filter(s => s.active);
+    } catch { /* ignore */ }
+    for (const sub of subscriptions) {
+      if (!trainerNames.has(sub.trainer_id)) {
+        trainerNames.set(sub.trainer_id, await profileName(sub.trainer_id));
+      }
+    }
+    if (!selectedTrainerId && trainerNames.size > 0) {
+      selectedTrainerId = trainerNames.keys().next().value as number;
     }
   }
 
-  // ── Мои встречи ────────────────────────────────────────────────────────────
-  async function renderMyMeetingsSection(): Promise<void> {
-    const card = document.createElement('div');
-    card.className = 'meetings-card';
-    card.innerHTML = '<h2 class="meetings-card__title">Мои встречи</h2>';
+  // ── Поповер ──
+  let activePopover: HTMLElement | null = null;
+  let popoverCloser: ((e: MouseEvent) => void) | null = null;
+  function closePopover(): void {
+    activePopover?.remove();
+    activePopover = null;
+    if (popoverCloser) {
+      document.removeEventListener('click', popoverCloser);
+      popoverCloser = null;
+    }
+  }
+  function openPopover(anchor: HTMLElement, content: HTMLElement): void {
+    closePopover();
+    const pop = document.createElement('div');
+    pop.className = 'cal-pop';
+    pop.appendChild(content);
+    document.body.appendChild(pop);
+    activePopover = pop;
 
+    const r = anchor.getBoundingClientRect();
+    const pw = pop.offsetWidth;
+    const ph = pop.offsetHeight;
+    let left = r.left;
+    if (left + pw > window.innerWidth - 12) left = window.innerWidth - pw - 12;
+    if (left < 12) left = 12;
+    let top = r.bottom + 6;
+    if (top + ph > window.innerHeight - 12) top = Math.max(12, r.top - ph - 6);
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+
+    popoverCloser = (e: MouseEvent) => {
+      if (activePopover && !activePopover.contains(e.target as Node)) closePopover();
+    };
+    setTimeout(() => document.addEventListener('click', popoverCloser!), 0);
+  }
+
+  function goToChat(userId: number): void {
+    closePopover();
+    const router = (window as unknown as { router?: { navigateTo: (p: string) => void } }).router;
+    router?.navigateTo(`/chat/${userId}`);
+  }
+
+  // ── Каркас страницы ──
+  root.innerHTML = '';
+  const page = document.createElement('div');
+  page.className = 'cal';
+  page.innerHTML = `
+    <div class="cal__banner" id="cal-banner" hidden></div>
+    <div class="cal__toolbar">
+      <div class="cal__toolbar-left" id="cal-toolbar-left"></div>
+      <div class="cal__toolbar-nav">
+        <button class="cal__nav-btn" id="cal-prev" aria-label="Предыдущая неделя">‹</button>
+        <button class="cal__today" id="cal-today">Сегодня</button>
+        <button class="cal__nav-btn" id="cal-next" aria-label="Следующая неделя">›</button>
+        <span class="cal__week-label" id="cal-week-label"></span>
+      </div>
+    </div>
+    <div class="cal__legend" id="cal-legend"></div>
+    <div class="cal__grid-wrap"><div class="cal__grid" id="cal-grid"></div></div>
+    <div class="cal__upcoming" id="cal-upcoming"></div>
+  `;
+  root.appendChild(page);
+
+  const bannerEl = page.querySelector('#cal-banner') as HTMLElement;
+  const toolbarLeft = page.querySelector('#cal-toolbar-left') as HTMLElement;
+  const weekLabelEl = page.querySelector('#cal-week-label') as HTMLElement;
+  const legendEl = page.querySelector('#cal-legend') as HTMLElement;
+  const gridEl = page.querySelector('#cal-grid') as HTMLElement;
+  const upcomingEl = page.querySelector('#cal-upcoming') as HTMLElement;
+
+  let bannerTimer: number | undefined;
+  function showBanner(text: string, kind: 'error' | 'ok' = 'error'): void {
+    bannerEl.textContent = text;
+    bannerEl.className = `cal__banner cal__banner--${kind}`;
+    bannerEl.hidden = false;
+    window.clearTimeout(bannerTimer);
+    bannerTimer = window.setTimeout(() => { bannerEl.hidden = true; }, 5000);
+  }
+
+  (page.querySelector('#cal-prev') as HTMLButtonElement).addEventListener('click', () => {
+    weekStart = addDays(weekStart, -7);
+    void renderWeek();
+  });
+  (page.querySelector('#cal-next') as HTMLButtonElement).addEventListener('click', () => {
+    weekStart = addDays(weekStart, 7);
+    void renderWeek();
+  });
+  (page.querySelector('#cal-today') as HTMLButtonElement).addEventListener('click', () => {
+    weekStart = startOfWeek(new Date());
+    void renderWeek();
+  });
+
+  // ── Тулбар: переключатель режима + выбор тренера ──
+  function renderToolbarLeft(): void {
+    toolbarLeft.innerHTML = '';
+
+    if (isTrainer) {
+      const toggle = document.createElement('div');
+      toggle.className = 'cal__modes';
+      const mk = (m: Mode, label: string): HTMLButtonElement => {
+        const b = document.createElement('button');
+        b.className = `cal__mode${mode === m ? ' cal__mode--active' : ''}`;
+        b.textContent = label;
+        b.addEventListener('click', () => {
+          if (mode === m) return;
+          mode = m;
+          void renderWeek();
+        });
+        return b;
+      };
+      toggle.append(mk('trainer', 'Моё расписание'), mk('client', 'Записаться к тренеру'));
+      toolbarLeft.appendChild(toggle);
+    }
+
+    if (mode === 'client') {
+      const wrap = document.createElement('div');
+      wrap.className = 'cal__trainer-pick';
+      if (trainerNames.size === 0) {
+        wrap.innerHTML = '<span class="cal__muted">Нет активных подписок</span>';
+      } else {
+        const select = document.createElement('select');
+        select.className = 'cal__select';
+        for (const [id, name] of trainerNames) {
+          const opt = document.createElement('option');
+          opt.value = String(id);
+          opt.textContent = name;
+          if (id === selectedTrainerId) opt.selected = true;
+          select.appendChild(opt);
+        }
+        select.addEventListener('change', () => {
+          selectedTrainerId = Number(select.value);
+          void renderWeek();
+        });
+        wrap.appendChild(select);
+      }
+      toolbarLeft.appendChild(wrap);
+    }
+  }
+
+  function renderLegend(): void {
+    legendEl.innerHTML = mode === 'client'
+      ? `<span class="cal__chip cal__chip--free"></span> свободно — клик, чтобы записаться
+         <span class="cal__chip cal__chip--mine"></span> ваша запись`
+      : `<span class="cal__chip cal__chip--open"></span> открыто для записи
+         <span class="cal__chip cal__chip--booked"></span> запись клиента
+         <span class="cal__muted">· клик по пустой ячейке — открыть час</span>`;
+  }
+
+  // ── Загрузка и отрисовка недели ──
+  async function renderWeek(): Promise<void> {
+    closePopover();
+    renderToolbarLeft();
+    renderLegend();
+    weekLabelEl.textContent = weekLabel(weekStart);
+    gridEl.innerHTML = '<div class="cal__loading">Загрузка…</div>';
+
+    const weekEndExclusive = addDays(weekStart, 7).getTime();
+    const inWeek = (ms: number): boolean => ms >= weekStart.getTime() && ms < weekEndExclusive;
+
+    let hourLo = DEFAULT_HOUR_LO;
+    let hourHi = DEFAULT_HOUR_HI;
+    const widen = (h: number): void => { hourLo = Math.min(hourLo, h); hourHi = Math.max(hourHi, h); };
+
+    const free = new Set<number>();                  // client: свободные часы (ms)
+    const slotIds = new Map<number, number>();       // trainer: разовый слот ms -> slot_id
+    const ruleIds = new Map<string, number>();       // trainer: `${utcWeekday}-${utcHour}` -> rule_id
+    let placed: PlacedBooking[] = [];
+
+    if (mode === 'client') {
+      if (!selectedTrainerId) {
+        gridEl.innerHTML = '<div class="cal__loading">Оформите подписку на тренера с опцией «Календарь», чтобы записаться.</div>';
+        await renderUpcoming();
+        return;
+      }
+      let slots: MeetingAvailabilitySlot[] = [];
+      try {
+        const data = await api.getTrainerAvailability(selectedTrainerId, {
+          from: ymd(addDays(weekStart, -1)),
+          to: ymd(addDays(weekStart, 7)),
+        });
+        slots = data.slots || [];
+      } catch (err) {
+        gridEl.innerHTML = `<div class="cal__loading cal__loading--error">${escapeHtml(friendlyError(err))}</div>`;
+        await renderUpcoming();
+        return;
+      }
+      for (const s of slots) {
+        const ms = hourMs(s.starts_at);
+        if (!inWeek(ms)) continue;
+        free.add(ms);
+        widen(new Date(ms).getHours());
+      }
+      placed = await placeBookings(b => b.role === 'client' && b.other_user_id === selectedTrainerId, inWeek, widen);
+    } else {
+      const tzOffsetH = -new Date().getTimezoneOffset() / 60;
+      try {
+        const data = await api.listMyAvailabilityRules();
+        for (const r of data.rules || []) {
+          ruleIds.set(`${r.weekday}-${r.start_hour}`, r.rule_id);
+          widen(((r.start_hour + tzOffsetH) % 24 + 24) % 24);
+        }
+      } catch { /* ignore */ }
+      try {
+        const data = await api.listMyAvailabilitySlots();
+        for (const s of data.slots || []) {
+          const ms = hourMs(s.starts_at);
+          if (!inWeek(ms)) continue;
+          slotIds.set(ms, s.slot_id);
+          widen(new Date(ms).getHours());
+        }
+      } catch { /* ignore */ }
+      placed = await placeBookings(b => b.role === 'trainer', inWeek, widen);
+    }
+
+    hourLo = Math.max(0, hourLo);
+    hourHi = Math.min(23, hourHi);
+    drawGrid(hourLo, hourHi, { free, slotIds, ruleIds, placed });
+    await renderUpcoming();
+  }
+
+  async function placeBookings(
+    pred: (b: MeetingBooking) => boolean,
+    inWeek: (ms: number) => boolean,
+    widen: (h: number) => void
+  ): Promise<PlacedBooking[]> {
+    let bookings: MeetingBooking[] = [];
+    try {
+      const data = await api.listMyMeetings();
+      bookings = (data.bookings || []).filter(b => b.status === 'confirmed' && pred(b));
+    } catch { /* ignore */ }
+
+    const result: PlacedBooking[] = [];
+    for (const b of bookings) {
+      const start = new Date(b.starts_at);
+      const ms = startOfDay(start).getTime();
+      if (!inWeek(new Date(b.starts_at).getTime())) continue;
+      const dayIndex = Math.round((ms - weekStart.getTime()) / 86400000);
+      if (dayIndex < 0 || dayIndex > 6) continue;
+      const startHour = start.getHours();
+      const span = Math.max(1, Math.round((new Date(b.ends_at).getTime() - start.getTime()) / 3600000));
+      widen(startHour);
+      widen(startHour + span - 1);
+      result.push({ booking: b, dayIndex, startHour, span, name: await profileName(b.other_user_id) });
+    }
+    return result;
+  }
+
+  function drawGrid(
+    hourLo: number,
+    hourHi: number,
+    data: { free: Set<number>; slotIds: Map<number, number>; ruleIds: Map<string, number>; placed: PlacedBooking[] }
+  ): void {
+    gridEl.innerHTML = '';
+    const rows = hourHi - hourLo + 1;
+    gridEl.style.gridTemplateColumns = '56px repeat(7, minmax(0, 1fr))';
+    gridEl.style.gridTemplateRows = `40px repeat(${rows}, 46px)`;
+
+    // Угол + заголовки дней
+    const corner = document.createElement('div');
+    corner.className = 'cal__corner';
+    corner.style.gridColumn = '1';
+    corner.style.gridRow = '1';
+    gridEl.appendChild(corner);
+
+    const today = new Date();
+    for (let d = 0; d < 7; d++) {
+      const dayDate = addDays(weekStart, d);
+      const head = document.createElement('div');
+      head.className = `cal__dayhead${sameDay(dayDate, today) ? ' cal__dayhead--today' : ''}`;
+      head.style.gridColumn = String(d + 2);
+      head.style.gridRow = '1';
+      head.innerHTML = `<span class="cal__dayhead-wd">${WEEKDAYS_SHORT[d]}</span><span class="cal__dayhead-num">${dayDate.getDate()}</span>`;
+      gridEl.appendChild(head);
+    }
+
+    // Часовые метки
+    for (let h = hourLo; h <= hourHi; h++) {
+      const label = document.createElement('div');
+      label.className = 'cal__hourlabel';
+      label.style.gridColumn = '1';
+      label.style.gridRow = String(h - hourLo + 2);
+      label.textContent = `${pad(h)}:00`;
+      gridEl.appendChild(label);
+    }
+
+    const occupied = new Set<string>();
+    for (const p of data.placed) {
+      for (let k = 0; k < p.span; k++) occupied.add(`${p.dayIndex}-${p.startHour + k}`);
+    }
+
+    // Ячейки
+    for (let d = 0; d < 7; d++) {
+      const dayDate = addDays(weekStart, d);
+      for (let h = hourLo; h <= hourHi; h++) {
+        if (occupied.has(`${d}-${h}`)) continue;
+        const cellDate = new Date(dayDate);
+        cellDate.setHours(h, 0, 0, 0);
+        const cell = document.createElement('div');
+        cell.className = 'cal__cell';
+        cell.style.gridColumn = String(d + 2);
+        cell.style.gridRow = String(h - hourLo + 2);
+        const ms = cellDate.getTime();
+        const isPast = ms < Date.now();
+
+        if (mode === 'client') {
+          if (data.free.has(ms) && !isPast) {
+            cell.classList.add('cal__cell--free');
+            cell.addEventListener('click', (e) => { e.stopPropagation(); onBookCell(cell, cellDate); });
+          }
+        } else {
+          const ruleId = data.ruleIds.get(`${cellDate.getUTCDay()}-${cellDate.getUTCHours()}`);
+          const slotId = data.slotIds.get(ms);
+          if (ruleId !== undefined || slotId !== undefined) {
+            cell.classList.add('cal__cell--open');
+            cell.addEventListener('click', (e) => { e.stopPropagation(); onOpenCell(cell, cellDate, ruleId, slotId); });
+          } else if (!isPast) {
+            cell.classList.add('cal__cell--addable');
+            cell.addEventListener('click', (e) => { e.stopPropagation(); onEmptyCell(cell, cellDate); });
+          }
+        }
+        gridEl.appendChild(cell);
+      }
+    }
+
+    // Блоки встреч поверх сетки
+    for (const p of data.placed) {
+      if (p.startHour + p.span - 1 < hourLo || p.startHour > hourHi) continue;
+      const top = Math.max(p.startHour, hourLo);
+      const bottom = Math.min(p.startHour + p.span - 1, hourHi);
+      const block = document.createElement('button');
+      block.className = `cal__event${mode === 'client' ? ' cal__event--mine' : ' cal__event--booked'}`;
+      block.style.gridColumn = String(p.dayIndex + 2);
+      block.style.gridRow = `${top - hourLo + 2} / ${bottom - hourLo + 3}`;
+      const time = `${pad(new Date(p.booking.starts_at).getHours())}:00`;
+      block.innerHTML = `<span class="cal__event-time">${time}</span><span class="cal__event-name">${escapeHtml(p.name)}</span>`;
+      block.addEventListener('click', (e) => { e.stopPropagation(); onEventClick(block, p); });
+      gridEl.appendChild(block);
+    }
+  }
+
+  // ── Интеракции: клиент ──
+  function onBookCell(anchor: HTMLElement, cellDate: Date): void {
+    const content = document.createElement('div');
+    content.className = 'cal-pop__body';
+    content.innerHTML = `
+      <div class="cal-pop__title">Записаться на занятие</div>
+      <div class="cal-pop__line">${escapeHtml(fullDayLabel(cellDate))}, ${pad(cellDate.getHours())}:00 — ${pad(cellDate.getHours() + 1)}:00</div>
+    `;
+    const btn = document.createElement('button');
+    btn.className = 'cal-pop__btn';
+    btn.textContent = 'Записаться';
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        await api.bookMeeting(selectedTrainerId, cellDate.toISOString());
+        closePopover();
+        showBanner('Вы записаны. Договоритесь о деталях в чате.', 'ok');
+        await renderWeek();
+      } catch (err) {
+        btn.disabled = false;
+        showBanner(friendlyError(err));
+      }
+    });
+    content.appendChild(btn);
+    openPopover(anchor, content);
+  }
+
+  // ── Интеракции: тренер ──
+  function onEmptyCell(anchor: HTMLElement, cellDate: Date): void {
+    const content = document.createElement('div');
+    content.className = 'cal-pop__body';
+    content.innerHTML = `
+      <div class="cal-pop__title">${escapeHtml(fullDayLabel(cellDate))}, ${pad(cellDate.getHours())}:00</div>
+      <div class="cal-pop__label">Открыть час для записи</div>
+    `;
+
+    const row = document.createElement('div');
+    row.className = 'cal-pop__row';
+    const onceBtn = document.createElement('button');
+    onceBtn.className = 'cal-pop__btn cal-pop__btn--soft';
+    onceBtn.textContent = 'Только в этот день';
+    onceBtn.addEventListener('click', () => void doCreate(() => api.createAvailabilitySlot(cellDate.toISOString())));
+    const weeklyBtn = document.createElement('button');
+    weeklyBtn.className = 'cal-pop__btn cal-pop__btn--soft';
+    weeklyBtn.textContent = 'Каждую неделю';
+    weeklyBtn.addEventListener('click', () => void doCreate(() => api.createAvailabilityRule(cellDate.getUTCDay(), cellDate.getUTCHours())));
+    row.append(onceBtn, weeklyBtn);
+    content.appendChild(row);
+
+    async function doCreate(fn: () => Promise<unknown>): Promise<void> {
+      try {
+        await fn();
+        closePopover();
+        await renderWeek();
+      } catch (err) {
+        showBanner(friendlyError(err));
+      }
+    }
+
+    // Назначить занятие конкретному клиенту
+    const divider = document.createElement('div');
+    divider.className = 'cal-pop__divider';
+    content.appendChild(divider);
+
+    const assignLabel = document.createElement('div');
+    assignLabel.className = 'cal-pop__label';
+    assignLabel.textContent = 'Назначить занятие клиенту';
+    content.appendChild(assignLabel);
+
+    const assignForm = document.createElement('div');
+    assignForm.className = 'cal-pop__form';
+    assignForm.innerHTML = `
+      <input class="cal-pop__input" id="cal-assign-client" type="number" min="1" placeholder="ID клиента">
+      <select class="cal-pop__input" id="cal-assign-duration">
+        ${Array.from({ length: 8 }, (_, i) => `<option value="${i + 1}">${i + 1} ч</option>`).join('')}
+      </select>
+      <input class="cal-pop__input" id="cal-assign-note" type="text" maxlength="1000" placeholder="Заметка (необязательно)">
+    `;
+    const assignBtn = document.createElement('button');
+    assignBtn.className = 'cal-pop__btn';
+    assignBtn.textContent = 'Назначить';
+    assignBtn.addEventListener('click', async () => {
+      const clientId = Number((assignForm.querySelector('#cal-assign-client') as HTMLInputElement).value);
+      const duration = Number((assignForm.querySelector('#cal-assign-duration') as HTMLSelectElement).value);
+      const note = (assignForm.querySelector('#cal-assign-note') as HTMLInputElement).value.trim();
+      if (!clientId) { showBanner('Укажите ID клиента'); return; }
+      if (clientId === myUserId) { showBanner('Нельзя назначить занятие самому себе'); return; }
+      assignBtn.disabled = true;
+      try {
+        await api.assignMeeting({ client_user_id: clientId, starts_at: cellDate.toISOString(), duration_hours: duration, note: note || undefined });
+        closePopover();
+        await renderWeek();
+      } catch (err) {
+        assignBtn.disabled = false;
+        showBanner(friendlyError(err));
+      }
+    });
+    assignForm.appendChild(assignBtn);
+    content.appendChild(assignForm);
+
+    openPopover(anchor, content);
+  }
+
+  function onOpenCell(anchor: HTMLElement, cellDate: Date, ruleId?: number, slotId?: number): void {
+    const content = document.createElement('div');
+    content.className = 'cal-pop__body';
+    const recurring = ruleId !== undefined && slotId === undefined;
+    content.innerHTML = `
+      <div class="cal-pop__title">${escapeHtml(fullDayLabel(cellDate))}, ${pad(cellDate.getHours())}:00</div>
+      <div class="cal-pop__line">${recurring ? 'Открыто каждую неделю' : 'Открыто в этот день'}</div>
+    `;
+    const btn = document.createElement('button');
+    btn.className = 'cal-pop__btn cal-pop__btn--danger';
+    btn.textContent = recurring ? 'Убрать (каждую неделю)' : 'Убрать слот';
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        if (slotId !== undefined) await api.deleteAvailabilitySlot(slotId);
+        else if (ruleId !== undefined) await api.deleteAvailabilityRule(ruleId);
+        closePopover();
+        await renderWeek();
+      } catch (err) {
+        btn.disabled = false;
+        showBanner(friendlyError(err));
+      }
+    });
+    content.appendChild(btn);
+    openPopover(anchor, content);
+  }
+
+  // ── Интеракции: клик по встрече ──
+  function onEventClick(anchor: HTMLElement, p: PlacedBooking): void {
+    const b = p.booking;
+    const start = new Date(b.starts_at);
+    const end = new Date(b.ends_at);
+    const content = document.createElement('div');
+    content.className = 'cal-pop__body';
+    content.innerHTML = `
+      <div class="cal-pop__title">${escapeHtml(p.name)}</div>
+      <div class="cal-pop__line">${escapeHtml(fullDayLabel(start))}, ${pad(start.getHours())}:00 — ${pad(end.getHours())}:00</div>
+      <div class="cal-pop__line">${mode === 'client' ? 'Вы записаны как клиент' : 'Запись вашего клиента'}</div>
+      ${b.note ? `<div class="cal-pop__note">${escapeHtml(b.note)}</div>` : ''}
+    `;
+    const row = document.createElement('div');
+    row.className = 'cal-pop__row';
+    const chatBtn = document.createElement('button');
+    chatBtn.className = 'cal-pop__btn cal-pop__btn--soft';
+    chatBtn.textContent = 'Написать в чате';
+    chatBtn.addEventListener('click', () => goToChat(b.other_user_id));
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'cal-pop__btn cal-pop__btn--danger';
+    cancelBtn.textContent = 'Отменить';
+    cancelBtn.addEventListener('click', async () => {
+      cancelBtn.disabled = true;
+      try {
+        await api.cancelMeeting(b.booking_id);
+        closePopover();
+        await renderWeek();
+      } catch (err) {
+        cancelBtn.disabled = false;
+        showBanner(friendlyError(err));
+      }
+    });
+    row.append(chatBtn, cancelBtn);
+    content.appendChild(row);
+    openPopover(anchor, content);
+  }
+
+  // ── Список ближайших встреч ──
+  async function renderUpcoming(): Promise<void> {
     let bookings: MeetingBooking[] = [];
     try {
       const data = await api.listMyMeetings();
@@ -113,407 +675,37 @@ export async function renderMeetingsPage(
     const now = Date.now();
     const upcoming = bookings
       .filter(b => b.status === 'confirmed' && new Date(b.starts_at).getTime() > now)
-      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
-    const past = bookings
-      .filter(b => !(b.status === 'confirmed' && new Date(b.starts_at).getTime() > now))
-      .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
+      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
+      .slice(0, 6);
 
-    if (bookings.length === 0) {
-      card.insertAdjacentHTML('beforeend', '<p class="meetings-empty">Пока нет встреч.</p>');
-      root.appendChild(card);
+    upcomingEl.innerHTML = '<h2 class="cal__upcoming-title">Ближайшие встречи</h2>';
+    if (upcoming.length === 0) {
+      upcomingEl.insertAdjacentHTML('beforeend', '<p class="cal__muted">Запланированных встреч пока нет.</p>');
       return;
     }
-
     const list = document.createElement('div');
-    list.className = 'meetings-list';
-    card.appendChild(list);
-
-    for (const booking of [...upcoming, ...past]) {
-      const isUpcoming = booking.status === 'confirmed' && new Date(booking.starts_at).getTime() > now;
-      const counterpart = await profileName(booking.other_user_id);
-      const roleBadge = booking.role === 'trainer'
-        ? '<span class="meeting-badge meeting-badge--trainer">Вы тренер</span>'
-        : '<span class="meeting-badge meeting-badge--client">Вы клиент</span>';
-      const cancelledBadge = booking.status === 'cancelled'
-        ? '<span class="meeting-badge meeting-badge--cancelled">Отменено</span>' : '';
-
-      const item = document.createElement('div');
-      item.className = `meeting-item${isUpcoming ? '' : ' meeting-item--past'}`;
+    list.className = 'cal__upcoming-list';
+    for (const b of upcoming) {
+      const start = new Date(b.starts_at);
+      const name = await profileName(b.other_user_id);
+      const roleBadge = b.role === 'trainer'
+        ? '<span class="cal__badge cal__badge--trainer">Вы тренер</span>'
+        : '<span class="cal__badge cal__badge--client">Вы клиент</span>';
+      const item = document.createElement('button');
+      item.className = 'cal__upcoming-item';
       item.innerHTML = `
-        <div class="meeting-item__main">
-          <span class="meeting-item__when">${formatDateTime(booking.starts_at)} · ${formatTimeRange(booking.starts_at, booking.ends_at)}</span>
-          <span class="meeting-item__who">${escapeHtml(counterpart)}${roleBadge}${cancelledBadge}</span>
-          ${booking.note ? `<span class="meeting-item__note">${escapeHtml(booking.note)}</span>` : ''}
-        </div>
+        <span class="cal__upcoming-when">${escapeHtml(fullDayLabel(start))}, ${pad(start.getHours())}:00</span>
+        <span class="cal__upcoming-who">${escapeHtml(name)} ${roleBadge}</span>
       `;
-
-      if (isUpcoming) {
-        const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'meetings-btn meetings-btn--ghost';
-        cancelBtn.textContent = 'Отменить';
-        cancelBtn.addEventListener('click', async () => {
-          cancelBtn.disabled = true;
-          try {
-            await api.cancelMeeting(booking.booking_id);
-            await renderAll();
-          } catch (err) {
-            cancelBtn.disabled = false;
-            showError(card, friendlyError(err));
-          }
-        });
-        item.appendChild(cancelBtn);
-      }
+      item.addEventListener('click', () => {
+        weekStart = startOfWeek(start);
+        void renderWeek();
+      });
       list.appendChild(item);
     }
-
-    root.appendChild(card);
+    upcomingEl.appendChild(list);
   }
 
-  // ── Записаться к тренеру ────────────────────────────────────────────────────
-  async function renderBookSection(): Promise<void> {
-    const card = document.createElement('div');
-    card.className = 'meetings-card';
-    card.innerHTML = `
-      <h2 class="meetings-card__title">Записаться к тренеру</h2>
-      <p class="meetings-card__hint">Доступно по подписке с опцией «Календарь». Запись — на 1 час.</p>
-    `;
-
-    let subscriptions: Subscription[] = [];
-    try {
-      const data = await api.getMySubscriptions();
-      subscriptions = (data.subscriptions || []).filter(s => s.active);
-    } catch { /* ignore */ }
-
-    const trainers = new Map<number, string>();
-    for (const sub of subscriptions) {
-      if (!trainers.has(sub.trainer_id)) {
-        trainers.set(sub.trainer_id, await profileName(sub.trainer_id));
-      }
-    }
-
-    if (trainers.size === 0) {
-      card.insertAdjacentHTML('beforeend', '<p class="meetings-empty">Нет активных подписок. Оформите подписку на тренера, чтобы записаться.</p>');
-      root.appendChild(card);
-      return;
-    }
-
-    const options = Array.from(trainers.entries())
-      .map(([id, name]) => `<option value="${id}"${id === params.initialTrainerId ? ' selected' : ''}>${escapeHtml(name)}</option>`)
-      .join('');
-
-    const form = document.createElement('div');
-    form.className = 'meetings-form';
-    form.innerHTML = `
-      <div class="meetings-field">
-        <label>Тренер</label>
-        <select id="book-trainer">${options}</select>
-      </div>
-    `;
-    card.appendChild(form);
-
-    const body = document.createElement('div');
-    body.className = 'booking';
-    const calPane = document.createElement('div');
-    calPane.className = 'booking__cal';
-    const slotPane = document.createElement('div');
-    slotPane.className = 'booking__slots';
-    body.append(calPane, slotPane);
-    card.appendChild(body);
-
-    const select = form.querySelector('#book-trainer') as HTMLSelectElement;
-
-    function renderDayPane(trainerId: number, byDay: Map<string, MeetingAvailabilitySlot[]>, key: string): void {
-      const daySlots = byDay.get(key) ?? [];
-      slotPane.innerHTML = '';
-      if (daySlots.length === 0) {
-        slotPane.innerHTML = '<p class="meetings-empty">Выберите день со свободными слотами.</p>';
-        return;
-      }
-      const title = document.createElement('div');
-      title.className = 'booking__day-title';
-      title.textContent = dayLabel(daySlots[0].starts_at);
-      slotPane.appendChild(title);
-
-      const grid = document.createElement('div');
-      grid.className = 'slot-grid';
-      for (const slot of daySlots) {
-        const chip = document.createElement('button');
-        chip.className = 'slot-chip';
-        chip.textContent = formatTimeRange(slot.starts_at, slot.ends_at);
-        chip.addEventListener('click', async () => {
-          chip.disabled = true;
-          try {
-            await api.bookMeeting(trainerId, slot.starts_at);
-            await renderAll();
-          } catch (err) {
-            chip.disabled = false;
-            showError(card, friendlyError(err));
-          }
-        });
-        grid.appendChild(chip);
-      }
-      slotPane.appendChild(grid);
-    }
-
-    async function loadSlots(): Promise<void> {
-      const trainerId = Number(select.value);
-      if (!trainerId) return;
-      calPane.innerHTML = '';
-      slotPane.innerHTML = '<p class="meetings-empty">Загрузка…</p>';
-
-      const from = new Date();
-      const to = new Date();
-      to.setDate(to.getDate() + 14);
-      const fmt = (d: Date) => d.toISOString().slice(0, 10);
-
-      let slots: MeetingAvailabilitySlot[] = [];
-      try {
-        const data = await api.getTrainerAvailability(trainerId, { from: fmt(from), to: fmt(to) });
-        slots = data.slots || [];
-      } catch (err) {
-        slotPane.innerHTML = `<div class="meetings-error">${friendlyError(err)}</div>`;
-        return;
-      }
-
-      const byDay = new Map<string, MeetingAvailabilitySlot[]>();
-      for (const slot of slots) {
-        const key = dayKey(new Date(slot.starts_at));
-        if (!byDay.has(key)) byDay.set(key, []);
-        byDay.get(key)!.push(slot);
-      }
-
-      if (byDay.size === 0) {
-        calPane.innerHTML = '';
-        slotPane.innerHTML = '<p class="meetings-empty">У тренера нет свободных слотов на ближайшие две недели.</p>';
-        return;
-      }
-
-      const enabled = new Set(byDay.keys());
-      const firstDate = new Date(slots[0].starts_at);
-
-      const calendar = createCalendar({
-        initialMonth: firstDate,
-        selected: firstDate,
-        minDate: from,
-        maxDate: to,
-        enabledDates: enabled,
-        markedDates: enabled,
-        onSelect: (date) => renderDayPane(trainerId, byDay, dayKey(date)),
-      });
-      calPane.appendChild(calendar.el);
-      renderDayPane(trainerId, byDay, dayKey(firstDate));
-    }
-
-    select.addEventListener('change', () => void loadSlots());
-    root.appendChild(card);
-
-    await loadSlots();
-  }
-
-  // ── Моё расписание (тренер) ─────────────────────────────────────────────────
-  async function renderScheduleSection(): Promise<void> {
-    const card = document.createElement('div');
-    card.className = 'meetings-card';
-    card.innerHTML = `
-      <h2 class="meetings-card__title">Моё расписание</h2>
-      <p class="meetings-card__hint">Повторяющиеся слоты задаются по дню недели и часу (UTC). Можно также открыть разовый слот на конкретную дату.</p>
-    `;
-
-    let rules: MeetingAvailabilityRule[] = [];
-    try {
-      const data = await api.listMyAvailabilityRules();
-      rules = data.rules || [];
-    } catch { /* ignore */ }
-
-    const tags = document.createElement('div');
-    tags.className = 'rule-tags';
-    if (rules.length === 0) {
-      tags.innerHTML = '<span class="meetings-empty">Повторяющихся слотов нет.</span>';
-    } else {
-      for (const rule of rules) {
-        const tag = document.createElement('span');
-        tag.className = 'rule-tag';
-        tag.innerHTML = `<span>${WEEKDAYS[rule.weekday]}, ${String(rule.start_hour).padStart(2, '0')}:00 UTC</span>`;
-        const del = document.createElement('button');
-        del.textContent = '×';
-        del.title = 'Удалить';
-        del.addEventListener('click', async () => {
-          try {
-            await api.deleteAvailabilityRule(rule.rule_id);
-            await renderAll();
-          } catch (err) {
-            showError(card, friendlyError(err));
-          }
-        });
-        tag.appendChild(del);
-        tags.appendChild(tag);
-      }
-    }
-    card.appendChild(tags);
-
-    const weekdayOptions = WEEKDAYS.map((name, index) => `<option value="${index}">${name}</option>`).join('');
-    const hourOptions = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${String(h).padStart(2, '0')}:00</option>`).join('');
-
-    const ruleForm = document.createElement('div');
-    ruleForm.className = 'meetings-form';
-    ruleForm.innerHTML = `
-      <div class="meetings-field">
-        <label>День недели</label>
-        <select id="rule-weekday">${weekdayOptions}</select>
-      </div>
-      <div class="meetings-field">
-        <label>Час (UTC)</label>
-        <select id="rule-hour">${hourOptions}</select>
-      </div>
-      <button class="meetings-btn" id="rule-add">Добавить слот</button>
-    `;
-    card.appendChild(ruleForm);
-
-    (ruleForm.querySelector('#rule-add') as HTMLButtonElement).addEventListener('click', async () => {
-      const weekday = Number((ruleForm.querySelector('#rule-weekday') as HTMLSelectElement).value);
-      const hour = Number((ruleForm.querySelector('#rule-hour') as HTMLSelectElement).value);
-      try {
-        await api.createAvailabilityRule(weekday, hour);
-        await renderAll();
-      } catch (err) {
-        showError(card, friendlyError(err));
-      }
-    });
-
-    let oneOffSlots: MeetingSlot[] = [];
-    try {
-      const data = await api.listMyAvailabilitySlots();
-      oneOffSlots = data.slots || [];
-    } catch { /* ignore */ }
-
-    const slotTags = document.createElement('div');
-    slotTags.className = 'rule-tags';
-    slotTags.style.marginTop = '14px';
-    if (oneOffSlots.length === 0) {
-      slotTags.innerHTML = '<span class="meetings-empty">Разовых слотов нет.</span>';
-    } else {
-      for (const slot of oneOffSlots) {
-        const tag = document.createElement('span');
-        tag.className = 'rule-tag';
-        tag.innerHTML = `<span>${formatDateTime(slot.starts_at)}</span>`;
-        const del = document.createElement('button');
-        del.textContent = '×';
-        del.title = 'Удалить';
-        del.addEventListener('click', async () => {
-          try {
-            await api.deleteAvailabilitySlot(slot.slot_id);
-            await renderAll();
-          } catch (err) {
-            showError(card, friendlyError(err));
-          }
-        });
-        tag.appendChild(del);
-        slotTags.appendChild(tag);
-      }
-    }
-    card.appendChild(slotTags);
-
-    const slotForm = document.createElement('div');
-    slotForm.className = 'meetings-form';
-    slotForm.style.marginTop = '12px';
-    card.appendChild(slotForm);
-
-    const slotPicker = createDateTimePicker({
-      label: 'Разовый слот (дата и час)',
-      placeholder: 'Выберите дату слота',
-      minDate: new Date(),
-    });
-    const slotAddBtn = document.createElement('button');
-    slotAddBtn.className = 'meetings-btn';
-    slotAddBtn.textContent = 'Открыть слот';
-    slotForm.append(slotPicker.el, slotAddBtn);
-
-    slotAddBtn.addEventListener('click', async () => {
-      const iso = alignedISOFromDate(slotPicker.getValue());
-      if (!iso) {
-        showError(card, 'Укажите дату и время слота');
-        return;
-      }
-      try {
-        await api.createAvailabilitySlot(iso);
-        await renderAll();
-      } catch (err) {
-        showError(card, friendlyError(err));
-      }
-    });
-
-    root.appendChild(card);
-  }
-
-  // ── Назначить занятие (тренер) ──────────────────────────────────────────────
-  function renderAssignSection(): void {
-    const card = document.createElement('div');
-    card.className = 'meetings-card';
-    card.innerHTML = `
-      <h2 class="meetings-card__title">Назначить занятие клиенту</h2>
-      <p class="meetings-card__hint">Клиент должен иметь активную подписку с опцией «Календарь». Длительность — до 8 часов.</p>
-    `;
-
-    const durationOptions = Array.from({ length: 8 }, (_, i) => `<option value="${i + 1}">${i + 1} ч</option>`).join('');
-    const form = document.createElement('div');
-    form.className = 'meetings-form';
-    form.innerHTML = `
-      <div class="meetings-field">
-        <label>ID клиента</label>
-        <input type="number" id="assign-client" min="1" placeholder="напр. 42">
-      </div>
-      <div class="meetings-field" id="assign-datetime-slot"></div>
-      <div class="meetings-field">
-        <label>Длительность</label>
-        <select id="assign-duration">${durationOptions}</select>
-      </div>
-      <div class="meetings-field">
-        <label>Заметка (необязательно)</label>
-        <input type="text" id="assign-note" maxlength="1000" placeholder="комментарий">
-      </div>
-      <button class="meetings-btn" id="assign-submit">Назначить</button>
-    `;
-    card.appendChild(form);
-
-    const assignPicker = createDateTimePicker({
-      label: 'Дата и час',
-      placeholder: 'Выберите дату и время',
-      minDate: new Date(),
-    });
-    (form.querySelector('#assign-datetime-slot') as HTMLElement).replaceWith(assignPicker.el);
-
-    (form.querySelector('#assign-submit') as HTMLButtonElement).addEventListener('click', async () => {
-      const clientId = Number((form.querySelector('#assign-client') as HTMLInputElement).value);
-      const iso = alignedISOFromDate(assignPicker.getValue());
-      const duration = Number((form.querySelector('#assign-duration') as HTMLSelectElement).value);
-      const note = (form.querySelector('#assign-note') as HTMLInputElement).value.trim();
-      if (!clientId || !iso) {
-        showError(card, 'Укажите ID клиента и дату/время');
-        return;
-      }
-      if (clientId === myUserId) {
-        showError(card, 'Нельзя назначить занятие самому себе');
-        return;
-      }
-      try {
-        await api.assignMeeting({ client_user_id: clientId, starts_at: iso, duration_hours: duration, note: note || undefined });
-        await renderAll();
-      } catch (err) {
-        showError(card, friendlyError(err));
-      }
-    });
-
-    root.appendChild(card);
-  }
-
-  function showError(card: HTMLElement, text: string): void {
-    card.querySelector('.meetings-error')?.remove();
-    const banner = document.createElement('div');
-    banner.className = 'meetings-error';
-    banner.textContent = text;
-    card.appendChild(banner);
-    setTimeout(() => banner.remove(), 5000);
-  }
-
-  await renderAll();
+  await loadTrainers();
+  await renderWeek();
 }
