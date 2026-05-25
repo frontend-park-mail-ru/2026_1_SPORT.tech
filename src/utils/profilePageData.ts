@@ -46,6 +46,9 @@ interface MapProfileDataResult {
     avatar: string | null;
     isOwnProfile: boolean;
     isTrainer: boolean;
+    username: string;
+    bio: string | null;
+    careerSinceDate: string | null;
   };
   currentUser: {
     id: number;
@@ -76,7 +79,10 @@ export function mapProfileData(
       role: getUserRoleLabel(apiData.is_trainer),
       avatar: apiData.avatar_url,
       isOwnProfile,
-      isTrainer: Boolean(apiData.is_trainer)
+      isTrainer: Boolean(apiData.is_trainer),
+      username: apiData.username,
+      bio: apiData.bio ?? null,
+      careerSinceDate: apiData.trainer_details?.career_since_date ?? null
     },
     currentUser: currentUserData ? {
       id: currentUserData.user_id,

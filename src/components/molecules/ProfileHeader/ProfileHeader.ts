@@ -14,10 +14,40 @@ export interface ProfileHeaderConfig {
   isTrainer?: boolean;
   api: ApiClient;
   viewedUserId?: number;
+  username?: string;
+  bio?: string | null;
+  careerSinceDate?: string | null;
   onEdit?: (() => void) | null;
   showDonate?: boolean;
   onDonate?: (() => void) | null;
   onSubscribed?: (() => Promise<void>) | null;
+}
+
+// Русская плюрализация: выбирает форму слова в зависимости от числа.
+function pluralize(n: number, one: string, few: string, many: string): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 14) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
+  return many;
+}
+
+function getExperienceYears(careerSinceDate: string): number {
+  const careerDate = new Date(careerSinceDate);
+  if (Number.isNaN(careerDate.getTime())) return 0;
+  const today = new Date();
+  let years = today.getFullYear() - careerDate.getFullYear();
+  const monthDiff = today.getMonth() - careerDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < careerDate.getDate())) {
+    years--;
+  }
+  return years < 0 ? 0 : years;
+}
+
+interface MetaItem {
+  text: string;
+  onClick?: () => void;
 }
 
 export async function renderProfileHeader(
@@ -26,43 +56,132 @@ export async function renderProfileHeader(
 ): Promise<HTMLElement> {
   const {
     name, role, avatar = null, isOwnProfile = false, isTrainer = false, api,
-    viewedUserId, showDonate = false, onDonate = null,
-    onSubscribed = null
+    viewedUserId, username = '', bio = null, careerSinceDate = null,
+    showDonate = false, onDonate = null, onSubscribed = null
   } = config;
 
   const template = (window as any).Handlebars.templates['ProfileHeader.hbs'];
   const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
   const id = 'header-' + Date.now();
 
-  const showStats = isOwnProfile && isTrainer;
-  const html = template({ name, role, avatar, initials, id, isOwnProfile, showStats });
+  const html = template({ name, role, avatar, initials, id, isOwnProfile, bio });
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild as HTMLElement;
-  const donateContainer = element.querySelector(`#profile-donate-${id}`) as HTMLElement | null;
-  const actionsContainer = element.querySelector(`#profile-actions-${id}`) as HTMLElement | null;
 
-  // Пожертвовать
+  const subscribeContainer = element.querySelector(`#profile-subscribe-${id}`) as HTMLElement | null;
+  const donateContainer = element.querySelector(`#profile-donate-${id}`) as HTMLElement | null;
+  const editContainer = element.querySelector(`#profile-edit-${id}`) as HTMLElement | null;
+  const secondaryContainer = element.querySelector(`#profile-secondary-${id}`) as HTMLElement | null;
+  const metaContainer = element.querySelector(`#profile-meta-${id}`) as HTMLElement | null;
+  const actionsRow = element.querySelector('.profile-header__actions') as HTMLElement | null;
+
+  // ---- Строка метаданных (@handle · публикации · стаж · подписчики) ----
+  const metaParts: { handle?: MetaItem; posts?: MetaItem; experience?: MetaItem; subscribers?: MetaItem } = {};
+
+  const renderMeta = (): void => {
+    if (!metaContainer) return;
+    metaContainer.innerHTML = '';
+    const items: MetaItem[] = [
+      metaParts.handle, metaParts.posts, metaParts.experience, metaParts.subscribers
+    ].filter((item): item is MetaItem => Boolean(item));
+
+    items.forEach((item, index) => {
+      if (index > 0) {
+        const dot = document.createElement('span');
+        dot.className = 'profile-header__meta-dot';
+        dot.textContent = '·';
+        metaContainer.appendChild(dot);
+      }
+      if (item.onClick) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'profile-header__meta-item profile-header__meta-item--btn';
+        button.textContent = item.text;
+        button.addEventListener('click', item.onClick);
+        metaContainer.appendChild(button);
+      } else {
+        const span = document.createElement('span');
+        span.className = 'profile-header__meta-item';
+        span.textContent = item.text;
+        metaContainer.appendChild(span);
+      }
+    });
+  };
+
+  if (username) metaParts.handle = { text: `@${username}` };
+
+  if (isTrainer && careerSinceDate) {
+    const years = getExperienceYears(careerSinceDate);
+    if (years > 0) {
+      metaParts.experience = { text: `${years} ${pluralize(years, 'год', 'года', 'лет')} стажа` };
+    }
+  }
+
+  renderMeta();
+
+  // Количество публикаций — у тренеров (клиенты не публикуют посты).
+  if (isTrainer && viewedUserId) {
+    void api.getUserPosts(viewedUserId)
+      .then(resp => {
+        const count = Array.isArray(resp?.posts) ? resp.posts.length : 0;
+        metaParts.posts = { text: `${count} ${pluralize(count, 'публикация', 'публикации', 'публикаций')}` };
+        renderMeta();
+      })
+      .catch(() => { /* счётчик необязателен */ });
+  }
+
+  // Подписчики — только в собственном профиле тренера; клик открывает модалку.
+  if (isOwnProfile && isTrainer) {
+    void api.getMySubscribers()
+      .then(resp => {
+        const count = Array.isArray(resp?.subscribers) ? resp.subscribers.length : 0;
+        metaParts.subscribers = {
+          text: `${count} ${pluralize(count, 'подписчик', 'подписчика', 'подписчиков')}`,
+          onClick: async () => {
+            const { openSubscribersModal } = await import('../SubscribersModal/SubscribersModal');
+            await openSubscribersModal({ api });
+          }
+        };
+        renderMeta();
+      })
+      .catch(() => { /* счётчик необязателен */ });
+  }
+
+  // ---- Описание (bio) со сворачиванием ----
+  const bioText = element.querySelector(`#profile-bio-text-${id}`) as HTMLElement | null;
+  const bioToggle = element.querySelector(`#profile-bio-toggle-${id}`) as HTMLButtonElement | null;
+  const setupBioToggle = (): void => {
+    if (!bioText || !bioToggle) return;
+    // Кнопка «ещё» нужна только если текст реально не помещается в свёрнутом виде.
+    if (bioText.scrollHeight - bioText.clientHeight > 2) {
+      bioToggle.hidden = false;
+      bioToggle.addEventListener('click', () => {
+        const expanded = bioText.classList.toggle('profile-header__bio-text--expanded');
+        bioToggle.textContent = expanded ? 'свернуть' : 'ещё';
+      });
+    }
+  };
+
+  // ---- Пожертвовать ----
   if (!isOwnProfile && showDonate && donateContainer && onDonate) {
     await renderButton(donateContainer, {
       text: 'Пожертвовать',
-      variant: 'primary-orange',
+      variant: 'secondary-blue',
       state: 'normal',
       size: 'medium',
       onClick: onDonate
     });
   }
 
-  // Подписка / изменение подписки + кнопка чата
-  if (!isOwnProfile && showDonate && actionsContainer) {
+  // ---- Подписка / изменение подписки + кнопки чата и записи ----
+  if (!isOwnProfile && showDonate && subscribeContainer) {
     let subscriptionButton: ButtonAPI | null = null;
-    // Контейнер для дополнительных действий по активной подписке.
     const subscriptionActionsContainer = document.createElement('div');
     subscriptionActionsContainer.className = 'profile-header__subscription-actions';
-    actionsContainer.after(subscriptionActionsContainer);
+    if (actionsRow) actionsRow.appendChild(subscriptionActionsContainer);
 
-    // Проверяет активную подписку и наличие чата в тире; обновляет кнопки
-    const updateSubscriptionUI = async () => {
+    const updateSubscriptionUI = async (): Promise<void> => {
       if (!subscriptionButton) return;
       try {
         const subs = await api.getMySubscriptions();
@@ -71,7 +190,6 @@ export async function renderProfileHeader(
         );
         subscriptionButton.setText(activeSub ? 'Изменить подписку' : 'Подписаться');
 
-        // Показываем дополнительные действия, доступные в активном тире.
         subscriptionActionsContainer.innerHTML = '';
         if (activeSub && viewedUserId) {
           try {
@@ -102,15 +220,12 @@ export async function renderProfileHeader(
       }
     };
 
-    const handleClick = async () => {
+    const handleClick = async (): Promise<void> => {
       if (!viewedUserId) return;
 
-      // Подписываться может любой авторизованный пользователь (клиент или тренер),
-      // кроме как на самого себя.
       const currentUser = await api.getCurrentUser();
       if (!currentUser?.user || currentUser.user.user_id === viewedUserId) return;
 
-      // Свежая активная подписка перед открытием
       let existingSubscription = null;
       try {
         const subs = await api.getMySubscriptions();
@@ -125,7 +240,6 @@ export async function renderProfileHeader(
         trainerId: viewedUserId,
         existingSubscription,
         onSubscribed: async () => {
-          // Обновить текст кнопки, кнопку чата и остальную часть страницы
           emitSubscriptionsChanged();
           await updateSubscriptionUI();
           if (onSubscribed) await onSubscribed();
@@ -133,8 +247,7 @@ export async function renderProfileHeader(
       });
     };
 
-    // Создаём кнопку один раз
-    subscriptionButton = await renderButton(actionsContainer, {
+    subscriptionButton = await renderButton(subscribeContainer, {
       text: 'Подписаться',
       variant: 'primary-orange',
       state: 'normal',
@@ -144,9 +257,9 @@ export async function renderProfileHeader(
     await updateSubscriptionUI();
   }
 
-  // Редактировать профиль (только свой)
-  if (isOwnProfile && actionsContainer) {
-    await renderButton(actionsContainer, {
+  // ---- Редактировать профиль (только свой) ----
+  if (isOwnProfile && editContainer) {
+    await renderButton(editContainer, {
       text: 'Редактировать',
       variant: 'primary-orange',
       state: 'normal',
@@ -169,20 +282,21 @@ export async function renderProfileHeader(
     });
   }
 
-  // Статистика тренера (модалка)
-  const statBtn = element.querySelector(`#stat-btn-${id}`) as HTMLElement | null;
-  if (statBtn) statBtn.addEventListener('click', async () => {
-    const { openStatisticsModal } = await import('../StatisticsModal/StatisticsModal');
-    await openStatisticsModal({ api });
-  });
+  // ---- Статистика (только собственный профиль тренера) ----
+  if (isOwnProfile && isTrainer && secondaryContainer) {
+    await renderButton(secondaryContainer, {
+      text: 'Статистика',
+      variant: 'secondary-blue',
+      state: 'normal',
+      size: 'medium',
+      onClick: async () => {
+        const { openStatisticsModal } = await import('../StatisticsModal/StatisticsModal');
+        await openStatisticsModal({ api });
+      }
+    });
+  }
 
-  // Подписчики тренера (модалка)
-  const subscribersBtn = element.querySelector(`#subscribers-btn-${id}`) as HTMLElement | null;
-  if (subscribersBtn) subscribersBtn.addEventListener('click', async () => {
-    const { openSubscribersModal } = await import('../SubscribersModal/SubscribersModal');
-    await openSubscribersModal({ api });
-  });
-
+  // ---- Смена фото (только свой) ----
   const cameraBtn = element.querySelector('.profile-header__camera-btn') as HTMLElement | null;
   if (cameraBtn) cameraBtn.addEventListener('click', async () => {
     if (!api) return;
@@ -203,5 +317,6 @@ export async function renderProfileHeader(
   });
 
   container.appendChild(element);
+  window.requestAnimationFrame(setupBioToggle);
   return element;
 }

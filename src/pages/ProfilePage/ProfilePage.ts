@@ -9,7 +9,16 @@ import { loadProfilePageData } from '../../utils/profilePageData';
 
 interface ProfilePageParams {
   viewedUserId: number;
-  profile?: { name: string; role: string; avatar: string | null; isOwnProfile: boolean; isTrainer: boolean };
+  profile?: {
+    name: string;
+    role: string;
+    avatar: string | null;
+    isOwnProfile: boolean;
+    isTrainer: boolean;
+    username?: string;
+    bio?: string | null;
+    careerSinceDate?: string | null;
+  };
   currentUser?: { id: number; name: string; role: string; avatar: string | null } | null;
   subscriptions?: Array<{ id: number; name: string; role: string }>;
   posts?: PostWithAuthor[];
@@ -23,7 +32,7 @@ export async function renderProfilePage(
 ): Promise<HTMLElement> {
   const {
     viewedUserId,
-    profile = { name: 'Абдурахман Гасанов', role: 'Фитнес-тренер', avatar: null, isOwnProfile: false, isTrainer: false },
+    profile = { name: 'Абдурахман Гасанов', role: 'Фитнес-тренер', avatar: null, isOwnProfile: false, isTrainer: false, username: '', bio: null, careerSinceDate: null },
     posts = [], popularPosts = [], activeTab = 'publications',
   } = params;
 
@@ -66,6 +75,9 @@ export async function renderProfilePage(
       avatar: profile.avatar,
       isOwnProfile: profile.isOwnProfile,
       isTrainer: profile.isTrainer,
+      username: profile.username,
+      bio: profile.bio,
+      careerSinceDate: profile.careerSinceDate,
       showDonate: profile.isTrainer,
       api,
       viewedUserId,
