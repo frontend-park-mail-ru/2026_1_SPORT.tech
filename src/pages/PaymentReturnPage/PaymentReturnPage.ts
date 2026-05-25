@@ -67,7 +67,7 @@ async function renderSuccess(
   }
 
   const chatBtn = chatEnabled && trainerId
-    ? '<button class="payment-result__btn payment-result__btn--chat" id="btn-chat">💬 Написать тренеру</button>'
+    ? '<button class="payment-result__btn payment-result__btn--secondary" id="btn-chat">💬 Написать тренеру</button>'
     : '';
 
   el.innerHTML = `

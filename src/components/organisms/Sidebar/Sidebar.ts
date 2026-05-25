@@ -43,6 +43,7 @@ let unreadListenerInstalled = false;
 let badgePollingStarted = false;
 let chatStreamStarted = false;
 let chatEventSource: EventSource | null = null;
+let chatFallbackPollTimer: number | null = null;
 let lastChatSnapshot: ChatConversationsSnapshot | null = null;
 
 /**
@@ -103,13 +104,48 @@ export function getChatSnapshot(): ChatConversationsSnapshot | null {
   return lastChatSnapshot;
 }
 
+function applyChatConversationsSnapshot(snapshot: ChatConversationsSnapshot): void {
+  lastChatSnapshot = snapshot;
+  if (activeSidebarEl) updateChatBadge(activeSidebarEl, snapshot.unread_total || 0);
+  document.dispatchEvent(new CustomEvent(CHAT_CONVERSATIONS_EVENT, { detail: snapshot }));
+}
+
+async function refreshChatConversationsSnapshot(api: ApiClient): Promise<void> {
+  try {
+    const data = await api.listChatConversations();
+    const conversations = data.conversations || [];
+    applyChatConversationsSnapshot({
+      conversations,
+      unread_total: conversations.reduce((sum, conv) => sum + Number(conv.unread_count || 0), 0)
+    });
+  } catch { /* ignore */ }
+}
+
+function stopChatConversationsFallback(): void {
+  if (chatFallbackPollTimer != null) {
+    window.clearInterval(chatFallbackPollTimer);
+    chatFallbackPollTimer = null;
+  }
+}
+
+function startChatConversationsFallback(api: ApiClient): void {
+  if (chatFallbackPollTimer != null) return;
+
+  void refreshChatConversationsSnapshot(api);
+  chatFallbackPollTimer = window.setInterval(() => {
+    void refreshChatConversationsSnapshot(api);
+  }, 5000);
+}
+
 /**
  * Единый на сессию SSE-поток обновлений списка диалогов и счётчика непрочитанных.
- * Заменяет поллинг: сервер сам шлёт новый снапшот при изменении. EventSource
- * переподключается автоматически.
+ * Если EventSource падает, включается мягкий REST-fallback до восстановления потока.
  */
-function startChatConversationsStream(): void {
+function startChatConversationsStream(api: ApiClient): void {
   chatEventSource = new EventSource('/api/v1/chat/conversations/stream', { withCredentials: true });
+  chatEventSource.onopen = () => {
+    stopChatConversationsFallback();
+  };
   chatEventSource.onmessage = (event: MessageEvent) => {
     let snapshot: ChatConversationsSnapshot;
     try {
@@ -117,9 +153,10 @@ function startChatConversationsStream(): void {
     } catch {
       return;
     }
-    lastChatSnapshot = snapshot;
-    if (activeSidebarEl) updateChatBadge(activeSidebarEl, snapshot.unread_total || 0);
-    document.dispatchEvent(new CustomEvent(CHAT_CONVERSATIONS_EVENT, { detail: snapshot }));
+    applyChatConversationsSnapshot(snapshot);
+  };
+  chatEventSource.onerror = () => {
+    startChatConversationsFallback(api);
   };
 }
 
@@ -299,7 +336,7 @@ export async function renderSidebar(
 
     // Счётчик непрочитанных сообщений приходит из SSE, а не из поллинга.
     if (!chatStreamStarted) {
-      startChatConversationsStream();
+      startChatConversationsStream(api);
       chatStreamStarted = true;
     }
 

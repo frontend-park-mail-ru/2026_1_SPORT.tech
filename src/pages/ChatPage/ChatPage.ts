@@ -45,8 +45,87 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function escapeMultilineHtml(str: string): string {
-  return escapeHtml(str).replace(/\n/g, '<br>');
+const CHAT_LINK_RE = /(?:https?:\/\/|www\.)[^\s<>"']+/gi;
+
+function appendTextWithLineBreaks(target: HTMLElement, text: string): void {
+  const lines = text.split('\n');
+  lines.forEach((line, index) => {
+    if (index > 0) target.appendChild(document.createElement('br'));
+    if (line) target.appendChild(document.createTextNode(line));
+  });
+}
+
+function trimUrlPunctuation(rawUrl: string): { url: string; suffix: string } {
+  let url = rawUrl;
+  let suffix = '';
+
+  while (url.length > 0) {
+    const lastChar = url[url.length - 1];
+    if (/[.,!?;:]/.test(lastChar)) {
+      suffix = lastChar + suffix;
+      url = url.slice(0, -1);
+      continue;
+    }
+
+    const pair = lastChar === ')' ? '(' : lastChar === ']' ? '[' : lastChar === '}' ? '{' : '';
+    if (pair) {
+      const openingCount = url.split(pair).length - 1;
+      const closingCount = url.split(lastChar).length - 1;
+      if (closingCount > openingCount) {
+        suffix = lastChar + suffix;
+        url = url.slice(0, -1);
+        continue;
+      }
+    }
+
+    break;
+  }
+
+  return { url, suffix };
+}
+
+function normalizeChatLinkHref(url: string): string | null {
+  const href = url.toLowerCase().startsWith('www.') ? `https://${url}` : url;
+  try {
+    const parsed = new URL(href);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
+function appendMessageBody(target: HTMLElement, body: string): void {
+  let lastIndex = 0;
+
+  for (const match of body.matchAll(CHAT_LINK_RE)) {
+    const matchIndex = match.index ?? 0;
+    const rawMatch = match[0];
+    if (matchIndex > lastIndex) {
+      appendTextWithLineBreaks(target, body.slice(lastIndex, matchIndex));
+    }
+
+    const { url, suffix } = trimUrlPunctuation(rawMatch);
+    const href = normalizeChatLinkHref(url);
+    if (href) {
+      const link = document.createElement('a');
+      link.className = 'chat-msg__link';
+      link.href = href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer nofollow';
+      link.textContent = url;
+      target.appendChild(link);
+      if (suffix) appendTextWithLineBreaks(target, suffix);
+    } else {
+      appendTextWithLineBreaks(target, rawMatch);
+    }
+
+    lastIndex = matchIndex + rawMatch.length;
+  }
+
+  if (lastIndex < body.length) {
+    appendTextWithLineBreaks(target, body.slice(lastIndex));
+  }
 }
 
 export async function renderChatPage(
@@ -250,10 +329,15 @@ export async function renderChatPage(
     const isOut = Number(msg.sender_user_id) === myUserId;
     const msgEl = document.createElement('div');
     msgEl.className = `chat-msg chat-msg--${isOut ? 'out' : 'in'}`;
-    msgEl.innerHTML = `
-      <div class="chat-msg__bubble">${escapeMultilineHtml(msg.body)}</div>
-      <div class="chat-msg__meta">${formatTime(msg.created_at)}${isOut && msg.is_read ? ' ✓✓' : ''}</div>
-    `;
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-msg__bubble';
+    appendMessageBody(bubble, msg.body);
+
+    const meta = document.createElement('div');
+    meta.className = 'chat-msg__meta';
+    meta.textContent = `${formatTime(msg.created_at)}${isOut && msg.is_read ? ' ✓✓' : ''}`;
+
+    msgEl.append(bubble, meta);
     area.appendChild(msgEl);
 
     const messageId = Number(msg.message_id);
@@ -295,12 +379,37 @@ export async function renderChatPage(
 
   // ── SSE ───────────────────────────────────────────────────────────────────
   let activeEventSource: EventSource | null = null;
+  let sseFallbackPollTimer: number | null = null;
+
+  function stopSSEFallbackPoll(): void {
+    if (sseFallbackPollTimer != null) {
+      window.clearInterval(sseFallbackPollTimer);
+      sseFallbackPollTimer = null;
+    }
+  }
+
+  function startSSEFallbackPoll(userId: number): void {
+    if (sseFallbackPollTimer != null) return;
+
+    sseFallbackPollTimer = window.setInterval(() => {
+      if (activeConvUserId !== userId) {
+        stopSSEFallbackPoll();
+        return;
+      }
+
+      void loadMessages(userId);
+    }, 5000);
+  }
 
   function setupSSE(userId: number): void {
     clearSSE();
     const url = `/api/v1/chat/messages/${userId}/stream?after=${lastRenderedMessageId}`;
     const es = new EventSource(url, { withCredentials: true });
     activeEventSource = es;
+
+    es.onopen = () => {
+      stopSSEFallbackPoll();
+    };
 
     es.onmessage = (event: MessageEvent) => {
       if (activeConvUserId !== userId) { clearSSE(); return; }
@@ -326,11 +435,18 @@ export async function renderChatPage(
     };
 
     es.onerror = () => {
-      // EventSource автоматически переподключится; ничего делать не нужно.
+      if (activeConvUserId !== userId) {
+        clearSSE();
+        return;
+      }
+
+      void loadMessages(userId);
+      startSSEFallbackPoll(userId);
     };
   }
 
   function clearSSE(): void {
+    stopSSEFallbackPoll();
     if (activeEventSource) {
       activeEventSource.close();
       activeEventSource = null;

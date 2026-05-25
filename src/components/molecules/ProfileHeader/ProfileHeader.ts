@@ -55,10 +55,10 @@ export async function renderProfileHeader(
   // Подписка / изменение подписки + кнопка чата
   if (!isOwnProfile && showDonate && actionsContainer) {
     let subscriptionButton: ButtonAPI | null = null;
-    // Контейнер для кнопки чата (вставляется после кнопки подписки)
-    const chatBtnContainer = document.createElement('div');
-    chatBtnContainer.className = 'profile-header__chat-btn-wrap';
-    actionsContainer.after(chatBtnContainer);
+    // Контейнер для дополнительных действий по активной подписке.
+    const subscriptionActionsContainer = document.createElement('div');
+    subscriptionActionsContainer.className = 'profile-header__subscription-actions';
+    actionsContainer.after(subscriptionActionsContainer);
 
     // Проверяет активную подписку и наличие чата в тире; обновляет кнопки
     const updateSubscriptionUI = async () => {
@@ -70,29 +70,29 @@ export async function renderProfileHeader(
         );
         subscriptionButton.setText(activeSub ? 'Изменить подписку' : 'Подписаться');
 
-        // Показываем кнопку «Написать», если тир активной подписки содержит чат
-        chatBtnContainer.innerHTML = '';
+        // Показываем дополнительные действия, доступные в активном тире.
+        subscriptionActionsContainer.innerHTML = '';
         if (activeSub && viewedUserId) {
           try {
             const tiersResp = await api.getTrainerTiers(viewedUserId);
             const tier = (tiersResp?.tiers || []).find(t => t.tier_id === activeSub.tier_id);
             if (tier?.chat_enabled) {
               const btn = document.createElement('button');
-              btn.className = 'button button--secondary button--medium profile-header__chat-btn';
-              btn.innerHTML = '💬 Написать';
+              btn.className = 'button button--medium profile-header__subscription-action';
+              btn.textContent = '💬 Написать';
               btn.addEventListener('click', () => {
                 window.router.navigateTo(`/chat/${viewedUserId}`);
               });
-              chatBtnContainer.appendChild(btn);
+              subscriptionActionsContainer.appendChild(btn);
             }
             if (tier?.calendar_enabled) {
               const bookBtn = document.createElement('button');
-              bookBtn.className = 'button button--secondary button--medium profile-header__chat-btn';
-              bookBtn.innerHTML = '📅 Записаться';
+              bookBtn.className = 'button button--medium profile-header__subscription-action';
+              bookBtn.textContent = '📅 Записаться';
               bookBtn.addEventListener('click', () => {
                 window.router.navigateTo(`/meetings/${viewedUserId}`);
               });
-              chatBtnContainer.appendChild(bookBtn);
+              subscriptionActionsContainer.appendChild(bookBtn);
             }
           } catch { /* игнорируем */ }
         }

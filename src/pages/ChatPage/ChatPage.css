@@ -261,6 +261,21 @@
   word-break: break-word;
 }
 
+.chat-msg__link {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+.chat-msg--out .chat-msg__link {
+  color: #fff;
+}
+
+.chat-msg--in .chat-msg__link {
+  color: var(--primary-orange);
+}
+
 .chat-msg--out .chat-msg__bubble {
   background: var(--primary-orange);
   color: #fff;

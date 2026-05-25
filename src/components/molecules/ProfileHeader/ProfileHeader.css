@@ -263,24 +263,40 @@
   }
 }
 
-.profile-header__chat-btn-wrap {
+.profile-header__subscription-actions {
   display: inline-flex;
-  margin-left: 8px;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
 }
 
-.profile-header__chat-btn {
-  background: #fff;
-  color: var(--primary-orange);
-  border: 1.5px solid var(--primary-orange);
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+.profile-header__subscription-action {
+  background: transparent;
+  color: #444;
+  border: 1px solid #ddd;
+  min-width: 140px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
   white-space: nowrap;
 }
 
-.profile-header__chat-btn:hover {
-  background: #fff3ee;
+.profile-header__subscription-action:hover {
+  background: #f5f5f5;
+  border-color: #d0d0d0;
+}
+
+@media (max-width: 1024px) {
+  .profile-header__subscription-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-header__subscription-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .profile-header__subscription-action {
+    flex: 1 1 150px;
+  }
 }

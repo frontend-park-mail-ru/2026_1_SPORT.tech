@@ -171,19 +171,3 @@
   margin: 8px 0 0;
   font-weight: 500;
 }
-
-.payment-result__btn--chat {
-  background: #fff;
-  color: var(--primary-orange);
-  border: 1.5px solid var(--primary-orange);
-  border-radius: 8px;
-  padding: 10px 20px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.payment-result__btn--chat:hover {
-  background: #fff3ee;
-}
