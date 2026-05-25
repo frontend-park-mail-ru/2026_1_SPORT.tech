@@ -1,0 +1,122 @@
+.cal {
+  --cal-accent: #228be6;
+  --cal-accent-soft: #e7f5ff;
+  width: 100%;
+  user-select: none;
+}
+
+.cal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.cal__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #212529;
+  text-transform: capitalize;
+}
+
+.cal__nav {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.cal__nav:hover:not(:disabled) {
+  background: #f1f3f5;
+  border-color: #ced4da;
+}
+
+.cal__nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.cal__weekdays,
+.cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal__weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #adb5bd;
+  text-transform: uppercase;
+  padding-bottom: 4px;
+}
+
+.cal__cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: #343a40;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.cal__cell--blank {
+  cursor: default;
+}
+
+.cal__cell:not(.cal__cell--disabled):not(.cal__cell--selected):hover {
+  background: var(--cal-accent-soft);
+  border-color: #74c0fc;
+}
+
+.cal__cell--today {
+  font-weight: 700;
+  color: var(--cal-accent);
+}
+
+.cal__cell--selected {
+  background: var(--cal-accent);
+  border-color: var(--cal-accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+.cal__cell--disabled {
+  color: #ced4da;
+  cursor: not-allowed;
+}
+
+/* Точка-индикатор: день, в котором есть доступные слоты. */
+.cal__cell--marked::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--cal-accent);
+}
+
+.cal__cell--selected.cal__cell--marked::after {
+  background: #fff;
+}

@@ -1,0 +1,99 @@
+.dtp {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dtp__label {
+  font-size: 12px;
+  color: #868e96;
+}
+
+.dtp__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 200px;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  color: #adb5bd;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.dtp__trigger::before {
+  content: '📅';
+  font-size: 14px;
+}
+
+.dtp__trigger--filled {
+  color: #212529;
+  font-weight: 600;
+}
+
+.dtp__trigger:hover {
+  border-color: #74c0fc;
+}
+
+.dtp--open .dtp__trigger {
+  border-color: #228be6;
+  box-shadow: 0 0 0 3px rgba(34, 139, 230, 0.12);
+}
+
+.dtp__popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 290px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(33, 37, 41, 0.16);
+}
+
+.dtp__time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f3f5;
+}
+
+.dtp__time-label {
+  font-size: 13px;
+  color: #495057;
+  font-weight: 600;
+}
+
+.dtp__hour {
+  padding: 7px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.dtp__done {
+  margin-left: auto;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #228be6;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dtp__done:hover {
+  background: #1c7ed6;
+}

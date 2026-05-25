@@ -7,6 +7,8 @@ import type { ApiClient } from '../../utils/api';
 import type { AuthResponse } from '../../types/auth.types';
 import type { MeetingBooking, MeetingAvailabilitySlot, MeetingAvailabilityRule, MeetingSlot, Subscription } from '../../types/api.types';
 import { getFriendlyErrorMessage } from '../../utils/errorMessages';
+import { createCalendar, dayKey } from '../../components/atoms/Calendar/Calendar';
+import { createDateTimePicker } from '../../components/molecules/DateTimePicker/DateTimePicker';
 import './MeetingsPage.css';
 
 interface MeetingsPageParams {
@@ -40,16 +42,11 @@ function dayLabel(iso: string): string {
   return new Date(iso).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
 }
 
-function dateKey(iso: string): string {
-  return new Date(iso).toLocaleDateString('ru-RU');
-}
-
-function toAlignedISO(localValue: string): string | null {
-  if (!localValue) return null;
-  const date = new Date(localValue);
-  if (isNaN(date.getTime())) return null;
-  date.setMinutes(0, 0, 0);
-  return date.toISOString();
+function alignedISOFromDate(date: Date | null): string | null {
+  if (!date || isNaN(date.getTime())) return null;
+  const aligned = new Date(date);
+  aligned.setMinutes(0, 0, 0);
+  return aligned.toISOString();
 }
 
 function friendlyError(err: unknown): string {
@@ -211,21 +208,59 @@ export async function renderMeetingsPage(
         <label>Тренер</label>
         <select id="book-trainer">${options}</select>
       </div>
-      <button class="meetings-btn" id="book-load">Показать свободные слоты</button>
     `;
     card.appendChild(form);
 
-    const slotsContainer = document.createElement('div');
-    slotsContainer.id = 'book-slots';
-    card.appendChild(slotsContainer);
+    const body = document.createElement('div');
+    body.className = 'booking';
+    const calPane = document.createElement('div');
+    calPane.className = 'booking__cal';
+    const slotPane = document.createElement('div');
+    slotPane.className = 'booking__slots';
+    body.append(calPane, slotPane);
+    card.appendChild(body);
 
     const select = form.querySelector('#book-trainer') as HTMLSelectElement;
-    const loadBtn = form.querySelector('#book-load') as HTMLButtonElement;
+
+    function renderDayPane(trainerId: number, byDay: Map<string, MeetingAvailabilitySlot[]>, key: string): void {
+      const daySlots = byDay.get(key) ?? [];
+      slotPane.innerHTML = '';
+      if (daySlots.length === 0) {
+        slotPane.innerHTML = '<p class="meetings-empty">Выберите день со свободными слотами.</p>';
+        return;
+      }
+      const title = document.createElement('div');
+      title.className = 'booking__day-title';
+      title.textContent = dayLabel(daySlots[0].starts_at);
+      slotPane.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.className = 'slot-grid';
+      for (const slot of daySlots) {
+        const chip = document.createElement('button');
+        chip.className = 'slot-chip';
+        chip.textContent = formatTimeRange(slot.starts_at, slot.ends_at);
+        chip.addEventListener('click', async () => {
+          chip.disabled = true;
+          try {
+            await api.bookMeeting(trainerId, slot.starts_at);
+            await renderAll();
+          } catch (err) {
+            chip.disabled = false;
+            showError(card, friendlyError(err));
+          }
+        });
+        grid.appendChild(chip);
+      }
+      slotPane.appendChild(grid);
+    }
 
     async function loadSlots(): Promise<void> {
       const trainerId = Number(select.value);
       if (!trainerId) return;
-      slotsContainer.innerHTML = '<p class="meetings-empty">Загрузка…</p>';
+      calPane.innerHTML = '';
+      slotPane.innerHTML = '<p class="meetings-empty">Загрузка…</p>';
+
       const from = new Date();
       const to = new Date();
       to.setDate(to.getDate() + 14);
@@ -236,56 +271,43 @@ export async function renderMeetingsPage(
         const data = await api.getTrainerAvailability(trainerId, { from: fmt(from), to: fmt(to) });
         slots = data.slots || [];
       } catch (err) {
-        slotsContainer.innerHTML = `<div class="meetings-error">${friendlyError(err)}</div>`;
-        return;
-      }
-
-      if (slots.length === 0) {
-        slotsContainer.innerHTML = '<p class="meetings-empty">У тренера нет свободных слотов на ближайшие две недели.</p>';
+        slotPane.innerHTML = `<div class="meetings-error">${friendlyError(err)}</div>`;
         return;
       }
 
       const byDay = new Map<string, MeetingAvailabilitySlot[]>();
       for (const slot of slots) {
-        const key = dateKey(slot.starts_at);
+        const key = dayKey(new Date(slot.starts_at));
         if (!byDay.has(key)) byDay.set(key, []);
         byDay.get(key)!.push(slot);
       }
 
-      slotsContainer.innerHTML = '';
-      for (const daySlots of byDay.values()) {
-        const dayEl = document.createElement('div');
-        dayEl.className = 'slot-day';
-        dayEl.innerHTML = `<div class="slot-day__label">${dayLabel(daySlots[0].starts_at)}</div>`;
-        const grid = document.createElement('div');
-        grid.className = 'slot-grid';
-        for (const slot of daySlots) {
-          const chip = document.createElement('button');
-          chip.className = 'slot-chip';
-          chip.textContent = formatTimeRange(slot.starts_at, slot.ends_at);
-          chip.addEventListener('click', async () => {
-            chip.disabled = true;
-            try {
-              await api.bookMeeting(trainerId, slot.starts_at);
-              await renderAll();
-            } catch (err) {
-              chip.disabled = false;
-              showError(card, friendlyError(err));
-            }
-          });
-          grid.appendChild(chip);
-        }
-        dayEl.appendChild(grid);
-        slotsContainer.appendChild(dayEl);
+      if (byDay.size === 0) {
+        calPane.innerHTML = '';
+        slotPane.innerHTML = '<p class="meetings-empty">У тренера нет свободных слотов на ближайшие две недели.</p>';
+        return;
       }
+
+      const enabled = new Set(byDay.keys());
+      const firstDate = new Date(slots[0].starts_at);
+
+      const calendar = createCalendar({
+        initialMonth: firstDate,
+        selected: firstDate,
+        minDate: from,
+        maxDate: to,
+        enabledDates: enabled,
+        markedDates: enabled,
+        onSelect: (date) => renderDayPane(trainerId, byDay, dayKey(date)),
+      });
+      calPane.appendChild(calendar.el);
+      renderDayPane(trainerId, byDay, dayKey(firstDate));
     }
 
-    loadBtn.addEventListener('click', () => void loadSlots());
+    select.addEventListener('change', () => void loadSlots());
     root.appendChild(card);
 
-    if (params.initialTrainerId && trainers.has(params.initialTrainerId)) {
-      await loadSlots();
-    }
+    await loadSlots();
   }
 
   // ── Моё расписание (тренер) ─────────────────────────────────────────────────
@@ -394,18 +416,20 @@ export async function renderMeetingsPage(
     const slotForm = document.createElement('div');
     slotForm.className = 'meetings-form';
     slotForm.style.marginTop = '12px';
-    slotForm.innerHTML = `
-      <div class="meetings-field">
-        <label>Разовый слот (дата и час)</label>
-        <input type="datetime-local" id="slot-datetime">
-      </div>
-      <button class="meetings-btn" id="slot-add">Открыть слот</button>
-    `;
     card.appendChild(slotForm);
 
-    (slotForm.querySelector('#slot-add') as HTMLButtonElement).addEventListener('click', async () => {
-      const value = (slotForm.querySelector('#slot-datetime') as HTMLInputElement).value;
-      const iso = toAlignedISO(value);
+    const slotPicker = createDateTimePicker({
+      label: 'Разовый слот (дата и час)',
+      placeholder: 'Выберите дату слота',
+      minDate: new Date(),
+    });
+    const slotAddBtn = document.createElement('button');
+    slotAddBtn.className = 'meetings-btn';
+    slotAddBtn.textContent = 'Открыть слот';
+    slotForm.append(slotPicker.el, slotAddBtn);
+
+    slotAddBtn.addEventListener('click', async () => {
+      const iso = alignedISOFromDate(slotPicker.getValue());
       if (!iso) {
         showError(card, 'Укажите дату и время слота');
         return;
@@ -438,10 +462,7 @@ export async function renderMeetingsPage(
         <label>ID клиента</label>
         <input type="number" id="assign-client" min="1" placeholder="напр. 42">
       </div>
-      <div class="meetings-field">
-        <label>Дата и час</label>
-        <input type="datetime-local" id="assign-datetime">
-      </div>
+      <div class="meetings-field" id="assign-datetime-slot"></div>
       <div class="meetings-field">
         <label>Длительность</label>
         <select id="assign-duration">${durationOptions}</select>
@@ -454,9 +475,16 @@ export async function renderMeetingsPage(
     `;
     card.appendChild(form);
 
+    const assignPicker = createDateTimePicker({
+      label: 'Дата и час',
+      placeholder: 'Выберите дату и время',
+      minDate: new Date(),
+    });
+    (form.querySelector('#assign-datetime-slot') as HTMLElement).replaceWith(assignPicker.el);
+
     (form.querySelector('#assign-submit') as HTMLButtonElement).addEventListener('click', async () => {
       const clientId = Number((form.querySelector('#assign-client') as HTMLInputElement).value);
-      const iso = toAlignedISO((form.querySelector('#assign-datetime') as HTMLInputElement).value);
+      const iso = alignedISOFromDate(assignPicker.getValue());
       const duration = Number((form.querySelector('#assign-duration') as HTMLSelectElement).value);
       const note = (form.querySelector('#assign-note') as HTMLInputElement).value.trim();
       if (!clientId || !iso) {

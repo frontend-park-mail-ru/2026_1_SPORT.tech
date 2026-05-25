@@ -138,6 +138,53 @@
 }
 .meetings-btn--ghost:hover { background: #fff0f0; }
 
+.booking {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  align-items: flex-start;
+}
+
+.booking__cal {
+  flex: 0 0 300px;
+  max-width: 300px;
+}
+
+.booking__slots {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-left: 1px solid #e9ecef;
+  padding-left: 24px;
+  align-self: stretch;
+}
+
+.booking__day-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #212529;
+  text-transform: capitalize;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 640px) {
+  .booking {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .booking__cal {
+    flex-basis: auto;
+    max-width: none;
+    width: 100%;
+  }
+  .booking__slots {
+    border-left: none;
+    border-top: 1px solid #e9ecef;
+    padding-left: 0;
+    padding-top: 16px;
+    width: 100%;
+  }
+}
+
 .slot-day {
   margin-top: 14px;
 }
