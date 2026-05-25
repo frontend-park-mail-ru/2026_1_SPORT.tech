@@ -116,14 +116,16 @@
 }
 .cal__context strong { color: #212529; font-weight: 600; }
 
+/* Empty-state: занимает всю область сетки (внутри cal__grid-wrap), центрируется */
 .cal__access {
+  min-height: inherit;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
-  border: 1px solid #ffd8a8;
-  border-radius: 12px;
-  background: #fff8f1;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  padding: 40px 24px;
   color: #343a40;
 }
 
@@ -132,9 +134,9 @@
 }
 
 .cal__access-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
   background: #ffe8cc;
   color: #f76707;
   display: inline-flex;
@@ -144,26 +146,21 @@
 }
 
 .cal__access-icon svg {
-  width: 22px;
-  height: 22px;
-}
-
-.cal__access-copy {
-  min-width: 0;
-  flex: 1 1 auto;
+  width: 30px;
+  height: 30px;
 }
 
 .cal__access-title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   color: #212529;
-  margin-bottom: 3px;
 }
 
 .cal__access-text {
   font-size: 13px;
   line-height: 1.45;
   color: #5c5f66;
+  max-width: 420px;
 }
 
 .cal__access-action {
@@ -194,6 +191,7 @@
   font-size: 12px;
   color: #868e96;
 }
+.cal__legend[hidden] { display: none; }
 .cal__chip {
   display: inline-block;
   width: 14px;
@@ -218,6 +216,7 @@
   display: grid;
   min-width: 720px;
 }
+.cal__grid[hidden] { display: none; }
 
 .cal__corner {
   border-right: 1px solid #e9ecef;
@@ -459,11 +458,11 @@
   .cal__week-label { margin-left: 0; }
 
   .cal__access {
-    align-items: flex-start;
-    flex-direction: column;
+    padding: 32px 16px;
   }
 
   .cal__access-action {
     width: 100%;
+    max-width: 280px;
   }
 }

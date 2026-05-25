@@ -256,9 +256,11 @@ export async function renderMeetingsPage(
       </div>
     </div>
     <div class="cal__context" id="cal-context" hidden></div>
-    <div class="cal__access" id="cal-access" hidden></div>
     <div class="cal__legend" id="cal-legend"></div>
-    <div class="cal__grid-wrap"><div class="cal__grid" id="cal-grid"></div></div>
+    <div class="cal__grid-wrap" id="cal-grid-wrap">
+      <div class="cal__grid" id="cal-grid"></div>
+      <div class="cal__access" id="cal-access" hidden></div>
+    </div>
     <div class="cal__upcoming" id="cal-upcoming"></div>
   `;
   root.appendChild(page);
@@ -269,6 +271,7 @@ export async function renderMeetingsPage(
   const contextEl = page.querySelector('#cal-context') as HTMLElement;
   const accessEl = page.querySelector('#cal-access') as HTMLElement;
   const legendEl = page.querySelector('#cal-legend') as HTMLElement;
+  const gridWrapEl = page.querySelector('#cal-grid-wrap') as HTMLElement;
   const gridEl = page.querySelector('#cal-grid') as HTMLElement;
   const upcomingEl = page.querySelector('#cal-upcoming') as HTMLElement;
 
@@ -284,6 +287,8 @@ export async function renderMeetingsPage(
   function hideAccessNotice(): void {
     accessEl.hidden = true;
     accessEl.innerHTML = '';
+    gridEl.hidden = false;
+    legendEl.hidden = false;
   }
 
   function showCalendarAccessNotice(): void {
@@ -293,6 +298,10 @@ export async function renderMeetingsPage(
     contextEl.innerHTML = `Календарь тренера <strong>${escapeHtml(trainerName)}</strong>`;
     contextEl.hidden = false;
 
+    // Плашка занимает область сетки (а не вставляется отдельным блоком над ней),
+    // поэтому появление не толкает остальную страницу вниз.
+    legendEl.hidden = true;
+    gridEl.hidden = true;
     accessEl.innerHTML = `
       <div class="cal__access-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -301,11 +310,9 @@ export async function renderMeetingsPage(
           <path d="M9 15h6"/>
         </svg>
       </div>
-      <div class="cal__access-copy">
-        <div class="cal__access-title">Запись через календарь недоступна</div>
-        <div class="cal__access-text">
-          Текущая подписка на тренера не включает опцию «Календарь». Чтобы выбирать свободное время и записываться на занятия, измените тариф в профиле тренера.
-        </div>
+      <div class="cal__access-title">Запись через календарь недоступна</div>
+      <div class="cal__access-text">
+        Текущая подписка на тренера не включает опцию «Календарь». Чтобы выбирать свободное время и записываться на занятия, измените тариф в профиле тренера.
       </div>
       <button class="cal__access-action" type="button">Открыть профиль</button>
     `;
@@ -416,6 +423,7 @@ export async function renderMeetingsPage(
     const rows = hourHi - hourLo + 1;
     gridEl.style.gridTemplateColumns = '56px repeat(7, minmax(0, 1fr))';
     gridEl.style.gridTemplateRows = `40px repeat(${rows}, 46px)`;
+    gridWrapEl.style.minHeight = `${40 + rows * 46}px`;
 
     const frag = document.createDocumentFragment();
 
@@ -581,6 +589,7 @@ export async function renderMeetingsPage(
     const rows = hourHi - hourLo + 1;
     gridEl.style.gridTemplateColumns = '56px repeat(7, minmax(0, 1fr))';
     gridEl.style.gridTemplateRows = `40px repeat(${rows}, 46px)`;
+    gridWrapEl.style.minHeight = `${40 + rows * 46}px`;
 
     // Собираем всю сетку во фрагменте и вставляем одним коммитом — без
     // поэлементного reflow живой сетки (это и давало «рывки»).
