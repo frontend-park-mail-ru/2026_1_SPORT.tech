@@ -133,16 +133,18 @@ export async function renderMeetingsPage(
   const trainerNames = new Map<number, string>();
   const clients: { id: number; name: string; tierName: string; calendarEnabled: boolean }[] = [];
 
-  const profileCache = new Map<number, string>();
-  async function profileName(userId: number): Promise<string> {
-    if (profileCache.has(userId)) return profileCache.get(userId)!;
-    let name = `Пользователь #${userId}`;
-    try {
-      const profile = await api.getProfile(userId);
-      name = `${profile.first_name} ${profile.last_name}`.trim() || profile.username;
-    } catch { /* ignore */ }
-    profileCache.set(userId, name);
-    return name;
+  // Кэшируем сам промис, а не результат: параллельные запросы одного и того же
+  // пользователя дедуплицируются автоматически.
+  const profileCache = new Map<number, Promise<string>>();
+  function profileName(userId: number): Promise<string> {
+    let p = profileCache.get(userId);
+    if (!p) {
+      p = api.getProfile(userId)
+        .then(profile => `${profile.first_name} ${profile.last_name}`.trim() || profile.username)
+        .catch(() => `Пользователь #${userId}`);
+      profileCache.set(userId, p);
+    }
+    return p;
   }
 
   // ── Подписки клиента (список тренеров) ──
@@ -152,11 +154,9 @@ export async function renderMeetingsPage(
       const data = await api.getMySubscriptions();
       subscriptions = (data.subscriptions || []).filter(s => s.active);
     } catch { /* ignore */ }
-    for (const sub of subscriptions) {
-      if (!trainerNames.has(sub.trainer_id)) {
-        trainerNames.set(sub.trainer_id, await profileName(sub.trainer_id));
-      }
-    }
+    const trainerIds = [...new Set(subscriptions.map(s => s.trainer_id))];
+    const names = await Promise.all(trainerIds.map(id => profileName(id)));
+    trainerIds.forEach((id, i) => trainerNames.set(id, names[i]));
     if (!selectedTrainerId && trainerNames.size > 0) {
       selectedTrainerId = trainerNames.keys().next().value as number;
     }
@@ -180,16 +180,20 @@ export async function renderMeetingsPage(
     } catch { /* ignore */ }
 
     const seen = new Set<number>();
-    for (const s of subscribers) {
-      if (seen.has(s.client_id)) continue;
+    const unique = subscribers.filter(s => {
+      if (seen.has(s.client_id)) return false;
       seen.add(s.client_id);
+      return true;
+    });
+    const clientNames = await Promise.all(unique.map(s => profileName(s.client_id)));
+    unique.forEach((s, i) => {
       clients.push({
         id: s.client_id,
-        name: await profileName(s.client_id),
+        name: clientNames[i],
         tierName: s.tier_name,
         calendarEnabled: calendarTierIds.has(s.tier_id),
       });
-    }
+    });
     clients.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
   }
 
@@ -553,8 +557,11 @@ export async function renderMeetingsPage(
       const span = Math.max(1, Math.round((new Date(b.ends_at).getTime() - start.getTime()) / 3600000));
       widen(startHour);
       widen(startHour + span - 1);
-      result.push({ booking: b, dayIndex, startHour, span, name: await profileName(b.other_user_id) });
+      result.push({ booking: b, dayIndex, startHour, span, name: '' });
     }
+    // Имена тянем параллельно, а не по одному в цикле.
+    const names = await Promise.all(result.map(p => profileName(p.booking.other_user_id)));
+    result.forEach((p, i) => { p.name = names[i]; });
     return result;
   }
 
@@ -930,6 +937,9 @@ export async function renderMeetingsPage(
     upcomingEl.appendChild(list);
   }
 
+  // Скелетон показываем сразу, до загрузки тренеров/клиентов, чтобы не было
+  // пустой сетки и «прыжка с нуля» во время сетевых запросов.
+  renderGridSkeleton();
   await Promise.all([loadTrainers(), loadClients()]);
   await renderWeek();
 }
