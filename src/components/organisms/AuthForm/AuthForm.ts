@@ -576,17 +576,17 @@ export async function renderAuthForm(
         onChange: (value: number[]) => validateField(fieldConfig.name, value)
       });
 
-      const helpText = document.createElement('small');
-      helpText.textContent = sportTypeOptions.length > 0
-        ? 'Можно выбрать несколько дисциплин'
-        : 'Не удалось загрузить список дисциплин';
-      helpText.style.cssText = `
-        font-size: var(--font-size-xs);
-        color: var(--text-placeholder);
-        margin-top: 2px;
-        display: block;
-      `;
-      fieldContainer.appendChild(helpText);
+      if (sportTypeOptions.length === 0) {
+        const helpText = document.createElement('small');
+        helpText.textContent = 'Не удалось загрузить список дисциплин';
+        helpText.style.cssText = `
+          font-size: var(--font-size-xs);
+          color: var(--text-placeholder);
+          margin-top: 2px;
+          display: block;
+        `;
+        fieldContainer.appendChild(helpText);
+      }
 
       inputs.set(fieldConfig.name, fieldContainer);
       inputsApi.set(fieldConfig.name, sportFieldApi);
@@ -601,18 +601,6 @@ export async function renderAuthForm(
         maxlength: fieldConfig.maxlength,
         onChange: (value: string) => validateField(fieldConfig.name, value)
       });
-
-      if (fieldConfig.name === 'username') {
-        const helpText = document.createElement('small');
-        helpText.textContent = '@john_doe — для входа и ссылки на профиль';
-        helpText.style.cssText = `
-          font-size: var(--font-size-xs);
-          color: var(--text-placeholder);
-          margin-top: 2px;
-          display: block;
-        `;
-        fieldContainer.appendChild(helpText);
-      }
 
       inputs.set(fieldConfig.name, fieldContainer);
       inputsApi.set(fieldConfig.name, inputApi);
