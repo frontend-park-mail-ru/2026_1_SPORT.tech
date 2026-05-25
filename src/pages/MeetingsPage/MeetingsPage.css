@@ -116,6 +116,75 @@
 }
 .cal__context strong { color: #212529; font-weight: 600; }
 
+.cal__access {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #ffd8a8;
+  border-radius: 12px;
+  background: #fff8f1;
+  color: #343a40;
+}
+
+.cal__access[hidden] {
+  display: none;
+}
+
+.cal__access-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #ffe8cc;
+  color: #f76707;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.cal__access-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.cal__access-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.cal__access-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #212529;
+  margin-bottom: 3px;
+}
+
+.cal__access-text {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #5c5f66;
+}
+
+.cal__access-action {
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary-orange);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.cal__access-action:hover {
+  background: var(--primary-orange-hover);
+}
+
 /* ── Легенда ── */
 .cal__legend {
   display: flex;
@@ -348,4 +417,13 @@
   .meetings-page { padding: 14px; }
   .cal__toolbar { flex-direction: column; align-items: stretch; }
   .cal__week-label { margin-left: 0; }
+
+  .cal__access {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cal__access-action {
+    width: 100%;
+  }
 }

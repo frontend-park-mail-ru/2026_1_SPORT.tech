@@ -101,6 +101,12 @@ function friendlyError(err: unknown): string {
   return getFriendlyErrorMessage(err, 'Не удалось выполнить действие. Попробуйте ещё раз.');
 }
 
+function isCalendarAccessError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  const status = (err as { status?: number })?.status;
+  return status === 403 || /forbidden|PermissionDenied|403|нет доступа/i.test(message);
+}
+
 interface PlacedBooking {
   booking: MeetingBooking;
   dayIndex: number;
@@ -245,6 +251,7 @@ export async function renderMeetingsPage(
       </div>
     </div>
     <div class="cal__context" id="cal-context" hidden></div>
+    <div class="cal__access" id="cal-access" hidden></div>
     <div class="cal__legend" id="cal-legend"></div>
     <div class="cal__grid-wrap"><div class="cal__grid" id="cal-grid"></div></div>
     <div class="cal__upcoming" id="cal-upcoming"></div>
@@ -255,6 +262,7 @@ export async function renderMeetingsPage(
   const toolbarLeft = page.querySelector('#cal-toolbar-left') as HTMLElement;
   const weekLabelEl = page.querySelector('#cal-week-label') as HTMLElement;
   const contextEl = page.querySelector('#cal-context') as HTMLElement;
+  const accessEl = page.querySelector('#cal-access') as HTMLElement;
   const legendEl = page.querySelector('#cal-legend') as HTMLElement;
   const gridEl = page.querySelector('#cal-grid') as HTMLElement;
   const upcomingEl = page.querySelector('#cal-upcoming') as HTMLElement;
@@ -266,6 +274,42 @@ export async function renderMeetingsPage(
     bannerEl.hidden = false;
     window.clearTimeout(bannerTimer);
     bannerTimer = window.setTimeout(() => { bannerEl.hidden = true; }, 5000);
+  }
+
+  function hideAccessNotice(): void {
+    accessEl.hidden = true;
+    accessEl.innerHTML = '';
+  }
+
+  function showCalendarAccessNotice(): void {
+    const trainerName = trainerNames.get(selectedTrainerId) ?? 'Выбранный тренер';
+    window.clearTimeout(bannerTimer);
+    bannerEl.hidden = true;
+    contextEl.innerHTML = `Календарь тренера <strong>${escapeHtml(trainerName)}</strong>`;
+    contextEl.hidden = false;
+
+    accessEl.innerHTML = `
+      <div class="cal__access-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="3" y="4" width="18" height="17" rx="2"/>
+          <path d="M8 2v4M16 2v4M3 9h18"/>
+          <path d="M9 15h6"/>
+        </svg>
+      </div>
+      <div class="cal__access-copy">
+        <div class="cal__access-title">Запись через календарь недоступна</div>
+        <div class="cal__access-text">
+          Текущая подписка на тренера не включает опцию «Календарь». Чтобы выбирать свободное время и записываться на занятия, измените тариф в профиле тренера.
+        </div>
+      </div>
+      <button class="cal__access-action" type="button">Открыть профиль</button>
+    `;
+    const action = accessEl.querySelector('.cal__access-action') as HTMLButtonElement | null;
+    action?.addEventListener('click', () => {
+      const router = (window as unknown as { router?: { navigateTo: (p: string) => void } }).router;
+      router?.navigateTo(`/profile/${selectedTrainerId}`);
+    });
+    accessEl.hidden = false;
   }
 
   (page.querySelector('#cal-prev') as HTMLButtonElement).addEventListener('click', () => {
@@ -358,6 +402,7 @@ export async function renderMeetingsPage(
     closePopover();
     renderToolbarLeft();
     renderContext();
+    hideAccessNotice();
     renderLegend();
     weekLabelEl.textContent = weekLabel(weekStart);
     gridEl.innerHTML = '<div class="cal__loading">Загрузка…</div>';
@@ -387,7 +432,11 @@ export async function renderMeetingsPage(
           });
           slots = data.slots || [];
         } catch (err) {
-          showBanner(friendlyError(err));
+          if (isCalendarAccessError(err)) {
+            showCalendarAccessNotice();
+          } else {
+            showBanner(friendlyError(err));
+          }
           slots = [];
         }
         for (const s of slots) {
@@ -565,7 +614,12 @@ export async function renderMeetingsPage(
         await renderWeek();
       } catch (err) {
         btn.disabled = false;
-        showBanner(friendlyError(err));
+        if (isCalendarAccessError(err)) {
+          closePopover();
+          showCalendarAccessNotice();
+        } else {
+          showBanner(friendlyError(err));
+        }
       }
     });
     content.appendChild(btn);
