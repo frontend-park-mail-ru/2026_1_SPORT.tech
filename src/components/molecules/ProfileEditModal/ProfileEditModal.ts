@@ -95,7 +95,7 @@ export async function openProfileEditModal({
 
   const trainerFields: FieldConfig[] = [
     { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS as InputType, required: false, maxlength: 255, placeholder: 'Введите образование' },
-    { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 10, placeholder: 'ГГГГ-ММ-ДД' },
+    { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 10, placeholder: '' },
     { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 100, placeholder: 'Выберите виды спорта' }
   ];
 
@@ -267,19 +267,9 @@ export async function openProfileEditModal({
 
       if (field.name === 'career_since_date') {
         const input = inputApi.input;
-        input.addEventListener('input', (e: Event) => {
-          const target = e.target as HTMLInputElement;
-          let val = target.value.replace(/\D/g, '');
-          if (val.length >= 4) {
-            let formatted = val.substring(0, 4);
-            if (val.length > 4) formatted += '-' + val.substring(4, 6);
-            if (val.length > 6) formatted += '-' + val.substring(6, 8);
-            target.value = formatted;
-          } else {
-            target.value = val;
-          }
-          validateField(field.name, target.value);
-        });
+        input.type = 'date';
+        input.max = new Date().toISOString().slice(0, 10);
+        input.placeholder = '';
       }
 
       inputsApi.set(field.name, inputApi);
