@@ -32,8 +32,25 @@ function renderBootScreen(container: HTMLElement, message = 'Загружаем 
 function renderContentSkeleton(content: HTMLElement): void {
   content.innerHTML = `
     <div class="content-skeleton">
-      <div class="page-skeleton page-skeleton--header"></div>
-      <div class="page-skeleton page-skeleton--content"></div>
+      <div class="page-skeleton page-skeleton--header">
+        <div class="page-skeleton__block page-skeleton__block--cover"></div>
+        <div class="page-skeleton__row">
+          <div class="page-skeleton__block page-skeleton__block--avatar"></div>
+          <div class="page-skeleton__meta">
+            <div class="page-skeleton__block page-skeleton__block--name"></div>
+            <div class="page-skeleton__block page-skeleton__block--role"></div>
+          </div>
+        </div>
+      </div>
+      <div class="page-skeleton page-skeleton--content">
+        <div class="page-skeleton__row page-skeleton__row--tabs">
+          <div class="page-skeleton__block page-skeleton__block--tab"></div>
+          <div class="page-skeleton__block page-skeleton__block--tab"></div>
+          <div class="page-skeleton__block page-skeleton__block--tab"></div>
+        </div>
+        <div class="page-skeleton__block page-skeleton__block--card"></div>
+        <div class="page-skeleton__block page-skeleton__block--card"></div>
+      </div>
     </div>
   `;
 }

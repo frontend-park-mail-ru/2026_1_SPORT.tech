@@ -167,7 +167,7 @@ export async function renderProfileHeader(
   if (!isOwnProfile && showDonate && donateContainer && onDonate) {
     await renderButton(donateContainer, {
       text: 'Пожертвовать',
-      variant: 'secondary-blue',
+      variant: 'primary-orange',
       state: 'normal',
       size: 'medium',
       onClick: onDonate

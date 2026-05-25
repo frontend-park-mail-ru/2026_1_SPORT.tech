@@ -397,6 +397,64 @@ export async function renderMeetingsPage(
          <span class="cal__muted">· клик по пустой ячейке — открыть час</span>`;
   }
 
+  // ── Скелетон сетки (тот же каркас, что и реальная неделя) ──
+  function renderGridSkeleton(): void {
+    const hourLo = DEFAULT_HOUR_LO;
+    const hourHi = DEFAULT_HOUR_HI;
+    const rows = hourHi - hourLo + 1;
+    gridEl.style.gridTemplateColumns = '56px repeat(7, minmax(0, 1fr))';
+    gridEl.style.gridTemplateRows = `40px repeat(${rows}, 46px)`;
+
+    const frag = document.createDocumentFragment();
+
+    const corner = document.createElement('div');
+    corner.className = 'cal__corner';
+    corner.style.gridColumn = '1';
+    corner.style.gridRow = '1';
+    frag.appendChild(corner);
+
+    for (let d = 0; d < 7; d++) {
+      const head = document.createElement('div');
+      head.className = 'cal__dayhead cal__dayhead--sk';
+      head.style.gridColumn = String(d + 2);
+      head.style.gridRow = '1';
+      head.innerHTML = '<span class="cal__sk-bar cal__sk-bar--day"></span>';
+      frag.appendChild(head);
+    }
+
+    for (let h = hourLo; h <= hourHi; h++) {
+      const label = document.createElement('div');
+      label.className = 'cal__hourlabel cal__hourlabel--sk';
+      label.style.gridColumn = '1';
+      label.style.gridRow = String(h - hourLo + 2);
+      label.innerHTML = '<span class="cal__sk-bar cal__sk-bar--hour"></span>';
+      frag.appendChild(label);
+    }
+
+    for (let d = 0; d < 7; d++) {
+      for (let h = hourLo; h <= hourHi; h++) {
+        const cell = document.createElement('div');
+        cell.className = 'cal__cell cal__cell--sk';
+        cell.style.gridColumn = String(d + 2);
+        cell.style.gridRow = String(h - hourLo + 2);
+        frag.appendChild(cell);
+      }
+    }
+
+    // Несколько фантомных «встреч», чтобы скелетон читался как календарь
+    const phantoms = [{ d: 1, h: 9, span: 1 }, { d: 3, h: 13, span: 2 }, { d: 4, h: 18, span: 1 }];
+    for (const p of phantoms) {
+      if (p.h < hourLo || p.h > hourHi) continue;
+      const block = document.createElement('div');
+      block.className = 'cal__event cal__event--sk';
+      block.style.gridColumn = String(p.d + 2);
+      block.style.gridRow = `${p.h - hourLo + 2} / ${p.h - hourLo + 2 + p.span}`;
+      frag.appendChild(block);
+    }
+
+    gridEl.replaceChildren(frag);
+  }
+
   // ── Загрузка и отрисовка недели ──
   async function renderWeek(): Promise<void> {
     closePopover();
@@ -405,7 +463,7 @@ export async function renderMeetingsPage(
     hideAccessNotice();
     renderLegend();
     weekLabelEl.textContent = weekLabel(weekStart);
-    gridEl.innerHTML = '<div class="cal__loading">Загрузка…</div>';
+    renderGridSkeleton();
 
     const weekEndExclusive = addDays(weekStart, 7).getTime();
     const inWeek = (ms: number): boolean => ms >= weekStart.getTime() && ms < weekEndExclusive;
@@ -505,17 +563,20 @@ export async function renderMeetingsPage(
     hourHi: number,
     data: { free: Set<number>; slotIds: Map<number, number>; ruleIds: Map<string, number>; placed: PlacedBooking[] }
   ): void {
-    gridEl.innerHTML = '';
     const rows = hourHi - hourLo + 1;
     gridEl.style.gridTemplateColumns = '56px repeat(7, minmax(0, 1fr))';
     gridEl.style.gridTemplateRows = `40px repeat(${rows}, 46px)`;
+
+    // Собираем всю сетку во фрагменте и вставляем одним коммитом — без
+    // поэлементного reflow живой сетки (это и давало «рывки»).
+    const frag = document.createDocumentFragment();
 
     // Угол + заголовки дней
     const corner = document.createElement('div');
     corner.className = 'cal__corner';
     corner.style.gridColumn = '1';
     corner.style.gridRow = '1';
-    gridEl.appendChild(corner);
+    frag.appendChild(corner);
 
     const today = new Date();
     for (let d = 0; d < 7; d++) {
@@ -525,7 +586,7 @@ export async function renderMeetingsPage(
       head.style.gridColumn = String(d + 2);
       head.style.gridRow = '1';
       head.innerHTML = `<span class="cal__dayhead-wd">${WEEKDAYS_SHORT[d]}</span><span class="cal__dayhead-num">${dayDate.getDate()}</span>`;
-      gridEl.appendChild(head);
+      frag.appendChild(head);
     }
 
     // Часовые метки
@@ -535,7 +596,7 @@ export async function renderMeetingsPage(
       label.style.gridColumn = '1';
       label.style.gridRow = String(h - hourLo + 2);
       label.textContent = `${pad(h)}:00`;
-      gridEl.appendChild(label);
+      frag.appendChild(label);
     }
 
     const occupied = new Set<string>();
@@ -573,7 +634,7 @@ export async function renderMeetingsPage(
             cell.addEventListener('click', (e) => { e.stopPropagation(); onEmptyCell(cell, cellDate); });
           }
         }
-        gridEl.appendChild(cell);
+        frag.appendChild(cell);
       }
     }
 
@@ -590,8 +651,10 @@ export async function renderMeetingsPage(
       const time = `${pad(new Date(p.booking.starts_at).getHours())}:00`;
       block.innerHTML = `<span class="cal__event-time">${time}</span><span class="cal__event-name">${escapeHtml(p.name)}</span>`;
       block.addEventListener('click', (e) => { e.stopPropagation(); onEventClick(block, p); });
-      gridEl.appendChild(block);
+      frag.appendChild(block);
     }
+
+    gridEl.replaceChildren(frag);
   }
 
   // ── Интеракции: клиент ──

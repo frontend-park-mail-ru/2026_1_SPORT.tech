@@ -30,6 +30,7 @@ function renderSkeleton(): string {
   return Array.from({ length: 5 }, () => `
     <div class="notification-skeleton">
       <div class="notification-skeleton__dot"></div>
+      <div class="notification-skeleton__avatar"></div>
       <div class="notification-skeleton__content">
         <div class="notification-skeleton__line"></div>
         <div class="notification-skeleton__line notification-skeleton__line--short"></div>
@@ -95,9 +96,13 @@ function renderNotificationItem(n: Notification): HTMLElement {
  * Для уведомлений с actor_user_id — подгружаем профиль и обновляем уже зарезервированные слоты.
  * Структура DOM не меняется → нет layout shift.
  */
-async function enrichWithActor(item: HTMLElement, api: ApiClient, actorUserId: number): Promise<void> {
+async function enrichWithActor(
+  item: HTMLElement,
+  fetchProfile: (id: number) => Promise<Profile>,
+  actorUserId: number
+): Promise<void> {
   try {
-    const profile = await api.getProfile(actorUserId);
+    const profile = await fetchProfile(actorUserId);
     const fullName = `${profile.first_name} ${profile.last_name}`.trim();
 
     // Обновляем аватар-слот
@@ -105,11 +110,21 @@ async function enrichWithActor(item: HTMLElement, api: ApiClient, actorUserId: n
     if (avatarSlot) {
       if (profile.avatar_url) {
         const img = document.createElement('img');
-        img.src = profile.avatar_url;
         img.className = 'notification-item__avatar';
         img.alt = profile.first_name || '';
-        // Картинка уже имеет размер через CSS, поэтому загрузка не сдвигает layout
-        avatarSlot.replaceWith(img);
+        img.decoding = 'async';
+        img.src = profile.avatar_url;
+        try {
+          // Дожидаемся полной декодировки до вставки в DOM — плейсхолдер-шиммер
+          // держится до готовности картинки, поэтому нет мигания «пусто → аватар».
+          await img.decode();
+          avatarSlot.replaceWith(img);
+        } catch {
+          // битый/недоступный аватар — откатываемся к инициалам
+          avatarSlot.classList.remove('notification-item__avatar--placeholder');
+          avatarSlot.classList.add('notification-item__avatar--initials');
+          avatarSlot.textContent = getInitials(profile);
+        }
       } else {
         avatarSlot.classList.remove('notification-item__avatar--placeholder');
         avatarSlot.classList.add('notification-item__avatar--initials');
@@ -146,6 +161,18 @@ export async function renderNotificationsPage(
   const listEl = container.querySelector('#notifications-list') as HTMLElement;
   const markAllBtn = container.querySelector('#mark-all-read-btn') as HTMLButtonElement;
 
+  // Кэшируем (и дедуплицируем) запросы профилей: один и тот же актор в нескольких
+  // уведомлениях не вызывает повторных запросов и резких подскоков при разной задержке.
+  const profileCache = new Map<number, Promise<Profile>>();
+  const fetchProfile = (id: number): Promise<Profile> => {
+    let p = profileCache.get(id);
+    if (!p) {
+      p = api.getProfile(id);
+      profileCache.set(id, p);
+    }
+    return p;
+  };
+
   // Show skeleton
   listEl.innerHTML = renderSkeleton();
 
@@ -170,7 +197,7 @@ export async function renderNotificationsPage(
 
       // Асинхронно обогащаем актором для subscription/donation/comment/like
       if (n.actor_user_id) {
-        void enrichWithActor(item, api, n.actor_user_id);
+        void enrichWithActor(item, fetchProfile, n.actor_user_id);
       }
 
       if (!n.is_read) {

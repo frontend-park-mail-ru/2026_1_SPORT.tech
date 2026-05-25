@@ -139,6 +139,16 @@
   margin-top: 6px;
 }
 
+.notification-skeleton__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s infinite;
+}
+
 .notification-skeleton__content {
   flex: 1;
   display: flex;
