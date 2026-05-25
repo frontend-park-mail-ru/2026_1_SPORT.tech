@@ -130,6 +130,7 @@ export async function renderMeetingsPage(
   let mode: Mode = params.initialTrainerId ? 'client' : (isTrainer ? 'trainer' : 'client');
   let selectedTrainerId = params.initialTrainerId ?? 0;
   let weekStart = startOfWeek(new Date());
+  let trainersLoaded = false; // пока false — селект/контекст показывают скелетон
   const trainerNames = new Map<number, string>();
   const clients: { id: number; name: string; tierName: string; calendarEnabled: boolean }[] = [];
 
@@ -354,7 +355,9 @@ export async function renderMeetingsPage(
     if (mode === 'client') {
       const wrap = document.createElement('div');
       wrap.className = 'cal__trainer-pick';
-      if (trainerNames.size === 0) {
+      if (!trainersLoaded) {
+        wrap.innerHTML = '<span class="cal__sk-bar cal__sk-bar--select"></span>';
+      } else if (trainerNames.size === 0) {
         wrap.innerHTML = '<span class="cal__muted">Нет активных подписок</span>';
       } else {
         const select = document.createElement('select');
@@ -377,6 +380,11 @@ export async function renderMeetingsPage(
   }
 
   function renderContext(): void {
+    if (!trainersLoaded && mode === 'client') {
+      contextEl.innerHTML = '<span class="cal__sk-bar cal__sk-bar--context"></span>';
+      contextEl.hidden = false;
+      return;
+    }
     if (mode === 'client' && selectedTrainerId) {
       const name = trainerNames.get(selectedTrainerId) ?? 'тренера';
       contextEl.innerHTML = `Свободные слоты тренера <strong>${escapeHtml(name)}</strong> — кликните по времени, чтобы записаться`;
@@ -895,6 +903,19 @@ export async function renderMeetingsPage(
     openPopover(anchor, content);
   }
 
+  function renderUpcomingSkeleton(): void {
+    const rows = Array.from({ length: 3 }, () => `
+      <div class="cal__upcoming-item cal__upcoming-item--sk">
+        <span class="cal__sk-bar cal__sk-bar--up-when"></span>
+        <span class="cal__sk-bar cal__sk-bar--up-who"></span>
+      </div>
+    `).join('');
+    upcomingEl.innerHTML = `
+      <h2 class="cal__upcoming-title">Ближайшие встречи</h2>
+      <div class="cal__upcoming-list">${rows}</div>
+    `;
+  }
+
   // ── Список ближайших встреч ──
   async function renderUpcoming(): Promise<void> {
     let bookings: MeetingBooking[] = [];
@@ -937,9 +958,17 @@ export async function renderMeetingsPage(
     upcomingEl.appendChild(list);
   }
 
-  // Скелетон показываем сразу, до загрузки тренеров/клиентов, чтобы не было
-  // пустой сетки и «прыжка с нуля» во время сетевых запросов.
+  // Весь каркас рисуем сразу, до сетевых запросов: дата и легенда детерминированы,
+  // а селект тренеров, контекст, сетка и список встреч показывают скелетоны.
+  // Так ничего не «допрыгивает» по мере загрузки данных.
+  weekLabelEl.textContent = weekLabel(weekStart);
+  renderToolbarLeft();
+  renderContext();
+  renderLegend();
   renderGridSkeleton();
+  renderUpcomingSkeleton();
+
   await Promise.all([loadTrainers(), loadClients()]);
+  trainersLoaded = true;
   await renderWeek();
 }

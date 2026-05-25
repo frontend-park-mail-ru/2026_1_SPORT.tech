@@ -322,6 +322,11 @@
 }
 .cal__sk-bar--day { width: 28px; height: 16px; }
 .cal__sk-bar--hour { width: 26px; height: 9px; }
+.cal__sk-bar--select { display: block; width: 180px; max-width: 48vw; height: 34px; border-radius: 8px; }
+.cal__sk-bar--context { display: block; width: 320px; max-width: 70%; height: 15px; }
+.cal__sk-bar--up-when { display: block; width: 45%; height: 14px; }
+.cal__sk-bar--up-who { display: block; width: 30%; height: 12px; }
+.cal__upcoming-item--sk { background: #fff; border-color: #f1f3f5; cursor: default; pointer-events: none; gap: 6px; }
 .cal__hourlabel--sk { transform: none; align-items: center; padding-top: 0; }
 .cal__event--sk {
   background: linear-gradient(90deg, #e7ecf1 25%, #dde3ea 50%, #e7ecf1 75%);
