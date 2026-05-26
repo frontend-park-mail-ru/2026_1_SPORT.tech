@@ -308,6 +308,20 @@
   color: #adb5bd;
   margin-top: 3px;
   padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chat-msg__read-mark {
+  display: inline-flex;
+  align-items: center;
+  color: var(--primary-orange);
+}
+
+.chat-msg__read-mark svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* Input area */

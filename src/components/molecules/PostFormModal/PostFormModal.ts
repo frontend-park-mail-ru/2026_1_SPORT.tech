@@ -401,7 +401,7 @@ export async function openPostFormModal({
             const uploadResult = await api.uploadPostMedia(block.file);
             return { file_url: uploadResult.file_url, kind: block.file.type.startsWith('video/') ? 'video' : 'image' };
           } catch {
-            globalErr.textContent = '⚠️ Загрузка медиа временно недоступна. Файл не будет добавлен.';
+            globalErr.textContent = 'Загрузка медиа временно недоступна. Файл не будет добавлен.';
             globalErr.hidden = false;
             return null;
           }

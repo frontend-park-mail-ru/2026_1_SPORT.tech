@@ -3,6 +3,7 @@
 import type { ApiClient } from '../../../utils/api';
 import type { Tier, Subscription } from '../../../types/api.types';
 import { escapeHtml, formatMonthlyPrice } from '../../../utils/profilePageData';
+import { icons } from '../../../utils/icons';
 
 export interface SubscriptionModalOptions {
   api: ApiClient;
@@ -63,10 +64,10 @@ export async function openSubscriptionModal({
           ${tiers.map(tier => {
     const isCurrent = currentSubscription?.tier_id === tier.tier_id;
     const chatBadge = tier.chat_enabled
-      ? '<span class="subscription-modal__chat-badge">💬 Чат с тренером</span>'
+      ? `<span class="subscription-modal__chat-badge">${icons.chat}<span>Чат с тренером</span></span>`
       : '';
     const calendarBadge = tier.calendar_enabled
-      ? '<span class="subscription-modal__chat-badge">📅 Запись в календарь</span>'
+      ? `<span class="subscription-modal__chat-badge">${icons.calendar}<span>Запись в календарь</span></span>`
       : '';
     return `
               <div class="subscription-modal__tier ${isCurrent ? 'subscription-modal__tier--current' : ''}">

@@ -156,10 +156,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
-  font-weight: bold;
   margin-bottom: var(--spacing-lg);
   animation: donation-success-pop 0.3s ease;
+}
+
+.donation-modal__success-icon svg {
+  width: 36px;
+  height: 36px;
+  stroke-width: 2.5;
 }
 
 @keyframes donation-success-pop {

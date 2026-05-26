@@ -35,6 +35,8 @@
                 data-field="name"
                 value="{{this.name}}"
                 placeholder="Например: Базовый"
+                maxlength="60"
+                required
               >
             </div>
 
@@ -48,7 +50,11 @@
                 data-field="price"
                 value="{{this.price}}"
                 placeholder="0"
-                min="0"
+                min="1"
+                max="1000000"
+                step="1"
+                inputmode="numeric"
+                required
               >
             </div>
 
@@ -62,6 +68,7 @@
                 data-field="description"
                 value="{{this.description}}"
                 placeholder="Что получает подписчик"
+                maxlength="500"
               >
             </div>
 

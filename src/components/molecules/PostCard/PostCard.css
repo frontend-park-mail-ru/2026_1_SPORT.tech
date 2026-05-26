@@ -8,6 +8,10 @@
   overflow: hidden;
   position: relative;
   cursor: pointer;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   transition: max-height 0.3s ease, box-shadow 0.2s;
 }
 
@@ -15,10 +19,10 @@
   box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 }
 
-/* Развёрнутая карточка */
-.post-card--expanded {
+/* Развёрнутая карточка — двойной класс для приоритета над мобильными media-rules. */
+.post-card.post-card--expanded {
   max-height: none;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* Шапка */
@@ -157,6 +161,7 @@
 
 .post-card__body--full {
   display: none;
+  max-width: 100%;
 }
 
 .post-card__body--full.post-card__body--open {
@@ -165,6 +170,13 @@
 
 .post-card__body-inner {
   overflow: hidden;
+  max-width: 100%;
+}
+
+.post-card__body,
+.post-card__content {
+  max-width: 100%;
+  min-width: 0;
 }
 
 /* Текстовый блок */
@@ -173,6 +185,15 @@
   font-size: 14px;
   line-height: 1.6;
   color: #666;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+  max-width: 100%;
+}
+
+.post-card__title {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Медиа блок */
@@ -298,10 +319,15 @@
   .post-card {
     padding: 16px;
     border-radius: 14px;
+    /* На мобильной версии не ограничиваем высоту слишком жёстко, иначе
+       в развёрнутом виде содержимое наезжает на футер. */
+    max-height: 360px;
   }
 
   .post-card__header {
     margin-bottom: 12px;
+    /* Заголовок поста умеет переноситься, если имя автора + бейдж длинные. */
+    flex-wrap: wrap;
   }
 
   .post-card__author-avatar {
@@ -310,12 +336,37 @@
     font-size: 13px;
   }
 
+  .post-card__author-info {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .post-card__author-name,
+  .post-card__author-role {
+    overflow-wrap: anywhere;
+  }
+
+  .post-card__tier-badge {
+    margin-left: 0;
+    flex-shrink: 0;
+  }
+
   .post-card__title {
     font-size: 16px;
   }
 
   .post-card__text-block {
     font-size: 13px;
+  }
+
+  .post-card__media-block {
+    min-height: 140px;
+  }
+
+  .post-card__media-block img,
+  .post-card__media-block video {
+    width: 100%;
+    height: auto;
   }
 
   .post-card__footer {
@@ -329,20 +380,38 @@
   }
 
   .post-card__actions-right {
-    width: 100%;
-    margin-left: 0;
-    justify-content: flex-end;
+    margin-left: auto;
   }
 }
 
 @media (max-width: 480px) {
+  .post-card {
+    padding: 14px;
+    max-height: 320px;
+  }
+
+  .post-card__title {
+    font-size: 15px;
+  }
+
   .post-card__footer {
+    gap: 10px;
     justify-content: space-between;
   }
 
   .post-card__actions-right {
     width: auto;
     margin-left: auto;
+    gap: 8px;
+  }
+
+  .post-card__action svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .post-card__comment-form {
+    gap: 6px;
   }
 }
 

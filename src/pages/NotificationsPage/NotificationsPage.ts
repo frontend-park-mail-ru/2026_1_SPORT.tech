@@ -4,6 +4,7 @@ import type { AuthResponse, Profile } from '../../types/api.types';
 import type { Notification } from '../../types/api.types';
 import { emitUnreadCount } from '../../components/organisms/Sidebar/Sidebar';
 import { escapeHtml } from '../../utils/profilePageData';
+import { icons } from '../../utils/icons';
 
 interface NotificationsPageParams {
   currentUser?: AuthResponse | null;
@@ -40,16 +41,16 @@ function renderSkeleton(): string {
 }
 
 /**
- * Иконка-эмодзи для типа уведомления
+ * SVG-иконка для типа уведомления (общая стилистика с сайдбаром).
  */
 function notifIcon(type: string): string {
   switch (type) {
-  case 'subscription': return '🎫';
-  case 'donation':     return '💸';
-  case 'like':         return '❤️';
-  case 'comment':      return '💬';
-  case 'post':         return '📝';
-  default:             return '🔔';
+  case 'subscription': return icons.ticket;
+  case 'donation':     return icons.money;
+  case 'like':         return icons.heart;
+  case 'comment':      return icons.chat;
+  case 'post':         return icons.post;
+  default:             return icons.bell;
   }
 }
 

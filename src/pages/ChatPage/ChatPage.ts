@@ -230,7 +230,7 @@ export async function renderChatPage(
           <p class="chat-empty-state__text">Нет диалогов</p>
           <p class="chat-empty-state__hint">
             Чат доступен при подписке с опцией «Чат».<br>
-            Откройте профиль тренера и нажмите кнопку <strong>«💬 Написать»</strong>.
+            Откройте профиль тренера и нажмите кнопку <strong>«Написать»</strong>.
           </p>
         </div>
       `;
@@ -332,7 +332,10 @@ export async function renderChatPage(
   }
 
   function renderMessageMeta(meta: HTMLElement, time: string, isRead: boolean): void {
-    meta.textContent = `${time}${isRead ? ' ✓✓' : ''}`;
+    const readMark = isRead
+      ? ' <span class="chat-msg__read-mark" aria-label="Прочитано"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/><polyline points="22 12 13 21" opacity="0.75"/></svg></span>'
+      : '';
+    meta.innerHTML = `${time}${readMark}`;
   }
 
   function markMessageRead(messageId: number): void {

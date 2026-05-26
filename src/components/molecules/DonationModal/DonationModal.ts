@@ -3,6 +3,7 @@ import type { InputAPI } from '../../atoms/Input/Input';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { MIN_DONATION_AMOUNT_RUB, MAX_DONATION_AMOUNT_RUB, Validator } from '../../../utils/validator';
 import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
+import { icons } from '../../../utils/icons';
 
 export interface DonationModalOptions {
   api: ApiClient;
@@ -163,7 +164,7 @@ function showSuccess(form: HTMLFormElement, submitBtn: HTMLButtonElement, amount
   const successMessage = document.createElement('div');
   successMessage.className = 'donation-modal__success';
   successMessage.innerHTML = `
-    <div class="donation-modal__success-icon">✓</div>
+    <div class="donation-modal__success-icon">${icons.successCircle}</div>
     <h3 class="donation-modal__success-title">Спасибо!</h3>
     <p class="donation-modal__success-text">
       Ваше пожертвование в размере <strong>${amount} ₽</strong> успешно отправлено.

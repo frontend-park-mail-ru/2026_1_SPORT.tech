@@ -6,6 +6,7 @@
 import type { ApiClient } from '../../../utils/api';
 import { escapeHtml } from '../../../utils/profilePageData';
 import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
+import { icons } from '../../../utils/icons';
 import './FinanceTab.css';
 
 export interface FinanceTabOptions {
@@ -58,14 +59,14 @@ export async function renderFinanceTab(container: HTMLElement, { api }: FinanceT
       </div>
 
       <div class="finance-tab__disclaimer">
-        <p>💡 Доходы рассчитываются по завершённым платежам. Актуализируются в реальном времени.</p>
+        <p><span class="finance-tab__disclaimer-icon">${icons.bulb}</span>Доходы рассчитываются по завершённым платежам. Актуализируются в реальном времени.</p>
       </div>
     `;
   } catch (err: unknown) {
     const msg = getFriendlyErrorMessage(err, 'Попробуйте повторить позже.');
     root.innerHTML = `
       <div class="finance-tab__error">
-        <div class="finance-tab__error-icon">⚠️</div>
+        <div class="finance-tab__error-icon">${icons.warning}</div>
         <p class="finance-tab__error-text">Не удалось загрузить финансовые данные</p>
         <p class="finance-tab__error-detail">${escapeHtml(msg)}</p>
         <button class="finance-tab__retry-btn">Попробовать снова</button>

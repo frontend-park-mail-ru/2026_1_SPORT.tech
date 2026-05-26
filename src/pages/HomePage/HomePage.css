@@ -76,7 +76,7 @@
 
 .home-page__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 18px;
 }
 
@@ -94,6 +94,8 @@
 
 .trainer-card {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid #dbe9f2;
   background: linear-gradient(180deg, #f9fcff 0%, #f3f9fe 100%);
   border-radius: 20px;
@@ -103,6 +105,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
@@ -203,6 +206,8 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .trainer-card__meta {
@@ -289,16 +294,82 @@
   }
 
   .trainer-card {
-    padding: 16px;
-    border-radius: 18px;
+    padding: 14px;
+    border-radius: 16px;
+    gap: 12px;
+  }
+
+  .trainer-card__header {
+    gap: 12px;
+  }
+
+  .trainer-card__avatar {
+    width: 52px;
+    height: 52px;
+    font-size: 18px;
   }
 
   .trainer-card__name {
-    font-size: 18px;
+    font-size: 17px;
+  }
+
+  .trainer-card__top {
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
   .trainer-card__bio {
     min-height: 0;
+    -webkit-line-clamp: 4;
+    font-size: 13px;
+  }
+
+  .trainer-card__meta,
+  .trainer-card__sports {
+    gap: 6px;
+  }
+
+  .trainer-card__meta-item,
+  .trainer-card__sport {
+    font-size: 11px;
+    padding: 5px 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-page__main {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .home-page__hero,
+  .home-page__catalog {
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+
+  .home-page__title {
+    font-size: 22px;
+  }
+
+  .trainer-card {
+    padding: 12px;
+  }
+
+  .trainer-card__avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 16px;
+  }
+
+  .trainer-card__name {
+    font-size: 16px;
+    -webkit-line-clamp: 2;
+  }
+
+  .home-page__toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 }
 /* Панель инструментов (поиск + фильтры) */

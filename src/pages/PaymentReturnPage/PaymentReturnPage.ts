@@ -4,6 +4,7 @@ import type { AuthResponse, PaymentResponse } from '../../types/api.types';
 import { escapeHtml, formatMonthlyPrice } from '../../utils/profilePageData';
 import { getFriendlyErrorMessage } from '../../utils/errorMessages';
 import { emitSubscriptionsChanged } from '../../components/organisms/Sidebar/Sidebar';
+import { icons } from '../../utils/icons';
 
 interface PaymentReturnPageParams {
   currentUser?: AuthResponse | null;
@@ -68,12 +69,12 @@ async function renderSuccess(
   }
 
   const chatBtn = chatEnabled && trainerId
-    ? '<button class="payment-result__btn payment-result__btn--secondary" id="btn-chat">💬 Написать тренеру</button>'
+    ? `<button class="payment-result__btn payment-result__btn--secondary payment-result__btn--with-icon" id="btn-chat">${icons.chat}<span>Написать тренеру</span></button>`
     : '';
 
   el.innerHTML = `
     <div class="payment-result">
-      <div class="payment-result__icon payment-result__icon--success">✓</div>
+      <div class="payment-result__icon payment-result__icon--success">${icons.successCircle}</div>
       <h1 class="payment-result__title">${isSubscription ? 'Подписка оформлена!' : 'Оплата прошла!'}</h1>
       ${details}
       ${chatEnabled ? '<p class="payment-result__chat-hint">Ваша подписка включает чат с тренером — напишите ему прямо сейчас!</p>' : ''}
@@ -100,7 +101,7 @@ async function renderSuccess(
 function renderError(el: HTMLElement, message: string, navigateTo: (p: string) => void): void {
   el.innerHTML = `
     <div class="payment-result">
-      <div class="payment-result__icon payment-result__icon--error">✗</div>
+      <div class="payment-result__icon payment-result__icon--error">${icons.errorCircle}</div>
       <h1 class="payment-result__title">Ошибка оплаты</h1>
       <p class="payment-result__message">${escapeHtml(message)}</p>
       <div class="payment-result__actions">

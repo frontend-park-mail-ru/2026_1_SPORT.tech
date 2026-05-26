@@ -5,6 +5,7 @@ import { renderButton } from '../../atoms/Button/Button';
 import type { ButtonAPI } from '../../atoms/Button/Button';
 import { emitSubscriptionsChanged } from '../../organisms/Sidebar/Sidebar';
 import { openProfileEditModal } from '../ProfileEditModal/ProfileEditModal';
+import { icons } from '../../../utils/icons';
 
 export interface ProfileHeaderConfig {
   name: string;
@@ -198,7 +199,7 @@ export async function renderProfileHeader(
             if (tier?.chat_enabled) {
               const btn = document.createElement('button');
               btn.className = 'button button--medium profile-header__subscription-action';
-              btn.textContent = '💬 Написать';
+              btn.innerHTML = `${icons.chat}<span>Написать</span>`;
               btn.addEventListener('click', () => {
                 window.router.navigateTo(`/chat/${viewedUserId}`);
               });
@@ -207,7 +208,7 @@ export async function renderProfileHeader(
             if (tier?.calendar_enabled) {
               const bookBtn = document.createElement('button');
               bookBtn.className = 'button button--medium profile-header__subscription-action';
-              bookBtn.textContent = '📅 Записаться';
+              bookBtn.innerHTML = `${icons.calendar}<span>Записаться</span>`;
               bookBtn.addEventListener('click', () => {
                 window.router.navigateTo(`/meetings/${viewedUserId}`);
               });
@@ -284,9 +285,10 @@ export async function renderProfileHeader(
 
   // ---- Статистика (только собственный профиль тренера) ----
   if (isOwnProfile && isTrainer && secondaryContainer) {
+    secondaryContainer.classList.add('profile-header__secondary-slot');
     await renderButton(secondaryContainer, {
       text: 'Статистика',
-      variant: 'secondary-blue',
+      variant: 'primary-orange',
       state: 'normal',
       size: 'medium',
       onClick: async () => {

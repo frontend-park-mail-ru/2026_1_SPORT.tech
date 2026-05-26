@@ -145,15 +145,85 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
       } else if (field === 'calendar_enabled') {
         tier.calendar_enabled = (target as HTMLInputElement).checked;
       }
+      // Снимаем подсветку ошибки на текущем поле и убираем баннер,
+      // как только пользователь начал править значение.
+      target.classList.remove('tier-input--error');
+      container.querySelector('.tiers-error-message')?.remove();
     }
   });
 
+  // ========== ВАЛИДАЦИЯ ==========
+  // Ограничения уровня: имя 1–60 символов, цена 1–1 000 000 ₽, описание ≤ 500.
+  // Уровни без названия игнорируем — пользователь мог нажать «+» по ошибке.
+  function validate(): { tiers: TierData[]; error: string | null } {
+    const meaningful = tiers.filter(t => t.name.trim() || t.price > 0 || t.description.trim());
+
+    if (meaningful.length === 0) {
+      return { tiers: [], error: 'Добавьте хотя бы один уровень подписки' };
+    }
+
+    // Снимаем подсветку с предыдущей попытки.
+    container.querySelectorAll('.tier-input--error').forEach(el => el.classList.remove('tier-input--error'));
+
+    const markError = (tierId: string, field: string): void => {
+      const input = container.querySelector<HTMLInputElement>(
+        `.tier-input[data-tier-id="${tierId}"][data-field="${field}"]`
+      );
+      input?.classList.add('tier-input--error');
+      input?.focus();
+    };
+
+    const seenNames = new Set<string>();
+
+    for (const tier of meaningful) {
+      const name = tier.name.trim();
+      if (!name) {
+        markError(tier.id, 'name');
+        return { tiers: [], error: `Уровень ${tier.index}: укажите название` };
+      }
+      if (name.length < 2) {
+        markError(tier.id, 'name');
+        return { tiers: [], error: `Уровень ${tier.index}: название слишком короткое (минимум 2 символа)` };
+      }
+      if (name.length > 60) {
+        markError(tier.id, 'name');
+        return { tiers: [], error: `Уровень ${tier.index}: название слишком длинное (максимум 60 символов)` };
+      }
+      const key = name.toLowerCase();
+      if (seenNames.has(key)) {
+        markError(tier.id, 'name');
+        return { tiers: [], error: `Уровень ${tier.index}: название «${name}» уже используется` };
+      }
+      seenNames.add(key);
+
+      if (!Number.isFinite(tier.price) || tier.price <= 0) {
+        markError(tier.id, 'price');
+        return { tiers: [], error: `Уровень ${tier.index}: укажите цену больше 0 ₽` };
+      }
+      if (!Number.isInteger(tier.price)) {
+        markError(tier.id, 'price');
+        return { tiers: [], error: `Уровень ${tier.index}: цена должна быть целым числом` };
+      }
+      if (tier.price > 1_000_000) {
+        markError(tier.id, 'price');
+        return { tiers: [], error: `Уровень ${tier.index}: цена не может быть больше 1 000 000 ₽` };
+      }
+
+      if (tier.description.length > 500) {
+        markError(tier.id, 'description');
+        return { tiers: [], error: `Уровень ${tier.index}: описание длиннее 500 символов` };
+      }
+    }
+
+    return { tiers: meaningful, error: null };
+  }
+
   // ========== СОХРАНЕНИЕ ==========
   async function handleSave(saveBtn: HTMLButtonElement): Promise<void> {
-    const validTiers = tiers.filter(t => t.name.trim() && t.price !== undefined && t.price !== null && t.price >= 0);
+    const { tiers: validTiers, error } = validate();
 
-    if (validTiers.length === 0) {
-      showError('Добавьте хотя бы один уровень с названием и ценой');
+    if (error || validTiers.length === 0) {
+      showError(error || 'Не удалось сохранить уровни');
       return;
     }
 

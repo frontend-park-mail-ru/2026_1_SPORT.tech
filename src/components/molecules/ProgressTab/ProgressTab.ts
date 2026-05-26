@@ -5,6 +5,7 @@
 
 import type { ApiClient } from '../../../utils/api';
 import type { Measurement } from '../../../types/api.types';
+import { icons } from '../../../utils/icons';
 import './ProgressTab.css';
 
 export interface ProgressTabOptions {
@@ -83,14 +84,14 @@ function renderMeasurementRow(m: Measurement): string {
     `<td class="progress-table__cell">${m.hips_cm != null ? `${m.hips_cm} см` : '—'}</td>`,
     `<td class="progress-table__cell progress-table__cell--notes">${m.notes ? escapeHtml(m.notes) : '—'}</td>`,
   ].join('');
-  return `<tr class="progress-table__row" data-id="${m.measurement_id}">${cells}<td class="progress-table__cell progress-table__cell--actions"><button class="progress-tab__delete-btn" data-id="${m.measurement_id}" title="Удалить">✕</button></td></tr>`;
+  return `<tr class="progress-table__row" data-id="${m.measurement_id}">${cells}<td class="progress-table__cell progress-table__cell--actions"><button class="progress-tab__delete-btn" data-id="${m.measurement_id}" title="Удалить">${icons.close}</button></td></tr>`;
 }
 
 function renderEmptyState(isOwnProfile: boolean): string {
   if (isOwnProfile) {
     return `
       <div class="progress-tab__empty">
-        <div class="progress-tab__empty-icon">📊</div>
+        <div class="progress-tab__empty-icon">${icons.chart}</div>
         <p class="progress-tab__empty-text">Нет замеров</p>
         <p class="progress-tab__empty-hint">Добавьте первый замер, чтобы начать следить за прогрессом</p>
       </div>
@@ -98,7 +99,7 @@ function renderEmptyState(isOwnProfile: boolean): string {
   }
   return `
     <div class="progress-tab__empty">
-      <div class="progress-tab__empty-icon">📊</div>
+      <div class="progress-tab__empty-icon">${icons.chart}</div>
       <p class="progress-tab__empty-text">Замеров пока нет</p>
       <p class="progress-tab__empty-hint">Пользователь ещё не добавил ни одного замера</p>
     </div>
@@ -157,7 +158,7 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
       const denied = document.createElement('div');
       denied.className = 'progress-tab__empty';
       denied.innerHTML = `
-        <div class="progress-tab__empty-icon">🔒</div>
+        <div class="progress-tab__empty-icon">${icons.lock}</div>
         <p class="progress-tab__empty-text">Нет доступа к замерам</p>
         <p class="progress-tab__empty-hint">Клиент не открыл вам доступ к своим данным</p>
       `;
@@ -188,7 +189,7 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
           await refresh();
         } catch {
           btn.disabled = false;
-          btn.textContent = '✕';
+          btn.innerHTML = icons.close;
         }
       });
     }
@@ -333,7 +334,8 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
     section.innerHTML = `
       <details class="progress-tab__sharing-details">
         <summary class="progress-tab__sharing-summary">
-          🔒 Доступ тренеров к замерам
+          <span class="progress-tab__sharing-icon">${icons.lock}</span>
+          <span>Доступ тренеров к замерам</span>
           <span class="progress-tab__sharing-hint">Выберите тренеров, которые могут видеть ваш прогресс</span>
         </summary>
         <div class="progress-tab__sharing-body">
@@ -402,7 +404,7 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
             body.querySelectorAll<HTMLInputElement>('.progress-tab__sharing-checkbox:checked')
           ).map(cb => Number(cb.dataset.trainerId));
           await api.setMeasurementSharing(selected);
-          saveBtn.textContent = '✓ Сохранено';
+          saveBtn.innerHTML = `${icons.check}<span>Сохранено</span>`;
           setTimeout(() => {
             saveBtn.disabled = false;
             saveBtn.textContent = 'Сохранить доступ';
