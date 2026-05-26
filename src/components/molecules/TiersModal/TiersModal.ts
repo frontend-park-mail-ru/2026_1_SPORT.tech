@@ -26,6 +26,9 @@ interface TierData {
 }
 
 export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
+  // Не открываем повторно, если модалка уже есть в DOM
+  if (document.querySelector('.tiers-modal-container')) return;
+
   let tiers: TierData[] = [];
   let tierCounter = 0;
 

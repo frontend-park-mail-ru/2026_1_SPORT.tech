@@ -753,30 +753,7 @@
   accent-color: var(--primary-orange);
   cursor: pointer;
 }
-/* Стили для блока подписок */
-.tiers-settings {
-  padding: 20px;
-  text-align: center;
-}
-
-.tiers-settings h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1A2B3C;
-}
-
-.tiers-settings .button--full-width {
-  width: 100%;
-  max-width: 300px;
-  margin: 0 auto;
-}
-
-/* Скрытие поиска по умолчанию */
-.profile-content__search[style*="display: none"] {
-  display: none !important;
-}
-
-/* Стили для блока подписок */
+/* ===== Блок настройки уровней подписки ===== */
 .tiers-settings {
   padding: 20px;
   text-align: center;
@@ -795,14 +772,9 @@
   line-height: 1.5;
 }
 
-#tiers-button-container {
-  display: flex;
-  justify-content: center;
-}
-
-#tiers-button-container .button {
-  width: 100%;
-  max-width: 300px;
+/* Скрытие поиска по умолчанию */
+.profile-content__search[style*="display: none"] {
+  display: none !important;
 }
 
 /* ===== ПАНЕЛЬ СТАТИСТИКИ ТРЕНЕРА ===== */
