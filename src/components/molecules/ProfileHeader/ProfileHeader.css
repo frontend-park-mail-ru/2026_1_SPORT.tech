@@ -87,6 +87,9 @@
 
 .profile-header__meta-item {
   color: #5b6b7b;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .profile-header__meta-item--btn {

@@ -110,7 +110,7 @@ function createLogoutHandler(
       setCurrentUser(null);
       localStorage.removeItem('user');
       localStorage.removeItem('cached_user');
-      navigateTo('/auth');
+      navigateTo('/auth/login');
     }
   };
 }
@@ -208,14 +208,17 @@ function createRouter(api: ApiClient): Router {
 
   // ─── Page renderers ─────────────────────────────────────────────────────
 
-  async function showAuthPage(app: HTMLElement): Promise<void> {
+  async function showAuthPage(
+    app: HTMLElement,
+    mode: 'login' | 'register' | 'register-trainer' = 'login'
+  ): Promise<void> {
     destroyShell(app);
-    setPageTitle('Вход');
-    renderBootScreen(app, 'Загружаем страницу входа');
+    setPageTitle(mode === 'login' ? 'Вход' : mode === 'register-trainer' ? 'Регистрация тренера' : 'Регистрация');
+    renderBootScreen(app, mode === 'login' ? 'Загружаем страницу входа' : 'Загружаем страницу регистрации');
     app.classList.add('auth-page');
     try {
       const { renderAuthPage } = await import('./pages/AuthPage/AuthPage');
-      await renderAuthPage(app, api);
+      await renderAuthPage(app, api, mode);
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to load AuthPage:', err);
@@ -250,7 +253,7 @@ function createRouter(api: ApiClient): Router {
     viewed?: number | string
   ): Promise<void> {
     const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
-    if (viewed === undefined && !currentUser?.user?.user_id) { navigateTo('/auth'); return; }
+    if (viewed === undefined && !currentUser?.user?.user_id) { navigateTo('/auth/login'); return; }
 
     const content = ensureShell(app);
     void syncSidebar(app, currentUser, 'profile', onLogout);
@@ -404,16 +407,26 @@ function createRouter(api: ApiClient): Router {
     const meetingsWithMatch = path.match(/^\/meetings\/(\d+)$/);
 
     if (path === '/index.html') {
-      navigateTo(isAuthenticated ? '/' : '/auth');
+      navigateTo(isAuthenticated ? '/' : '/auth/login');
       return;
     }
-    if (path === '/auth') {
+    if (path === '/auth' || path === '/auth/login') {
       if (isAuthenticated) navigateTo('/');
-      else await showAuthPage(app);
+      else await showAuthPage(app, 'login');
+      return;
+    }
+    if (path === '/auth/register') {
+      if (isAuthenticated) navigateTo('/');
+      else await showAuthPage(app, 'register');
+      return;
+    }
+    if (path === '/auth/register/trainer') {
+      if (isAuthenticated) navigateTo('/');
+      else await showAuthPage(app, 'register-trainer');
       return;
     }
     if (!isAuthenticated) {
-      navigateTo('/auth');
+      navigateTo('/auth/login');
       return;
     }
 

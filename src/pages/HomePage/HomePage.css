@@ -106,13 +106,25 @@
   flex-direction: column;
   gap: 16px;
   overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.26s ease,
+              background 0.26s ease;
 }
 
 .trainer-card:hover {
-  transform: translateY(-3px);
-  border-color: #bfd8e7;
-  box-shadow: 0 12px 26px rgba(52, 94, 132, 0.14);
+  transform: translateY(-6px);
+  border-color: #a8c8dc;
+  background: linear-gradient(180deg, #ffffff 0%, #f0f7fd 100%);
+  box-shadow: 0 18px 40px rgba(52, 94, 132, 0.18);
+}
+
+.trainer-card:hover .trainer-card__avatar {
+  transform: scale(1.04);
+}
+
+.trainer-card__avatar {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .trainer-card:focus-visible {

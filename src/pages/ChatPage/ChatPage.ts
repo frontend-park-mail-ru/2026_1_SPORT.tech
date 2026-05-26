@@ -476,7 +476,7 @@ export async function renderChatPage(
       const isAtBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 80;
       appendMessageNode(area, msg);
       lastRenderedMessageId = Number(msg.message_id);
-      if (isAtBottom) area.scrollTop = area.scrollHeight;
+      if (isAtBottom) area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
     };
 
     es.addEventListener('read', (event: MessageEvent) => {
@@ -571,7 +571,7 @@ export async function renderChatPage(
           if (messageId > lastRenderedMessageId) {
             appendMessageNode(area, sentMessage);
             lastRenderedMessageId = messageId;
-            area.scrollTop = area.scrollHeight;
+            area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
           }
         }
 

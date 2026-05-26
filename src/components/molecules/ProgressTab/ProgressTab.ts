@@ -208,23 +208,23 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
         </label>
         <label class="progress-tab__field">
           <span class="progress-tab__label">Вес (кг)</span>
-          <input class="progress-tab__input" type="text" inputmode="decimal" name="weight_kg" data-number-field="weight_kg" placeholder="75.5">
+          <input class="progress-tab__input" type="text" inputmode="decimal" name="weight_kg" data-number-field="weight_kg" maxlength="6" placeholder="75.5">
         </label>
         <label class="progress-tab__field">
           <span class="progress-tab__label">% жира</span>
-          <input class="progress-tab__input" type="text" inputmode="decimal" name="body_fat_pct" data-number-field="body_fat_pct" placeholder="18.5">
+          <input class="progress-tab__input" type="text" inputmode="decimal" name="body_fat_pct" data-number-field="body_fat_pct" maxlength="5" placeholder="18.5">
         </label>
         <label class="progress-tab__field">
           <span class="progress-tab__label">Грудь (см)</span>
-          <input class="progress-tab__input" type="text" inputmode="numeric" name="chest_cm" data-number-field="chest_cm" placeholder="100">
+          <input class="progress-tab__input" type="text" inputmode="numeric" name="chest_cm" data-number-field="chest_cm" maxlength="3" placeholder="100">
         </label>
         <label class="progress-tab__field">
           <span class="progress-tab__label">Талия (см)</span>
-          <input class="progress-tab__input" type="text" inputmode="numeric" name="waist_cm" data-number-field="waist_cm" placeholder="80">
+          <input class="progress-tab__input" type="text" inputmode="numeric" name="waist_cm" data-number-field="waist_cm" maxlength="3" placeholder="80">
         </label>
         <label class="progress-tab__field">
           <span class="progress-tab__label">Бёдра (см)</span>
-          <input class="progress-tab__input" type="text" inputmode="numeric" name="hips_cm" data-number-field="hips_cm" placeholder="95">
+          <input class="progress-tab__input" type="text" inputmode="numeric" name="hips_cm" data-number-field="hips_cm" maxlength="3" placeholder="95">
         </label>
         <label class="progress-tab__field progress-tab__field--full">
           <span class="progress-tab__label">Заметки</span>

@@ -50,6 +50,7 @@ interface ModeConfig {
   submitText: string;
   altText: string;
   altLinkText: string;
+  altLinkHref: string;
   fields: FieldConfig[];
 }
 
@@ -72,15 +73,15 @@ export interface AuthFormAPI {
 }
 
 const SERVER_ERROR_MAP: Record<string, string> = {
-  'invalid credentials': 'Неверный email или пароль',
-  'invalid credential': 'Неверный email или пароль',
-  'wrong password': 'Неверный email или пароль',
+  'invalid credentials': 'Неверная почта или пароль',
+  'invalid credential': 'Неверная почта или пароль',
+  'wrong password': 'Неверная почта или пароль',
   'user not found': 'Пользователь не найден',
-  'email already exists': 'Этот email уже занят',
-  'email already taken': 'Этот email уже занят',
+  'email already exists': 'Эта почта уже занята',
+  'email already taken': 'Эта почта уже занята',
   'username already exists': 'Это имя пользователя уже занято',
   'username already taken': 'Это имя пользователя уже занято',
-  'user already exists': 'Пользователь с таким email или именем уже существует',
+  'user already exists': 'Пользователь с такой почтой или именем уже существует',
   'unauthorized': 'Необходима авторизация',
   'forbidden': 'Доступ запрещён',
   'internal server error': 'Ошибка сервера, попробуйте позже',
@@ -268,6 +269,7 @@ export async function renderAuthForm(
       submitText: 'Войти',
       altText: 'Нет аккаунта?',
       altLinkText: 'Зарегистрироваться',
+      altLinkHref: '/auth/register',
       fields: [
         {
           type: INPUT_TYPES.MAIL as InputType,
@@ -292,6 +294,7 @@ export async function renderAuthForm(
       submitText: 'Зарегистрироваться',
       altText: 'Уже есть аккаунт?',
       altLinkText: 'Войти',
+      altLinkHref: '/auth/login',
       fields: [
         {
           type: INPUT_TYPES.NAME as InputType,
@@ -349,6 +352,7 @@ export async function renderAuthForm(
       submitText: 'Зарегистрироваться',
       altText: 'Уже есть аккаунт?',
       altLinkText: 'Войти',
+      altLinkHref: '/auth/login',
       fields: [
         {
           type: INPUT_TYPES.NAME as InputType,
@@ -415,7 +419,7 @@ export async function renderAuthForm(
         {
           type: INPUT_TYPES.WITHOUTS as InputType,
           name: 'sport_discipline',
-          label: 'Вид дисциплины/спорта',
+          label: 'Виды спорта',
           placeholder: 'Выберите виды спорта',
           required: true
         },
@@ -437,7 +441,8 @@ export async function renderAuthForm(
     subtitle: currentMode.subtitle,
     hasAltAction: true,
     altText: currentMode.altText,
-    altLinkText: currentMode.altLinkText
+    altLinkText: currentMode.altLinkText,
+    altLinkHref: currentMode.altLinkHref
   });
 
   const wrapper = document.createElement('div');

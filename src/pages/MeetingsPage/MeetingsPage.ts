@@ -26,6 +26,8 @@ const MONTHS_GEN = [
 
 const DEFAULT_HOUR_LO = 7;
 const DEFAULT_HOUR_HI = 22;
+const STABLE_HOUR_LO = 6;
+const STABLE_HOUR_HI = 23;
 
 function escapeHtml(str: string): string {
   return str
@@ -278,10 +280,13 @@ export async function renderMeetingsPage(
   let bannerTimer: number | undefined;
   function showBanner(text: string, kind: 'error' | 'ok' = 'error'): void {
     bannerEl.textContent = text;
-    bannerEl.className = `cal__banner cal__banner--${kind}`;
+    bannerEl.className = `cal__banner cal__banner--${kind} cal__banner--visible`;
     bannerEl.hidden = false;
     window.clearTimeout(bannerTimer);
-    bannerTimer = window.setTimeout(() => { bannerEl.hidden = true; }, 5000);
+    bannerTimer = window.setTimeout(() => {
+      bannerEl.classList.remove('cal__banner--visible');
+      window.setTimeout(() => { bannerEl.hidden = true; }, 280);
+    }, 5000);
   }
 
   function hideAccessNotice(): void {
@@ -294,6 +299,7 @@ export async function renderMeetingsPage(
   function showCalendarAccessNotice(): void {
     const trainerName = trainerNames.get(selectedTrainerId) ?? 'Выбранный тренер';
     window.clearTimeout(bannerTimer);
+    bannerEl.classList.remove('cal__banner--visible');
     bannerEl.hidden = true;
     contextEl.innerHTML = `Календарь тренера <strong>${escapeHtml(trainerName)}</strong>`;
     contextEl.hidden = false;
@@ -418,8 +424,8 @@ export async function renderMeetingsPage(
 
   // ── Скелетон сетки (тот же каркас, что и реальная неделя) ──
   function renderGridSkeleton(): void {
-    const hourLo = DEFAULT_HOUR_LO;
-    const hourHi = DEFAULT_HOUR_HI;
+    const hourLo = STABLE_HOUR_LO;
+    const hourHi = STABLE_HOUR_HI;
     const rows = hourHi - hourLo + 1;
     gridEl.style.gridTemplateColumns = '56px repeat(7, minmax(0, 1fr))';
     gridEl.style.gridTemplateRows = `40px repeat(${rows}, 46px)`;
@@ -484,6 +490,7 @@ export async function renderMeetingsPage(
     renderLegend();
     weekLabelEl.textContent = weekLabel(weekStart);
     renderGridSkeleton();
+    renderUpcomingSkeleton();
 
     const weekEndExclusive = addDays(weekStart, 7).getTime();
     const inWeek = (ms: number): boolean => ms >= weekStart.getTime() && ms < weekEndExclusive;
@@ -545,8 +552,8 @@ export async function renderMeetingsPage(
       placed = await placeBookings(() => true, inWeek, widen);
     }
 
-    hourLo = Math.max(0, hourLo);
-    hourHi = Math.min(23, hourHi);
+    hourLo = Math.max(0, Math.min(hourLo, STABLE_HOUR_LO));
+    hourHi = Math.min(23, Math.max(hourHi, STABLE_HOUR_HI));
     drawGrid(hourLo, hourHi, { free, slotIds, ruleIds, placed });
     await renderUpcoming();
   }
@@ -939,6 +946,8 @@ export async function renderMeetingsPage(
       .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
       .slice(0, 6);
 
+    const names = await Promise.all(upcoming.map(b => profileName(b.other_user_id)));
+
     upcomingEl.innerHTML = '<h2 class="cal__upcoming-title">Ближайшие встречи</h2>';
     if (upcoming.length === 0) {
       upcomingEl.insertAdjacentHTML('beforeend', '<p class="cal__muted">Запланированных встреч пока нет.</p>');
@@ -946,9 +955,8 @@ export async function renderMeetingsPage(
     }
     const list = document.createElement('div');
     list.className = 'cal__upcoming-list';
-    for (const b of upcoming) {
+    upcoming.forEach((b, i) => {
       const start = new Date(b.starts_at);
-      const name = await profileName(b.other_user_id);
       const roleBadge = b.role === 'trainer'
         ? '<span class="cal__badge cal__badge--trainer">Вы тренер</span>'
         : '<span class="cal__badge cal__badge--client">Вы клиент</span>';
@@ -956,14 +964,14 @@ export async function renderMeetingsPage(
       item.className = 'cal__upcoming-item';
       item.innerHTML = `
         <span class="cal__upcoming-when">${escapeHtml(fullDayLabel(start))}, ${pad(start.getHours())}:00</span>
-        <span class="cal__upcoming-who">${escapeHtml(name)} ${roleBadge}</span>
+        <span class="cal__upcoming-who">${escapeHtml(names[i])} ${roleBadge}</span>
       `;
       item.addEventListener('click', () => {
         weekStart = startOfWeek(start);
         void renderWeek();
       });
       list.appendChild(item);
-    }
+    });
     upcomingEl.appendChild(list);
   }
 

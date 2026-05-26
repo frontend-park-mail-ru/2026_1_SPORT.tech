@@ -15,15 +15,39 @@
   gap: 16px;
 }
 
-/* ── Баннер ── */
+/* ── Баннер ── как floating toast, не толкает контент */
 .cal__banner {
-  border-radius: 8px;
-  padding: 10px 14px;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  max-width: 360px;
+  border-radius: 10px;
+  padding: 12px 16px;
   font-size: 13px;
   font-weight: 500;
+  box-shadow: 0 12px 32px rgba(33, 37, 41, 0.18);
+  opacity: 0;
+  transform: translateY(-12px);
+  transition: opacity 0.24s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
 }
-.cal__banner--error { background: #fff0f0; color: #e03131; }
-.cal__banner--ok { background: #ebfbee; color: #2f9e44; }
+.cal__banner--visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.cal__banner--error { background: #fff0f0; color: #e03131; border: 1px solid #ffc9c9; }
+.cal__banner--ok { background: #ebfbee; color: #2f9e44; border: 1px solid #b2f2bb; }
+
+@media (max-width: 600px) {
+  .cal__banner {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    max-width: none;
+  }
+}
 
 /* ── Тулбар ── */
 .cal__toolbar {
@@ -39,7 +63,16 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  min-height: 34px;
 }
+
+.cal__trainer-pick {
+  display: flex;
+  align-items: center;
+  width: 220px;
+  min-height: 34px;
+}
+.cal__sk-bar--select { display: block; width: 100% !important; max-width: none !important; }
 
 .cal__toolbar-nav {
   display: flex;
@@ -94,6 +127,7 @@
 }
 
 .cal__select {
+  width: 100%;
   height: 34px;
   padding: 0 10px;
   border: 1px solid #ced4da;
@@ -101,6 +135,12 @@
   font-size: 14px;
   font-family: inherit;
   background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.cal__select:focus {
+  border-color: var(--primary-orange);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 107, 74, 0.15);
 }
 
 .cal__muted { font-size: 13px; color: #adb5bd; }
@@ -108,13 +148,18 @@
 /* ── Контекстная подпись (какой календарь видим) ── */
 .cal__context {
   font-size: 14px;
+  line-height: 1.4;
   color: #495057;
   background: #f1f3f5;
   border: 1px solid #e9ecef;
   border-radius: 8px;
   padding: 8px 12px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
 }
 .cal__context strong { color: #212529; font-weight: 600; }
+.cal__context[hidden] { display: none; }
 
 /* Empty-state: занимает всю область сетки (внутри cal__grid-wrap), центрируется */
 .cal__access {
@@ -260,6 +305,7 @@
 .cal__cell {
   border-right: 1px solid #f1f3f5;
   border-bottom: 1px solid #f1f3f5;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 .cal__cell--addable { cursor: pointer; }
 .cal__cell--addable:hover { background: #f8f9fa; box-shadow: inset 0 0 0 1px #dee2e6; }
@@ -288,11 +334,22 @@
   color: #fff;
   font-family: inherit;
   z-index: 1;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  animation: cal-event-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.cal__event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(33, 37, 41, 0.16);
 }
 .cal__event--mine { background: #228be6; }
 .cal__event--mine:hover { background: #1c7ed6; }
 .cal__event--booked { background: #40c057; }
 .cal__event--booked:hover { background: #37b24d; }
+
+@keyframes cal-event-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 .cal__event-time { font-size: 11px; font-weight: 700; opacity: 0.9; }
 .cal__event-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 

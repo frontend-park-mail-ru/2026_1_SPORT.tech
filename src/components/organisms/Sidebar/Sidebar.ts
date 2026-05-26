@@ -318,7 +318,7 @@ export async function renderSidebar(
   const urls: Record<string, string> = {
     'profile': '/profile',
     'home': '/',
-    'auth': '/auth',
+    'auth': '/auth/login',
     'notifications': '/notifications',
     'finance': '/finance',
     'chat': '/chat',

@@ -187,10 +187,15 @@ export async function renderNotificationsPage(
     return;
   }
 
+  const syncMarkAllBtn = (): void => {
+    markAllBtn.disabled = notifications.every(n => n.is_read);
+  };
+
   const renderList = (): void => {
     listEl.innerHTML = '';
     if (notifications.length === 0) {
       listEl.innerHTML = '<p class="notifications-page__empty">Уведомлений пока нет</p>';
+      syncMarkAllBtn();
       return;
     }
     notifications.forEach((n, idx) => {
@@ -209,12 +214,14 @@ export async function renderNotificationsPage(
               notifications[idx] = { ...n, is_read: true };
               item.classList.remove('notification-item--unread');
               emitUnreadCount(notifications.filter(x => !x.is_read).length);
+              syncMarkAllBtn();
             } catch { /* ignore */ }
           }
         });
       }
       listEl.appendChild(item);
     });
+    syncMarkAllBtn();
   };
 
   renderList();
@@ -228,8 +235,8 @@ export async function renderNotificationsPage(
       notifications = notifications.map(n => ({ ...n, is_read: true }));
       renderList();
       emitUnreadCount(0);
-    } catch { /* ignore */ } finally {
-      markAllBtn.disabled = false;
+    } catch {
+      syncMarkAllBtn();
     }
   });
 }

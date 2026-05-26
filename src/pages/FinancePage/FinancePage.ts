@@ -61,7 +61,8 @@ async function loadSummaryCards(api: ApiClient, cardsEl: HTMLElement): Promise<v
       api.getMyBalance().catch(() => null)
     ]);
 
-    const currency = balance?.currency || stats.currency || 'RUB';
+    const rawCurrency = balance?.currency || stats.currency || 'RUB';
+    const currency = rawCurrency === 'RUB' ? '₽' : rawCurrency;
     const fmt = (n: number): string => n.toLocaleString('ru-RU');
 
     const card = (value: string, label: string, accent = false): string => `
@@ -175,7 +176,7 @@ function renderDonationRow(
   const safeName = escapeHtml(name);
   const safeAvatarUrl = avatarUrl ? escapeHtml(avatarUrl) : '';
   const safeInitials = escapeHtml(initials);
-  const safeCurrency = escapeHtml(d.currency);
+  const safeCurrency = escapeHtml(d.currency === 'RUB' ? '₽' : d.currency);
   const date = new Date(d.created_at).toLocaleDateString('ru-RU', {
     day: '2-digit', month: 'long', year: 'numeric'
   });

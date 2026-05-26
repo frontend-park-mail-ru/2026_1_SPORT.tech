@@ -4,6 +4,7 @@ import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { MIN_DONATION_AMOUNT_RUB, MAX_DONATION_AMOUNT_RUB, Validator } from '../../../utils/validator';
 import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 import { icons } from '../../../utils/icons';
+import { closeAllModals, registerModal } from '../../../utils/modals';
 
 export interface DonationModalOptions {
   api: ApiClient;
@@ -48,8 +49,10 @@ export async function openDonationModal({
     onChange: () => messageApi.setNormal()
   });
 
+  let unregister: (() => void) | null = null;
   const close = (): void => {
     document.removeEventListener('keydown', onKey);
+    if (unregister) unregister();
     modal.remove();
   };
 
@@ -139,8 +142,10 @@ export async function openDonationModal({
     }
   });
 
+  closeAllModals();
   document.addEventListener('keydown', onKey);
   document.body.appendChild(modal);
+  unregister = registerModal(close);
   modal.focus({ preventScroll: true } as FocusOptions);
   amountApi.focus();
 }

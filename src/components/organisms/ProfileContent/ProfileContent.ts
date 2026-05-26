@@ -102,10 +102,9 @@ export async function fillProfilePostsSection(
     setPostsContainerMessageState(postsContainer, true);
     postsContainer.innerHTML = `
       <div class="profile-content__empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-          <line x1="9" y1="9" x2="15" y2="15"/>
-          <line x1="15" y1="9" x2="9" y2="15"/>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+          <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z"/>
         </svg>
         <p>Пока нет публикаций</p>
       </div>
@@ -396,7 +395,8 @@ async function renderStatsPanel(container: HTMLElement, api: ApiClient): Promise
       api.getMyStatistics(),
       api.getMyBalance().catch(() => null)
     ]);
-    const currency = balance?.currency || stats.currency || 'RUB';
+    const rawCurrency = balance?.currency || stats.currency || 'RUB';
+    const currency = rawCurrency === 'RUB' ? '₽' : rawCurrency;
     const fmt = (n: number): string => n.toLocaleString('ru-RU');
     container.innerHTML = `
       <div class="profile-stats">
@@ -480,7 +480,6 @@ async function renderSubscriptionsSection(
   if (isOwnProfile && isTrainer) {
     const header = document.createElement('div');
     header.innerHTML = `
-      <h3 style="margin-bottom:16px;">Уровни подписки</h3>
       <p style="color:#666;margin-bottom:20px;">Настройте уровни подписки, чтобы ваши подписчики могли получать эксклюзивный контент.</p>
     `;
     wrapper.appendChild(header);
@@ -540,7 +539,6 @@ async function renderSubscriptionsSection(
     button.addEventListener('click', () => openTiersModal({ api, onSaved: () => { void loadOwnTiers(); } }));
     void loadOwnTiers();
   } else if (!isOwnProfile && isTrainer) {
-    wrapper.innerHTML = '<h3 style="margin-bottom:16px;">Уровни подписки</h3>';
     const skeletonEl = document.createElement('div');
     skeletonEl.innerHTML = `
       <div class="page-skeleton__block" style="height:76px;border-radius:12px;margin-bottom:12px;"></div>

@@ -31,12 +31,41 @@ interface RegisterData {
   };
 }
 
+type AuthInitialMode = 'login' | 'register' | 'register-client' | 'register-trainer';
+
+const URL_BY_MODE: Record<string, string> = {
+  [AUTH_MODES.LOGIN]: '/auth/login',
+  [AUTH_MODES.REGISTER_CLIENT]: '/auth/register',
+  [AUTH_MODES.REGISTER_TRAINER]: '/auth/register/trainer'
+};
+
+const TITLE_BY_MODE: Record<string, string> = {
+  [AUTH_MODES.LOGIN]: 'Вход',
+  [AUTH_MODES.REGISTER_CLIENT]: 'Регистрация',
+  [AUTH_MODES.REGISTER_TRAINER]: 'Регистрация тренера'
+};
+
 export async function renderAuthPage(
   container: HTMLElement,
-  api: ApiClient
+  api: ApiClient,
+  initialMode: AuthInitialMode = 'login'
 ): Promise<void> {
-  let currentMode: string = AUTH_MODES.LOGIN;
+  let currentMode: string =
+    initialMode === 'register' || initialMode === 'register-client'
+      ? AUTH_MODES.REGISTER_CLIENT
+      : initialMode === 'register-trainer'
+        ? AUTH_MODES.REGISTER_TRAINER
+        : AUTH_MODES.LOGIN;
   let _form: AuthFormAPI | null = null; // ← Исправлено: убран any
+
+  function syncUrlAndTitle(): void {
+    const targetPath = URL_BY_MODE[currentMode];
+    if (targetPath && window.location.pathname !== targetPath) {
+      history.replaceState(history.state, '', targetPath);
+    }
+    const title = TITLE_BY_MODE[currentMode];
+    if (title) document.title = `Sporteon - ${title}`;
+  }
 
   async function handleLogin(data: LoginData): Promise<void> {
     const response = await api.login(data.email, data.password);
@@ -120,6 +149,7 @@ export async function renderAuthPage(
     }
 
     currentMode = newMode;
+    syncUrlAndTitle();
     await render();
 
     // Restore saved values into the new form
@@ -182,5 +212,6 @@ export async function renderAuthPage(
     container.appendChild(pageElement);
   }
 
+  syncUrlAndTitle();
   await render();
 }

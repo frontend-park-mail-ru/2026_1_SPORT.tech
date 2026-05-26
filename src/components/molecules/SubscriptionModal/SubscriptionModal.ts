@@ -4,6 +4,7 @@ import type { ApiClient } from '../../../utils/api';
 import type { Tier, Subscription } from '../../../types/api.types';
 import { escapeHtml, formatMonthlyPrice } from '../../../utils/profilePageData';
 import { icons } from '../../../utils/icons';
+import { closeAllModals, registerModal } from '../../../utils/modals';
 
 export interface SubscriptionModalOptions {
   api: ApiClient;
@@ -32,6 +33,7 @@ export async function openSubscriptionModal({
   }
 
   function showEmptyModal(): void {
+    closeAllModals();
     const modal = document.createElement('div');
     modal.className = 'subscription-modal';
     modal.innerHTML = `
@@ -47,10 +49,14 @@ export async function openSubscriptionModal({
       </div>
     `;
     document.body.appendChild(modal);
-    modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => modal.remove()));
+    const unregister = registerModal(() => modal.remove());
+    modal.querySelectorAll('[data-close]').forEach(el =>
+      el.addEventListener('click', () => { unregister(); modal.remove(); })
+    );
   }
 
   function showModal(tiers: Tier[], currentSubscription?: Subscription | null): void {
+    closeAllModals();
     const modal = document.createElement('div');
     modal.className = 'subscription-modal';
     modal.innerHTML = `
@@ -94,8 +100,11 @@ export async function openSubscriptionModal({
       </div>
     `;
     document.body.appendChild(modal);
+    const unregister = registerModal(() => modal.remove());
 
-    modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => modal.remove()));
+    modal.querySelectorAll('[data-close]').forEach(el =>
+      el.addEventListener('click', () => { unregister(); modal.remove(); })
+    );
 
     // Выбор уровня → оплата через провайдер
     modal.querySelectorAll('[data-subscribe]').forEach(btn => {

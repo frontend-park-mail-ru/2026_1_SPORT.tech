@@ -96,7 +96,7 @@ export async function openProfileEditModal({
   const trainerFields: FieldConfig[] = [
     { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS as InputType, required: false, maxlength: 255, placeholder: 'Введите образование' },
     { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 10, placeholder: '' },
-    { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 100, placeholder: 'Выберите виды спорта' }
+    { name: 'sport_discipline', label: 'Виды спорта', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 100, placeholder: 'Выберите виды спорта' }
   ];
 
   // Безопасное получение значения поля пользователя

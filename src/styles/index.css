@@ -1,5 +1,6 @@
 /* Глобальные стили */
 @import './global.css';
+@import './animations.css';
 
 /* Атомы */
 @import '../components/atoms/Button/Button.css';

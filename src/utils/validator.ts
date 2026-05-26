@@ -12,7 +12,7 @@ import type {
   ValidationRule
 } from '../types/validation.types';
 
-export const MIN_DONATION_AMOUNT_RUB = 50;
+export const MIN_DONATION_AMOUNT_RUB = 100;
 export const MAX_DONATION_AMOUNT_RUB = 1_000_000;
 export const MAX_PUBLIC_NAME_LENGTH = 30;
 export const MIN_PASSWORD_LENGTH = 8;
@@ -50,8 +50,8 @@ const rules: Rules = {
     max: 254,
     pattern: /^[A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}$/,
     messages: {
-      required: 'Email обязателен',
-      pattern: 'Неверный формат email (пример: example@smail.ru)'
+      required: 'Почта обязательна',
+      pattern: 'Неверный формат почты (пример: example@gmail.com)'
     }
   },
   password: {
