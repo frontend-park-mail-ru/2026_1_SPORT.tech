@@ -55,6 +55,40 @@ function renderContentSkeleton(content: HTMLElement): void {
   `;
 }
 
+function renderProfileSkeleton(content: HTMLElement): void {
+  content.innerHTML = `
+    <div class="content-skeleton">
+      <div class="profile-header profile-header--skeleton" aria-busy="true">
+        <div class="profile-header__main">
+          <div class="profile-header__avatar-wrapper">
+            <div class="page-skeleton__block profile-header__avatar"></div>
+          </div>
+          <div class="profile-header__body">
+            <div class="page-skeleton__block" style="height:32px;width:62%;margin-bottom:10px;border-radius:8px;"></div>
+            <div class="page-skeleton__block" style="height:16px;width:80%;margin-bottom:18px;border-radius:6px;"></div>
+            <div class="page-skeleton__block" style="height:14px;width:90%;margin-bottom:8px;border-radius:6px;"></div>
+            <div class="page-skeleton__block" style="height:14px;width:55%;margin-bottom:18px;border-radius:6px;"></div>
+            <div class="page-skeleton__actions">
+              <div class="page-skeleton__block page-skeleton__action"></div>
+              <div class="page-skeleton__block page-skeleton__action"></div>
+              <div class="page-skeleton__block page-skeleton__action"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="page-skeleton page-skeleton--content">
+        <div class="page-skeleton__row page-skeleton__row--tabs">
+          <div class="page-skeleton__block page-skeleton__block--tab"></div>
+          <div class="page-skeleton__block page-skeleton__block--tab"></div>
+          <div class="page-skeleton__block page-skeleton__block--tab"></div>
+        </div>
+        <div class="page-skeleton__block page-skeleton__block--card"></div>
+        <div class="page-skeleton__block page-skeleton__block--card"></div>
+      </div>
+    </div>
+  `;
+}
+
 // ─── Persistent app shell ────────────────────────────────────────────────────
 
 /**
@@ -258,7 +292,7 @@ function createRouter(api: ApiClient): Router {
     const content = ensureShell(app);
     void syncSidebar(app, currentUser, 'profile', onLogout);
 
-    renderContentSkeleton(content);
+    renderProfileSkeleton(content);
     try {
       const profileData = typeof viewed === 'string'
         ? await api.getProfileByUsername(viewed)

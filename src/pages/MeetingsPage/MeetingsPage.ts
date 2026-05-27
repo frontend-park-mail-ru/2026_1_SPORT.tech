@@ -301,7 +301,7 @@ export async function renderMeetingsPage(
     window.clearTimeout(bannerTimer);
     bannerEl.classList.remove('cal__banner--visible');
     bannerEl.hidden = true;
-    contextEl.innerHTML = `Календарь тренера <strong>${escapeHtml(trainerName)}</strong>`;
+    contextEl.innerHTML = `<span>Календарь тренера <strong>${escapeHtml(trainerName)}</strong></span>`;
     contextEl.hidden = false;
 
     // Плашка занимает область сетки (а не вставляется отдельным блоком над ней),
@@ -400,7 +400,7 @@ export async function renderMeetingsPage(
     }
     if (mode === 'client' && selectedTrainerId) {
       const name = trainerNames.get(selectedTrainerId) ?? 'тренера';
-      contextEl.innerHTML = `Свободные слоты тренера <strong>${escapeHtml(name)}</strong> — кликните по времени, чтобы записаться`;
+      contextEl.innerHTML = `<span>Свободные слоты тренера <strong>${escapeHtml(name)}</strong> — кликните по времени, чтобы записаться</span>`;
       contextEl.hidden = false;
     } else if (mode === 'trainer') {
       contextEl.innerHTML = 'Ваше расписание — открывайте часы для записи и назначайте занятия клиентам';
@@ -726,21 +726,54 @@ export async function renderMeetingsPage(
     content.className = 'cal-pop__body';
     content.innerHTML = `
       <div class="cal-pop__title">${escapeHtml(fullDayLabel(cellDate))}, ${pad(cellDate.getHours())}:00</div>
-      <div class="cal-pop__label">Открыть час для записи</div>
     `;
 
-    const row = document.createElement('div');
-    row.className = 'cal-pop__row';
+    const openSection = document.createElement('div');
+    openSection.className = 'cal-pop__section';
+
+    const openHeader = document.createElement('div');
+    openHeader.className = 'cal-pop__section-title';
+    openHeader.textContent = 'Открыть час для записи';
+    openSection.appendChild(openHeader);
+
+    let repeatMode: 'once' | 'weekly' = 'once';
+
+    const segmented = document.createElement('div');
+    segmented.className = 'cal-pop__segmented';
+    segmented.setAttribute('role', 'tablist');
     const onceBtn = document.createElement('button');
-    onceBtn.className = 'cal-pop__btn cal-pop__btn--soft';
+    onceBtn.className = 'cal-pop__seg cal-pop__seg--active';
     onceBtn.textContent = 'Только в этот день';
-    onceBtn.addEventListener('click', () => void doCreate(() => api.createAvailabilitySlot(cellDate.toISOString())));
+    onceBtn.setAttribute('role', 'tab');
+    onceBtn.setAttribute('aria-selected', 'true');
     const weeklyBtn = document.createElement('button');
-    weeklyBtn.className = 'cal-pop__btn cal-pop__btn--soft';
+    weeklyBtn.className = 'cal-pop__seg';
     weeklyBtn.textContent = 'Каждую неделю';
-    weeklyBtn.addEventListener('click', () => void doCreate(() => api.createAvailabilityRule(cellDate.getUTCDay(), cellDate.getUTCHours())));
-    row.append(onceBtn, weeklyBtn);
-    content.appendChild(row);
+    weeklyBtn.setAttribute('role', 'tab');
+    weeklyBtn.setAttribute('aria-selected', 'false');
+    const setMode = (mode: 'once' | 'weekly'): void => {
+      repeatMode = mode;
+      onceBtn.classList.toggle('cal-pop__seg--active', mode === 'once');
+      weeklyBtn.classList.toggle('cal-pop__seg--active', mode === 'weekly');
+      onceBtn.setAttribute('aria-selected', String(mode === 'once'));
+      weeklyBtn.setAttribute('aria-selected', String(mode === 'weekly'));
+    };
+    onceBtn.addEventListener('click', () => setMode('once'));
+    weeklyBtn.addEventListener('click', () => setMode('weekly'));
+    segmented.append(onceBtn, weeklyBtn);
+    openSection.appendChild(segmented);
+
+    const openBtn = document.createElement('button');
+    openBtn.className = 'cal-pop__btn';
+    openBtn.textContent = 'Открыть';
+    openBtn.addEventListener('click', () => void doCreate(() => {
+      return repeatMode === 'once'
+        ? api.createAvailabilitySlot(cellDate.toISOString())
+        : api.createAvailabilityRule(cellDate.getUTCDay(), cellDate.getUTCHours());
+    }));
+    openSection.appendChild(openBtn);
+
+    content.appendChild(openSection);
 
     async function doCreate(fn: () => Promise<unknown>): Promise<void> {
       try {
@@ -752,21 +785,20 @@ export async function renderMeetingsPage(
       }
     }
 
-    // Назначить занятие конкретному клиенту
-    const divider = document.createElement('div');
-    divider.className = 'cal-pop__divider';
-    content.appendChild(divider);
+    const assignSection = document.createElement('div');
+    assignSection.className = 'cal-pop__section';
 
     const assignLabel = document.createElement('div');
-    assignLabel.className = 'cal-pop__label';
+    assignLabel.className = 'cal-pop__section-title';
     assignLabel.textContent = 'Назначить занятие клиенту';
-    content.appendChild(assignLabel);
+    assignSection.appendChild(assignLabel);
 
     if (clients.length === 0) {
       const hint = document.createElement('div');
       hint.className = 'cal-pop__line cal-pop__muted';
       hint.textContent = 'Нет активных клиентов с подпиской.';
-      content.appendChild(hint);
+      assignSection.appendChild(hint);
+      content.appendChild(assignSection);
       openPopover(anchor, content);
       return;
     }
@@ -774,6 +806,11 @@ export async function renderMeetingsPage(
     const assignForm = document.createElement('div');
     assignForm.className = 'cal-pop__form';
 
+    const clientField = document.createElement('div');
+    clientField.className = 'cal-pop__field';
+    const clientLabel = document.createElement('label');
+    clientLabel.className = 'cal-pop__field-label';
+    clientLabel.textContent = 'Клиент';
     const clientSelect = document.createElement('select');
     clientSelect.className = 'cal-pop__input';
     const placeholder = document.createElement('option');
@@ -788,16 +825,29 @@ export async function renderMeetingsPage(
       opt.textContent = c.calendarEnabled ? c.name : `${c.name} — тариф «${c.tierName}» без «Календаря»`;
       clientSelect.appendChild(opt);
     }
+    clientField.append(clientLabel, clientSelect);
 
+    const durationField = document.createElement('div');
+    durationField.className = 'cal-pop__field';
+    const durationLabel = document.createElement('label');
+    durationLabel.className = 'cal-pop__field-label';
+    durationLabel.textContent = 'Длительность';
     const durationSelect = document.createElement('select');
     durationSelect.className = 'cal-pop__input';
     durationSelect.innerHTML = Array.from({ length: 8 }, (_, i) => `<option value="${i + 1}">${i + 1} ч</option>`).join('');
+    durationField.append(durationLabel, durationSelect);
 
+    const noteField = document.createElement('div');
+    noteField.className = 'cal-pop__field';
+    const noteLabel = document.createElement('label');
+    noteLabel.className = 'cal-pop__field-label';
+    noteLabel.textContent = 'Заметка';
     const noteInput = document.createElement('input');
     noteInput.className = 'cal-pop__input';
     noteInput.type = 'text';
     noteInput.maxLength = 1000;
-    noteInput.placeholder = 'Заметка (необязательно)';
+    noteInput.placeholder = 'необязательно';
+    noteField.append(noteLabel, noteInput);
 
     const errEl = document.createElement('div');
     errEl.className = 'cal-pop__error';
@@ -848,8 +898,9 @@ export async function renderMeetingsPage(
       }
     });
 
-    assignForm.append(clientSelect, durationSelect, noteInput, errEl, assignBtn);
-    content.appendChild(assignForm);
+    assignForm.append(clientField, durationField, noteField, errEl, assignBtn);
+    assignSection.appendChild(assignForm);
+    content.appendChild(assignSection);
 
     openPopover(anchor, content);
   }

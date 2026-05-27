@@ -209,13 +209,20 @@ async function showTrainerAbout(
   userId: number
 ): Promise<void> {
   setPostsContainerMessageState(container, false);
+  const skeletonSection = `
+    <div class="trainer-about__section">
+      <div class="page-skeleton__block" style="height:20px;width:38%;margin-bottom:14px;border-radius:6px;"></div>
+      <div class="page-skeleton__block" style="height:22px;width:60%;border-radius:6px;"></div>
+    </div>
+  `;
   container.innerHTML = `
-    <div style="padding:4px 0;">
-      <div class="page-skeleton__block" style="height:16px;width:40%;margin-bottom:20px;border-radius:6px;"></div>
-      <div class="page-skeleton__block" style="height:48px;margin-bottom:14px;border-radius:8px;"></div>
-      <div class="page-skeleton__block" style="height:48px;margin-bottom:14px;border-radius:8px;"></div>
-      <div class="page-skeleton__block" style="height:48px;margin-bottom:14px;border-radius:8px;"></div>
-      <div class="page-skeleton__block" style="height:80px;border-radius:8px;"></div>
+    <div class="trainer-about" aria-busy="true">
+      ${skeletonSection.repeat(4)}
+      <div class="trainer-about__section">
+        <div class="page-skeleton__block" style="height:20px;width:38%;margin-bottom:14px;border-radius:6px;"></div>
+        <div class="page-skeleton__block" style="height:14px;width:90%;margin-bottom:8px;border-radius:6px;"></div>
+        <div class="page-skeleton__block" style="height:14px;width:70%;border-radius:6px;"></div>
+      </div>
     </div>
   `;
   try {
@@ -536,7 +543,15 @@ async function renderSubscriptionsSection(
       }
     };
 
-    button.addEventListener('click', () => openTiersModal({ api, onSaved: () => { void loadOwnTiers(); } }));
+    button.addEventListener('click', () => {
+      if (button.disabled) return;
+      button.disabled = true;
+      openTiersModal({
+        api,
+        onSaved: () => { void loadOwnTiers(); },
+        onClose: () => { button.disabled = false; }
+      });
+    });
     void loadOwnTiers();
   } else if (!isOwnProfile && isTrainer) {
     const skeletonEl = document.createElement('div');

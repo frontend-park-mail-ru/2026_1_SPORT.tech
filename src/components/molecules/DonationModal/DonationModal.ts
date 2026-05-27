@@ -85,7 +85,7 @@ export async function openDonationModal({
 
     try {
       const amountValue = Math.round(result.amountNumber || 0);
-      const message = messageApi.getValue().trim() || 'Пожертвование';
+      const message = messageApi.getValue().trim();
       const origin = window.location.origin;
 
       const payment = await api.createDonationPayment({

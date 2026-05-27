@@ -473,6 +473,7 @@
     overflow-x: auto;
     padding: 6px;
     scrollbar-width: none;
+    justify-content: safe center;
   }
 
   .profile-content__tab-indicator {

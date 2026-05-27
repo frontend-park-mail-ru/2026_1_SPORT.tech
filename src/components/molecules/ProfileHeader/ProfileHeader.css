@@ -255,15 +255,28 @@
   }
 
   .profile-header__actions {
+    flex-direction: column;
+    align-items: stretch;
     justify-content: center;
+    width: 100%;
+  }
+
+  .profile-header__actions-slot {
+    width: 100%;
+  }
+
+  .profile-header__actions-slot > .button {
+    width: 100%;
   }
 
   .profile-header__subscription-actions {
     width: 100%;
+    flex-direction: column;
     justify-content: center;
   }
 
   .profile-header__subscription-action {
-    flex: 1 1 150px;
+    width: 100%;
+    flex: 1 1 auto;
   }
 }

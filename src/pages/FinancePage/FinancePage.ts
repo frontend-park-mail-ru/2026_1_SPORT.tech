@@ -34,7 +34,9 @@ export async function renderFinancePage(
       <div class="finance-page__section">
         <h2 class="finance-page__section-title">История донатов</h2>
         <div id="finance-donations-list" class="finance-page__donations-list">
-          <div class="finance-page__loading">Загрузка...</div>
+          <div class="finance-page__row-skeleton"></div>
+          <div class="finance-page__row-skeleton"></div>
+          <div class="finance-page__row-skeleton"></div>
         </div>
         <div id="finance-donations-pagination" class="finance-page__pagination"></div>
       </div>
@@ -42,7 +44,9 @@ export async function renderFinancePage(
       <div class="finance-page__section">
         <h2 class="finance-page__section-title">Подписчики</h2>
         <div id="finance-subscribers-list" class="finance-page__subscribers-list">
-          <div class="finance-page__loading">Загрузка...</div>
+          <div class="finance-page__row-skeleton"></div>
+          <div class="finance-page__row-skeleton"></div>
+          <div class="finance-page__row-skeleton"></div>
         </div>
       </div>
     </div>
@@ -93,7 +97,12 @@ async function loadSummaryCards(api: ApiClient, cardsEl: HTMLElement): Promise<v
       </div>
     `;
     cardsEl.querySelector('#finance-stats-retry')?.addEventListener('click', () => {
-      cardsEl.innerHTML = '<div class="finance-page__loading">Загрузка...</div>';
+      cardsEl.innerHTML = `
+        <div class="finance-page__card-skeleton"></div>
+        <div class="finance-page__card-skeleton"></div>
+        <div class="finance-page__card-skeleton"></div>
+        <div class="finance-page__card-skeleton"></div>
+      `;
       void loadSummaryCards(api, cardsEl);
     });
   }
@@ -104,7 +113,11 @@ async function loadDonations(api: ApiClient, container: HTMLElement, offset: num
   const paginationEl = container.querySelector('#finance-donations-pagination') as HTMLElement;
 
   if (!listEl) return;
-  listEl.innerHTML = '<div class="finance-page__loading">Загрузка...</div>';
+  listEl.innerHTML = `
+    <div class="finance-page__row-skeleton"></div>
+    <div class="finance-page__row-skeleton"></div>
+    <div class="finance-page__row-skeleton"></div>
+  `;
 
   try {
     const data = await api.getMyReceivedDonations({ limit: PAGE_SIZE, offset });

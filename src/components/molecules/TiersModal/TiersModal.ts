@@ -12,6 +12,7 @@ import './TiersModal.css';
 export interface TiersModalOptions {
   api: ApiClient;
   onSaved?: () => void;
+  onClose?: () => void;
 }
 
 interface TierData {
@@ -25,7 +26,7 @@ interface TierData {
   existingId?: number;  // настоящий tier_id с бэкенда
 }
 
-export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
+export function openTiersModal({ api, onSaved, onClose }: TiersModalOptions): void {
   // Не открываем повторно, если модалка уже есть в DOM
   if (document.querySelector('.tiers-modal-container')) return;
 
@@ -199,13 +200,17 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
       }
       seenNames.add(key);
 
-      if (!Number.isFinite(tier.price) || tier.price <= 0) {
+      if (!Number.isFinite(tier.price) || tier.price < 0) {
         markError(tier.id, 'price');
-        return { tiers: [], error: `Уровень ${tier.index}: укажите цену больше 0 ₽` };
+        return { tiers: [], error: `Уровень ${tier.index}: цена не может быть отрицательной` };
       }
       if (!Number.isInteger(tier.price)) {
         markError(tier.id, 'price');
         return { tiers: [], error: `Уровень ${tier.index}: цена должна быть целым числом` };
+      }
+      if (tier.price > 0 && tier.price < 100) {
+        markError(tier.id, 'price');
+        return { tiers: [], error: `Уровень ${tier.index}: минимальная цена платной подписки — 100 ₽. Поставьте 0 для бесплатного уровня.` };
       }
       if (tier.price > 1_000_000) {
         markError(tier.id, 'price');
@@ -297,6 +302,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
   function close(): void {
     document.removeEventListener('keydown', onKey);
     container.remove();
+    if (onClose) onClose();
   }
 
   function onKey(e: KeyboardEvent): void {
