@@ -694,18 +694,20 @@ export class ApiClient {
     recipientUserId: number,
     amountValue: number,
     currency: string = 'RUB',
-    message: string = 'Пожертвование'
+    message: string = ''
   ): Promise<DonationResponse> {
     await this.ensureCsrfToken();
+    const body: { amount_value: number; currency: string; message?: string } = {
+      amount_value: amountValue,
+      currency
+    };
+    const trimmed = message.trim();
+    if (trimmed) body.message = trimmed;
     return this.request<DonationResponse>(
       `/v1/profiles/${recipientUserId}/donations`,
       {
         method: 'POST',
-        body: JSON.stringify({
-          amount_value: amountValue,
-          currency,
-          message
-        })
+        body: JSON.stringify(body)
       }
     );
   }
@@ -883,9 +885,12 @@ export class ApiClient {
     cancel_url: string;
   }): Promise<PaymentResponse> {
     await this.ensureCsrfToken();
+    const { message, ...rest } = data;
+    const trimmed = message.trim();
+    const payload = trimmed ? { ...rest, message: trimmed } : rest;
     return this.request<PaymentResponse>('/v1/payments/donations', {
       method: 'POST',
-      body: JSON.stringify(data)
+      body: JSON.stringify(payload)
     });
   }
 

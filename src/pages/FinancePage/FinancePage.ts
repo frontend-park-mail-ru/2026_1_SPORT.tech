@@ -195,6 +195,8 @@ function renderDonationRow(
   });
   const safeDate = escapeHtml(date);
   const fmt = (n: number) => n.toLocaleString('ru-RU');
+  const trimmedMessage = (d.message ?? '').trim();
+  const hasMessage = trimmedMessage !== '' && trimmedMessage !== 'Пожертвование';
 
   return `
     <div class="finance-page__donation-row">
@@ -205,7 +207,7 @@ function renderDonationRow(
       </div>
       <div class="finance-page__donation-info">
         <div class="finance-page__donation-sender">${safeName}</div>
-        ${d.message ? `<div class="finance-page__donation-message">"${escapeHtml(d.message)}"</div>` : ''}
+        ${hasMessage ? `<div class="finance-page__donation-message">"${escapeHtml(trimmedMessage)}"</div>` : ''}
         <div class="finance-page__donation-date">${safeDate}</div>
       </div>
       <div class="finance-page__donation-amount">
