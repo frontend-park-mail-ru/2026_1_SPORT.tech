@@ -467,6 +467,13 @@
   color: #fff;
 }
 .cal-pop__seg--active:hover { color: #fff; }
+.cal-pop__segmented--mode {
+  margin: 4px 0 4px;
+}
+.cal-pop__segmented--mode .cal-pop__seg {
+  font-size: 13px;
+  padding: 9px 12px;
+}
 .cal-pop__input {
   width: 100%;
   padding: 8px 10px;

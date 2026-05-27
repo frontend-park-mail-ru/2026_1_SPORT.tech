@@ -32,6 +32,7 @@ export function openTiersModal({ api, onSaved, onClose }: TiersModalOptions): vo
 
   let tiers: TierData[] = [];
   let tierCounter = 0;
+  let loading = true;
 
   const template = templates['TiersModal.hbs'];
 
@@ -80,7 +81,7 @@ export function openTiersModal({ api, onSaved, onClose }: TiersModalOptions): vo
   // Генерация HTML без повторной привязки событий
   function render(): void {
     updateIndices();
-    const html = template({ tiers });
+    const html = template({ tiers, loading });
     container.innerHTML = html;
   }
 
@@ -324,12 +325,16 @@ export function openTiersModal({ api, onSaved, onClose }: TiersModalOptions): vo
           existingId: t.tier_id
         }));
         tierCounter = tiers.length;
-        render();
       }
     } catch (error) {
       console.error('Failed to load tiers:', error);
+      loading = false;
+      render();
       showError('Не удалось загрузить существующие уровни');
+      return;
     }
+    loading = false;
+    render();
   }
 
   // ========== ИНИЦИАЛИЗАЦИЯ ==========

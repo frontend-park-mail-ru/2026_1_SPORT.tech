@@ -11,7 +11,12 @@
   </div>
 
   <div class="tiers-list" data-container="tiers-list">
-    {{#if tiers.length}}
+    {{#if loading}}
+      <div class="tiers-loading" role="status" aria-live="polite">
+        <span class="tiers-loading__spinner" aria-hidden="true"></span>
+        <span class="tiers-loading__text">Загрузка уровней...</span>
+      </div>
+    {{else if tiers.length}}
       {{#each tiers}}
         <div class="tier-card" data-tier-id="{{this.id}}">
           <div class="tier-card-header">
@@ -119,6 +124,7 @@
     class="tiers-add-btn"
     data-action="add-tier"
     type="button"
+    {{#if loading}}disabled{{/if}}
   >+ Добавить уровень</button>
 
   <div class="tiers-actions">
@@ -131,6 +137,7 @@
       class="tiers-save-btn"
       data-action="save"
       type="button"
+      {{#if loading}}disabled{{/if}}
     >Сохранить</button>
   </div>
 </div>

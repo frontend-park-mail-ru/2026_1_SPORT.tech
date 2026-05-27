@@ -258,6 +258,41 @@ export async function renderProfileHeader(
     await updateSubscriptionUI();
   }
 
+  // ---- «Написать» клиенту (тренер смотрит профиль клиента, который подписан на тарифе с чатом) ----
+  if (!isOwnProfile && !isTrainer && viewedUserId && actionsRow) {
+    void (async () => {
+      try {
+        const me = await api.getCurrentUser();
+        const meUser = me?.user;
+        if (!meUser?.is_trainer) return;
+
+        const subs = await api.getMySubscribers();
+        const activeSub = (subs?.subscribers || []).find(
+          s => s.client_id === viewedUserId && s.active === true
+        );
+        if (!activeSub) return;
+
+        const tiersResp = await api.getTrainerTiers(meUser.user_id);
+        const tier = (tiersResp?.tiers || []).find(t => t.tier_id === activeSub.tier_id);
+        if (!tier?.chat_enabled) return;
+
+        const writeWrap = document.createElement('div');
+        writeWrap.className = 'profile-header__subscription-actions';
+        actionsRow.appendChild(writeWrap);
+
+        const btn = document.createElement('button');
+        btn.className = 'button button--medium profile-header__subscription-action';
+        btn.innerHTML = `${icons.chat}<span>Написать</span>`;
+        btn.addEventListener('click', () => {
+          window.router.navigateTo(`/chat/${viewedUserId}`);
+        });
+        writeWrap.appendChild(btn);
+      } catch {
+        // Кнопка необязательна — не мешаем рендеру при ошибке.
+      }
+    })();
+  }
+
   // ---- Редактировать профиль (только свой) ----
   if (isOwnProfile && editContainer) {
     await renderButton(editContainer, {
@@ -298,25 +333,31 @@ export async function renderProfileHeader(
     });
   }
 
-  // ---- Смена фото (только свой) ----
-  const cameraBtn = element.querySelector('.profile-header__camera-btn') as HTMLElement | null;
-  if (cameraBtn) cameraBtn.addEventListener('click', async () => {
-    if (!api) return;
-    const currentUser = await api.getCurrentUser();
-    let userData = currentUser?.user;
-    if (userData?.is_trainer) {
+  // ---- Смена фото (только свой) — клик по «фотоаппарату» сразу открывает выбор файла и загружает аватар ----
+  const cameraBtn = element.querySelector('.profile-header__camera-btn') as HTMLButtonElement | null;
+  if (cameraBtn) {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.style.display = 'none';
+    element.appendChild(fileInput);
+
+    cameraBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      fileInput.value = '';
+      if (!file || !api) return;
+      cameraBtn.disabled = true;
       try {
-        const fullProfile = await api.getProfile(userData.user_id);
-        userData = { ...userData, ...fullProfile };
-      } catch {}
-    }
-    const { openProfileEditModal } = await import('../ProfileEditModal/ProfileEditModal');
-    openProfileEditModal({
-      api,
-      currentUser: { user: userData },
-      onUpdated: () => { void window.router.reload(); }
+        await api.uploadAvatar(file);
+        void window.router.reload();
+      } catch (err) {
+        console.error('Не удалось загрузить аватар', err);
+        cameraBtn.disabled = false;
+      }
     });
-  });
+  }
 
   container.appendChild(element);
   window.requestAnimationFrame(setupBioToggle);

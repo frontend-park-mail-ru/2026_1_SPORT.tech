@@ -304,3 +304,30 @@
   stroke: var(--primary-orange);
   flex-shrink: 0;
 }
+
+.tiers-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 16px;
+  color: #6B7280;
+}
+
+.tiers-loading__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #E5E7EB;
+  border-top-color: var(--primary-orange);
+  border-radius: 50%;
+  animation: tiers-loading-spin 0.8s linear infinite;
+}
+
+.tiers-loading__text {
+  font-size: 14px;
+}
+
+@keyframes tiers-loading-spin {
+  to { transform: rotate(360deg); }
+}

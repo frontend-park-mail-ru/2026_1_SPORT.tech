@@ -3,6 +3,7 @@
 import type { ApiClient } from '../../../utils/api';
 import { escapeHtml } from '../../../utils/profilePageData';
 import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
+import './StatisticsModal.css';
 
 export interface StatisticsModalOptions {
   api: ApiClient;
@@ -10,17 +11,26 @@ export interface StatisticsModalOptions {
 
 export async function openStatisticsModal({ api }: StatisticsModalOptions): Promise<void> {
   const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;';
+  modal.className = 'statistics-modal';
   modal.innerHTML = `
-    <div data-close style="position:absolute;inset:0;background:rgba(0,0,0,0.5);"></div>
-    <div style="position:relative;background:#fff;border-radius:16px;padding:24px;width:min(460px,92vw);max-height:80vh;overflow:auto;box-shadow:0 12px 48px rgba(0,0,0,0.2);">
-      <button data-close style="position:absolute;top:12px;right:16px;border:none;background:none;font-size:24px;line-height:1;cursor:pointer;color:#999;">&times;</button>
-      <h2 style="margin:0 0 16px;font-size:20px;color:#1a2b3c;">Статистика</h2>
+    <div data-close class="statistics-modal__backdrop"></div>
+    <div class="statistics-modal__panel">
+      <button data-close class="statistics-modal__close" aria-label="Закрыть">&times;</button>
+      <h2 class="statistics-modal__title">Статистика</h2>
       <div id="statistics-modal-body"></div>
     </div>
   `;
   document.body.appendChild(modal);
-  modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => modal.remove()));
+
+  // Двойной rAF — первый кадр коммитит изначальные стили (opacity 0, transform),
+  // второй включает класс с конечным состоянием, чтобы transition действительно сыграл.
+  requestAnimationFrame(() => requestAnimationFrame(() => modal.classList.add('statistics-modal--visible')));
+
+  const close = (): void => {
+    modal.classList.remove('statistics-modal--visible');
+    setTimeout(() => modal.remove(), 220);
+  };
+  modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', close));
 
   const bodyEl = modal.querySelector('#statistics-modal-body') as HTMLElement;
   bodyEl.innerHTML = `

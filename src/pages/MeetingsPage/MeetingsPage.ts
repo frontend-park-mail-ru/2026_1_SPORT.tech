@@ -728,13 +728,39 @@ export async function renderMeetingsPage(
       <div class="cal-pop__title">${escapeHtml(fullDayLabel(cellDate))}, ${pad(cellDate.getHours())}:00</div>
     `;
 
+    // Переключатель режима показываем только если есть клиенты — иначе «назначить»
+    // нечего, и тренер видит только секцию «Открыть слот» с пояснением.
+    const hasClients = clients.length > 0;
+    let modeSwitch: HTMLDivElement | null = null;
+    let openModeBtn: HTMLButtonElement | null = null;
+    let assignModeBtn: HTMLButtonElement | null = null;
+    if (hasClients) {
+      modeSwitch = document.createElement('div');
+      modeSwitch.className = 'cal-pop__segmented cal-pop__segmented--mode';
+      modeSwitch.setAttribute('role', 'tablist');
+      openModeBtn = document.createElement('button');
+      openModeBtn.className = 'cal-pop__seg cal-pop__seg--active';
+      openModeBtn.textContent = 'Открыть слот';
+      openModeBtn.setAttribute('role', 'tab');
+      openModeBtn.setAttribute('aria-selected', 'true');
+      assignModeBtn = document.createElement('button');
+      assignModeBtn.className = 'cal-pop__seg';
+      assignModeBtn.textContent = 'Назначить клиента';
+      assignModeBtn.setAttribute('role', 'tab');
+      assignModeBtn.setAttribute('aria-selected', 'false');
+      modeSwitch.append(openModeBtn, assignModeBtn);
+      content.appendChild(modeSwitch);
+    }
+
     const openSection = document.createElement('div');
     openSection.className = 'cal-pop__section';
 
-    const openHeader = document.createElement('div');
-    openHeader.className = 'cal-pop__section-title';
-    openHeader.textContent = 'Открыть час для записи';
-    openSection.appendChild(openHeader);
+    if (!hasClients) {
+      const openHeader = document.createElement('div');
+      openHeader.className = 'cal-pop__section-title';
+      openHeader.textContent = 'Открыть час для записи';
+      openSection.appendChild(openHeader);
+    }
 
     let repeatMode: 'once' | 'weekly' = 'once';
 
@@ -785,23 +811,19 @@ export async function renderMeetingsPage(
       }
     }
 
-    const assignSection = document.createElement('div');
-    assignSection.className = 'cal-pop__section';
-
-    const assignLabel = document.createElement('div');
-    assignLabel.className = 'cal-pop__section-title';
-    assignLabel.textContent = 'Назначить занятие клиенту';
-    assignSection.appendChild(assignLabel);
-
-    if (clients.length === 0) {
+    if (!hasClients) {
       const hint = document.createElement('div');
       hint.className = 'cal-pop__line cal-pop__muted';
-      hint.textContent = 'Нет активных клиентов с подпиской.';
-      assignSection.appendChild(hint);
-      content.appendChild(assignSection);
+      hint.style.marginTop = '8px';
+      hint.textContent = 'Нет активных клиентов — назначить занятие пока некому.';
+      openSection.appendChild(hint);
       openPopover(anchor, content);
       return;
     }
+
+    const assignSection = document.createElement('div');
+    assignSection.className = 'cal-pop__section';
+    assignSection.hidden = true;
 
     const assignForm = document.createElement('div');
     assignForm.className = 'cal-pop__form';
@@ -901,6 +923,20 @@ export async function renderMeetingsPage(
     assignForm.append(clientField, durationField, noteField, errEl, assignBtn);
     assignSection.appendChild(assignForm);
     content.appendChild(assignSection);
+
+    if (openModeBtn && assignModeBtn) {
+      const setSectionMode = (next: 'open' | 'assign'): void => {
+        const isOpen = next === 'open';
+        openSection.hidden = !isOpen;
+        assignSection.hidden = isOpen;
+        openModeBtn!.classList.toggle('cal-pop__seg--active', isOpen);
+        assignModeBtn!.classList.toggle('cal-pop__seg--active', !isOpen);
+        openModeBtn!.setAttribute('aria-selected', String(isOpen));
+        assignModeBtn!.setAttribute('aria-selected', String(!isOpen));
+      };
+      openModeBtn.addEventListener('click', () => setSectionMode('open'));
+      assignModeBtn.addEventListener('click', () => setSectionMode('assign'));
+    }
 
     openPopover(anchor, content);
   }
