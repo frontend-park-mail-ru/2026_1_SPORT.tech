@@ -113,6 +113,11 @@ body {
         linear-gradient(180deg, #f7fbff 0%, #f5f5f5 100%);
     min-height: 100vh;
     overflow-x: hidden;
+    /* overflow-x: hidden принудительно делает overflow-y вычисляемым как auto,
+       поэтому реальный скролл-контейнер — это body, а не html. Жёлоб для
+       полосы прокрутки нужно резервировать здесь, иначе ширина центрированного
+       контента «гуляет» при переключении вкладок настроек. */
+    scrollbar-gutter: stable;
 }
 
 

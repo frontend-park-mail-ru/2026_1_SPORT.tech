@@ -397,7 +397,7 @@ function renderPrivacyTab(api: ApiClient, panel: HTMLElement, navigateTo: (path:
       </div>
     </div>
     <div class="settings-card settings-card--danger">
-      <h2 class="settings-card__title">Опасная зона</h2>
+      <h2 class="settings-card__title">Управление аккаунтом</h2>
       <div class="settings-danger-row">
         <div>
           <div class="settings-toggle__label">Выйти на всех устройствах</div>

@@ -62,6 +62,8 @@
   flex-direction: column;
   gap: 20px;
   min-width: 0;
+  /* Stable height so switching tabs doesn't shift the layout */
+  min-height: 540px;
 }
 
 .settings-card {
