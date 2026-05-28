@@ -1,4 +1,9 @@
 .settings-page {
+  /* width: 100% обязателен: страница — это флекс-ребёнок #app-content
+     (flex-direction: column), а margin: 0 auto по горизонтали отменяет
+     align-items: stretch. Без явной ширины блок сжимается до ширины
+     содержимого и «прыгает» по ширине между вкладками. */
+  width: 100%;
   max-width: 920px;
   margin: 0 auto;
   padding: 32px 24px 64px;
