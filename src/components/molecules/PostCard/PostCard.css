@@ -564,3 +564,147 @@
 .post-card__action--active {
   color: var(--primary-orange);
 }
+
+/* Шапка комментария: автор + время + метка «изменено» */
+.post-card__comment { position: relative; }
+
+.post-card__comment-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.post-card__comment-head .post-card__comment-author {
+  margin-bottom: 0;
+}
+
+.post-card__comment-time,
+.post-card__comment-edited {
+  font-size: 11px;
+  color: var(--text-placeholder, #9ca3af);
+}
+
+.post-card__comment-edited {
+  font-style: italic;
+  cursor: default;
+}
+
+/* Меню действий «⋯» */
+.post-card__comment-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.post-card__comment-menu-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-placeholder, #9ca3af);
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.post-card__comment-menu-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-primary);
+}
+
+.post-card__comment-menu-list {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  min-width: 140px;
+  background: #fff;
+  border: 1px solid var(--border-color, #ececec);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.post-card__comment-menu-item {
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.post-card__comment-menu-item:hover {
+  background: var(--background-hover, #fff5f2);
+}
+
+.post-card__comment-menu-item--danger {
+  color: var(--error-red, #ff4a4a);
+}
+
+/* Инлайн-редактор комментария */
+.post-card__comment-editor {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.post-card__comment-edit-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  border: 1px solid var(--border-color, #e2e2e2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.post-card__comment-edit-input:focus {
+  outline: none;
+  border-color: var(--border-focus, #ff6b4a);
+}
+
+.post-card__comment-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.post-card__comment-edit-cancel,
+.post-card__comment-edit-save {
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.post-card__comment-edit-cancel {
+  background: transparent;
+  border: 1px solid var(--border-color, #e2e2e2);
+  color: var(--text-primary);
+}
+
+.post-card__comment-edit-save {
+  background: var(--primary-orange, #ff6b4a);
+  color: #fff;
+}
+
+.post-card__comment-edit-save:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.post-card__comment-edit-error {
+  color: var(--error-red, #ff4a4a);
+  font-size: 12px;
+  margin: 0;
+}

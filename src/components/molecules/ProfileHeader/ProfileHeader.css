@@ -280,3 +280,61 @@
     flex: 1 1 auto;
   }
 }
+
+/* CTA «Стать тренером» (собственный профиль клиента) */
+.profile-header__trainer-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 18px 22px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--primary-orange, #ff6b4a), var(--primary-orange-hover, #ff5430));
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(255, 107, 74, 0.25);
+}
+
+.profile-header__trainer-cta-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-header__trainer-cta-text strong {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.profile-header__trainer-cta-text span {
+  font-size: 14px;
+  opacity: 0.92;
+}
+
+.profile-header__trainer-cta-btn {
+  flex-shrink: 0;
+  border: none;
+  background: #fff;
+  color: var(--primary-orange, #ff6b4a);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 11px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.profile-header__trainer-cta-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 640px) {
+  .profile-header__trainer-cta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .profile-header__trainer-cta-btn {
+    width: 100%;
+  }
+}

@@ -30,7 +30,11 @@ import type {
   MeetingAvailabilityRule,
   MeetingSlot,
   MeetingAvailabilitySlot,
-  MeetingBooking
+  MeetingBooking,
+  NotificationPreferences,
+  NotificationPreferencesResponse,
+  PrivacySettings,
+  PrivacySettingsResponse
 } from '../types/api.types';
 
 const OFFLINE_API_CACHE_PREFIX = 'sporteon_api_cache:v1:';
@@ -795,6 +799,106 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify({ body })
     });
+  }
+
+  async updateComment(commentId: number, body: string): Promise<{ comment: Comment }> {
+    await this.ensureCsrfToken();
+    return this.request<{ comment: Comment }>(`/v1/comments/${commentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ body })
+    });
+  }
+
+  async deleteComment(commentId: number): Promise<void> {
+    await this.ensureCsrfToken();
+    await this.request<void>(`/v1/comments/${commentId}`, { method: 'DELETE' });
+  }
+
+  // ========== SETTINGS / ACCOUNT ==========
+
+  async changePassword(payload: {
+    current_password: string;
+    new_password: string;
+    new_password_repeat: string;
+  }): Promise<void> {
+    await this.ensureCsrfToken();
+    await this.request<void>('/v1/auth/password', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async changeEmail(payload: { new_email: string; current_password: string }): Promise<AuthResponse> {
+    await this.ensureCsrfToken();
+    const response = await this.request<AuthResponse>('/v1/auth/email', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (response) this.writeCachedUser(response);
+    return response;
+  }
+
+  async becomeTrainer(trainerDetails: TrainerDetails): Promise<AuthResponse> {
+    await this.ensureCsrfToken();
+    const response = await this.request<AuthResponse>('/v1/auth/become-trainer', {
+      method: 'POST',
+      body: JSON.stringify({ trainer_details: trainerDetails })
+    });
+    if (response) this.writeCachedUser(response);
+    return response;
+  }
+
+  async logoutAllSessions(): Promise<void> {
+    try {
+      await this.ensureCsrfToken();
+      await this.request('/v1/auth/logout-all', { method: 'POST' });
+    } finally {
+      this.csrfToken = null;
+      if (typeof localStorage !== 'undefined') localStorage.removeItem('cached_user');
+      this.clearOfflineCache();
+    }
+  }
+
+  async deleteAccount(currentPassword: string): Promise<void> {
+    try {
+      await this.ensureCsrfToken();
+      await this.request('/v1/account/delete', {
+        method: 'POST',
+        body: JSON.stringify({ current_password: currentPassword })
+      });
+    } finally {
+      this.csrfToken = null;
+      if (typeof localStorage !== 'undefined') localStorage.removeItem('cached_user');
+      this.clearOfflineCache();
+    }
+  }
+
+  async getNotificationPreferences(): Promise<NotificationPreferences> {
+    const response = await this.request<NotificationPreferencesResponse>('/v1/notification-preferences');
+    return response.preferences;
+  }
+
+  async updateNotificationPreferences(preferences: NotificationPreferences): Promise<NotificationPreferences> {
+    await this.ensureCsrfToken();
+    const response = await this.request<NotificationPreferencesResponse>('/v1/notification-preferences', {
+      method: 'PUT',
+      body: JSON.stringify({ preferences })
+    });
+    return response.preferences;
+  }
+
+  async getPrivacySettings(): Promise<PrivacySettings> {
+    const response = await this.request<PrivacySettingsResponse>('/v1/privacy-settings');
+    return response.settings;
+  }
+
+  async updatePrivacySettings(settings: PrivacySettings): Promise<PrivacySettings> {
+    await this.ensureCsrfToken();
+    const response = await this.request<PrivacySettingsResponse>('/v1/privacy-settings', {
+      method: 'PUT',
+      body: JSON.stringify({ settings })
+    });
+    return response.settings;
   }
 
   // ========== STATISTICS ==========

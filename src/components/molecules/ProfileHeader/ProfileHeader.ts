@@ -360,6 +360,24 @@ export async function renderProfileHeader(
   }
 
   container.appendChild(element);
+
+  // ---- CTA «Стать тренером» (только в собственном профиле клиента) ----
+  if (isOwnProfile && !isTrainer) {
+    const banner = document.createElement('div');
+    banner.className = 'profile-header__trainer-cta';
+    banner.innerHTML = `
+      <div class="profile-header__trainer-cta-text">
+        <strong>Станьте тренером</strong>
+        <span>Публикуйте материалы, продавайте подписки, проводите встречи и принимайте донаты</span>
+      </div>
+      <button type="button" class="profile-header__trainer-cta-btn">Стать тренером</button>
+    `;
+    banner.querySelector('button')!.addEventListener('click', () => {
+      window.router.navigateTo('/settings?tab=account');
+    });
+    container.appendChild(banner);
+  }
+
   window.requestAnimationFrame(setupBioToggle);
   return element;
 }

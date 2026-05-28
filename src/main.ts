@@ -342,6 +342,25 @@ function createRouter(api: ApiClient): Router {
     }
   }
 
+  async function showSettingsPage(app: HTMLElement, currentUser: AuthResponse, isStale: () => boolean): Promise<void> {
+    setPageTitle('Настройки');
+    const content = ensureShell(app);
+    const onLogout = createLogoutHandler(api, setCurrentUser, navigateTo);
+
+    void syncSidebar(app, currentUser, 'settings', onLogout);
+
+    renderContentSkeleton(content);
+    try {
+      const { renderSettingsPage } = await import('./pages/SettingsPage/SettingsPage');
+      if (isStale()) return;
+      await renderSettingsPage(api, content, { currentUser, onLogout, reload, navigateTo });
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Failed to load SettingsPage:', err);
+      content.innerHTML = renderRouteError(err.message);
+    }
+  }
+
   async function showFinancePage(app: HTMLElement, currentUser: AuthResponse, isStale: () => boolean): Promise<void> {
     setPageTitle('Финансы');
     const content = ensureShell(app);
@@ -474,6 +493,8 @@ function createRouter(api: ApiClient): Router {
       await showProfilePage(app, currentUser!, isStale, /^\d+$/.test(slug) ? Number(slug) : slug);
     } else if (path === '/notifications') {
       await showNotificationsPage(app, currentUser!, isStale);
+    } else if (path === '/settings') {
+      await showSettingsPage(app, currentUser!, isStale);
     } else if (path === '/finance') {
       if (!currentUser!.user.is_trainer) {
         navigateTo('/');

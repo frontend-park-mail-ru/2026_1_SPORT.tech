@@ -22,6 +22,30 @@ export interface CSRFTokenResponse {
   csrf_token: string;
 }
 
+export interface NotificationPreferences {
+  comments: boolean;
+  likes: boolean;
+  donations: boolean;
+  posts: boolean;
+  subscriptions: boolean;
+  meetings: boolean;
+  email_digest: boolean;
+}
+
+export interface NotificationPreferencesResponse {
+  preferences: NotificationPreferences;
+}
+
+export interface PrivacySettings {
+  show_profile_in_search: boolean;
+  allow_measurement_sharing: boolean;
+  show_activity_status: boolean;
+}
+
+export interface PrivacySettingsResponse {
+  settings: PrivacySettings;
+}
+
 export interface PostBlock {
   post_block_id: number;
   text_content: string;
