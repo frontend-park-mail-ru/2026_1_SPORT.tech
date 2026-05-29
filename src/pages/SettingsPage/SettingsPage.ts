@@ -121,7 +121,7 @@ export async function renderSettingsPage(
     case 'account': renderAccountTab(api, panel, currentUser, reload); break;
     case 'security': renderSecurityTab(api, panel); break;
     case 'notifications': void renderNotificationsTab(api, panel); break;
-    case 'privacy': renderPrivacyTab(api, panel, navigateTo); break;
+    case 'privacy': renderPrivacyTab(api, panel, navigateTo, clearCurrentUser); break;
     }
   };
 
@@ -418,7 +418,7 @@ async function renderNotificationsTab(api: ApiClient, panel: HTMLElement): Promi
 
 // ─── Privacy + danger zone tab ───────────────────────────────────────────────
 
-function renderPrivacyTab(api: ApiClient, panel: HTMLElement, navigateTo: (path: string) => void): void {
+function renderPrivacyTab(api: ApiClient, panel: HTMLElement, navigateTo: (path: string) => void, clearCurrentUser?: (() => void) | null): void {
   panel.innerHTML = `
     <div class="settings-card">
       <h2 class="settings-card__title">Приватность</h2>
@@ -486,11 +486,11 @@ function renderPrivacyTab(api: ApiClient, panel: HTMLElement, navigateTo: (path:
   });
 
   (panel.querySelector('#delete-account-btn') as HTMLButtonElement).addEventListener('click', () => {
-    openDeleteAccountDialog(api, navigateTo);
+    openDeleteAccountDialog(api, navigateTo, clearCurrentUser);
   });
 }
 
-function openDeleteAccountDialog(api: ApiClient, navigateTo: (path: string) => void): void {
+function openDeleteAccountDialog(api: ApiClient, navigateTo: (path: string) => void, clearCurrentUser?: (() => void) | null): void {
   const overlay = document.createElement('div');
   overlay.className = 'settings-modal__overlay';
   overlay.innerHTML = `
