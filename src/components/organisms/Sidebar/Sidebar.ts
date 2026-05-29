@@ -183,17 +183,23 @@ function startChatConversationsStream(api: ApiClient): void {
   };
 }
 
+// Монотонный токен: при гонке (например, событие смены подписок + перерисовка
+// сайдбара после оплаты идут параллельно) применяем в DOM только результат
+// самого свежего вызова, иначе оба дописывают свой список и тренер задваивается.
+let subsRefreshSeq = 0;
+
 async function refreshSidebarSubscriptions(api: ApiClient, sidebarEl = activeSidebarEl): Promise<void> {
   const listEl = sidebarEl?.querySelector('.sidebar__users-list') as HTMLElement | null;
   if (!listEl) return;
+
+  const seq = ++subsRefreshSeq;
 
   try {
     const subsData = await api.getMySubscriptions();
     const activeSubs = (subsData.subscriptions || []).filter(s => s.active);
 
-    listEl.innerHTML = '';
-
     if (activeSubs.length === 0) {
+      if (seq !== subsRefreshSeq) return;
       listEl.innerHTML = '<p style="color:rgba(255,255,255,0.5);font-size:12px;padding:8px;text-align:center;margin:0;">Вы пока ни на кого не подписаны</p>';
       return;
     }
@@ -201,6 +207,12 @@ async function refreshSidebarSubscriptions(api: ApiClient, sidebarEl = activeSid
     const profiles = await Promise.all(
       activeSubs.map(s => api.getProfile(s.trainer_id).catch(() => null))
     );
+
+    // Стартовал более новый вызов, пока мы грузили профили — его результат
+    // важнее, наш молча отбрасываем, чтобы не дублировать элементы.
+    if (seq !== subsRefreshSeq) return;
+
+    const fragment = document.createDocumentFragment();
 
     activeSubs.forEach((sub, idx) => {
       const profile = profiles[idx];
@@ -230,8 +242,11 @@ async function refreshSidebarSubscriptions(api: ApiClient, sidebarEl = activeSid
       item.addEventListener('click', () => {
         window.router.navigateTo(`/profile/${sub.trainer_id}`);
       });
-      listEl.appendChild(item);
+      fragment.appendChild(item);
     });
+
+    // Очистка и заполнение — одной синхронной операцией, после всех await.
+    listEl.replaceChildren(fragment);
   } catch { /* ignore */ }
 }
 
