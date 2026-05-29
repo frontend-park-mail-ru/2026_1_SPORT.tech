@@ -69,14 +69,17 @@
 
 .auth-page__role-selector {
     display: flex;
-    gap: var(--spacing-md);
+    gap: var(--spacing-xs);
     margin-bottom: var(--spacing-2xl);
-    justify-content: center;
+    padding: 4px;
+    background: var(--background-light);
+    border-radius: var(--radius-full);
 }
 
 .auth-page__role-btn {
+    flex: 1;
     padding: var(--spacing-sm) var(--spacing-lg);
-    border: 2px solid var(--border-light);
+    border: none;
     border-radius: var(--radius-full);
     background: transparent;
     color: var(--text-secondary);
@@ -87,12 +90,12 @@
 
 .auth-page__role-btn--active {
     background: var(--primary-orange);
-    border-color: var(--primary-orange);
     color: white;
+    box-shadow: var(--shadow-sm);
 }
 
-.auth-page__role-btn:hover {
-    border-color: var(--primary-orange);
+.auth-page__role-btn:not(.auth-page__role-btn--active):hover {
+    color: var(--text-primary);
 }
 
 @keyframes fadeIn {

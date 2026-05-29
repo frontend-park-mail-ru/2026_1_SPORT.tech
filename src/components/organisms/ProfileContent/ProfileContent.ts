@@ -927,7 +927,7 @@ export async function renderProfileContent(
     sectionTitle: sectionTitles[currentTab],
     showFilters: isTrainer && (currentTab === 'main' || currentTab === 'publications'),
     popularPosts: popularWithDescriptions,
-    canAddPost: canAddPost && currentTab === 'publications'
+    canAddPost: canAddPost && isTrainer
   });
 
   const wrapperHtml = document.createElement('div');
@@ -1359,9 +1359,11 @@ export async function renderProfileContent(
     });
   });
 
-  if (canAddPost && currentTab === 'publications' && isTrainer) {
+  if (canAddPost && isTrainer) {
     const btnContainer = element.querySelector('#add-post-button-container') as HTMLElement | null;
     if (btnContainer) {
+      // Кнопка создаётся один раз, видимостью управляет переключение вкладок.
+      btnContainer.style.display = currentTab === 'publications' ? 'block' : 'none';
       await renderButton(btnContainer, {
         text: 'Добавить публикацию',
         variant: 'primary-orange',
