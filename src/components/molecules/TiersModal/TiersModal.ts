@@ -163,10 +163,6 @@ export function openTiersModal({ api, onSaved, onClose }: TiersModalOptions): vo
   function validate(): { tiers: TierData[]; error: string | null } {
     const meaningful = tiers.filter(t => t.name.trim() || t.price > 0 || t.description.trim());
 
-    if (meaningful.length === 0) {
-      return { tiers: [], error: 'Добавьте хотя бы один уровень подписки' };
-    }
-
     // Снимаем подсветку с предыдущей попытки.
     container.querySelectorAll('.tier-input--error').forEach(el => el.classList.remove('tier-input--error'));
 
@@ -231,7 +227,7 @@ export function openTiersModal({ api, onSaved, onClose }: TiersModalOptions): vo
   async function handleSave(saveBtn: HTMLButtonElement): Promise<void> {
     const { tiers: validTiers, error } = validate();
 
-    if (error || validTiers.length === 0) {
+    if (error) {
       showError(error || 'Не удалось сохранить уровни');
       return;
     }
@@ -241,7 +237,7 @@ export function openTiersModal({ api, onSaved, onClose }: TiersModalOptions): vo
 
     try {
       // Получаем существующие уровни для сравнения
-      const existingResponse = await api.getTiers().catch(() => ({ tiers: [] as Tier[] }));
+      const existingResponse = await api.getTiers();
       const existingTiers: Tier[] = existingResponse?.tiers || [];
 
       // Удаляем уровни, которых нет в новом списке
@@ -253,6 +249,7 @@ export function openTiersModal({ api, onSaved, onClose }: TiersModalOptions): vo
             await api.deleteTier(existingTier.tier_id);
           } catch (error) {
             console.error(`Failed to delete tier ${existingTier.tier_id}:`, error);
+            throw new Error(`Не удалось удалить уровень «${existingTier.name}»`);
           }
         }
       }

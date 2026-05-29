@@ -22,6 +22,7 @@ export interface PostFormModalOptions {
     text_content?: string;
     raw_text?: string;
     sport_type?: string;
+    sport_type_ids?: number[];
     min_tier_id?: number;
   };
   onSaved?: (() => void) | null;
@@ -71,7 +72,7 @@ export async function openPostFormModal({
   const blocks: ContentBlock[] = [];
   let blockCounter = 0;
   let selectedTiers: number[] = [];
-  let selectedSportTypeId: number | null = null;
+  let selectedSportTypeIds: number[] = [];
 
   // ========== ЗАГРУЖАЕМ СУЩЕСТВУЮЩИЙ ПОСТ (если редактирование) ==========
   if (mode === 'edit' && postId != null) {
@@ -106,8 +107,10 @@ export async function openPostFormModal({
         selectedTiers = [fullPost.min_tier_id];
       }
 
-      if (fullPost.sport_type_id != null) {
-        selectedSportTypeId = fullPost.sport_type_id;
+      if (fullPost.sport_type_ids?.length) {
+        selectedSportTypeIds = fullPost.sport_type_ids;
+      } else if (fullPost.sport_type_id != null) {
+        selectedSportTypeIds = [fullPost.sport_type_id];
       }
     } catch (error) {
       console.error('Failed to load existing post:', error);
@@ -145,30 +148,22 @@ export async function openPostFormModal({
 
   // ========== СОЗДАЁМ ПОЛЯ ФОРМЫ ==========
 
-  // Вид спорта – select (одиночный выбор)
+  // Виды спорта – мультивыбор.
   const sportTypes = await loadSportTypes(api);
   if (sportFieldContainer && sportTypes.length > 0) {
-    const selectEl = document.createElement('select');
-    selectEl.className = 'post-form__tier-select';
-    selectEl.id = 'post-form-sport-select';
-
-    const emptyOption = document.createElement('option');
-    emptyOption.value = '';
-    emptyOption.textContent = 'Не выбрано';
-    selectEl.appendChild(emptyOption);
-
-    sportTypes.forEach(sport => {
-      const option = document.createElement('option');
-      option.value = String(sport.sport_type_id);
-      option.textContent = sport.name;
-      selectEl.appendChild(option);
+    const sportFieldApi = createSportTypesField(sportFieldContainer, {
+      label: '',
+      placeholder: 'Выберите виды спорта',
+      required: false,
+      options: sportTypes,
+      onChange: (ids: number[]) => {
+        selectedSportTypeIds = ids;
+      }
     });
 
-    if (selectedSportTypeId != null) {
-      selectEl.value = String(selectedSportTypeId);
+    if (selectedSportTypeIds.length > 0) {
+      sportFieldApi.setValue(selectedSportTypeIds);
     }
-
-    sportFieldContainer.appendChild(selectEl);
   }
 
   // Уровни подписки – чекбоксы (можно выбрать несколько, передаётся минимальный)
@@ -421,16 +416,21 @@ export async function openPostFormModal({
         blocks: Array<{ text_content?: string; file_url?: string; kind?: string }>;
         min_tier_id?: number;
         sport_type_id?: number;
+        sport_type_ids?: number[];
         replace_blocks?: boolean;
+        clear_sport_type_id?: boolean;
+        clear_sport_type_ids?: boolean;
       } = {
         title: title.trim(),
         blocks: validBlocks as Array<{ text_content?: string; file_url?: string; kind?: string }>
       };
 
-      // Выбранный вид спорта из select
-      const sportSelect = document.getElementById('post-form-sport-select') as HTMLSelectElement | null;
-      if (sportSelect && sportSelect.value) {
-        payload.sport_type_id = Number(sportSelect.value);
+      if (selectedSportTypeIds.length > 0) {
+        payload.sport_type_ids = selectedSportTypeIds;
+        payload.sport_type_id = selectedSportTypeIds[0];
+      } else if (mode === 'edit') {
+        payload.clear_sport_type_ids = true;
+        payload.clear_sport_type_id = true;
       }
 
       if (selectedTiers.length > 0) {

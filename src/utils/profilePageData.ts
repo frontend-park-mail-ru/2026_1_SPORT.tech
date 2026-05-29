@@ -121,9 +121,17 @@ async function buildPostsWithAuthor(
       }
     }
 
-    const sportTypeName = post.sport_type_id
-      ? sportNamesById.get(post.sport_type_id) || ''
-      : '';
+    const sportTypeIds = post.sport_type_ids?.length
+      ? post.sport_type_ids
+      : fullPost?.sport_type_ids?.length
+        ? fullPost.sport_type_ids
+        : post.sport_type_id
+          ? [post.sport_type_id]
+          : [];
+    const sportTypeName = sportTypeIds
+      .map(id => sportNamesById.get(id))
+      .filter((name): name is string => Boolean(name))
+      .join(', ');
 
     const allText = contentBlocks
       .filter(b => b.type === 'text')
@@ -144,7 +152,8 @@ async function buildPostsWithAuthor(
       can_view: post.can_view ?? false,
       created_at: post.created_at,
       min_tier_id: post.min_tier_id ?? null,
-      sport_type_id: post.sport_type_id ?? null,
+      sport_type_id: post.sport_type_id ?? sportTypeIds[0] ?? null,
+      sport_type_ids: sportTypeIds,
       sport_type: sportTypeName,
       contentBlocks: contentBlocks,
       attachments: [],

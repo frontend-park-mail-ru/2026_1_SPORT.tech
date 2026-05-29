@@ -547,6 +547,7 @@ export class ApiClient {
     blocks: PostBlockInput[];
     min_tier_id?: number;
     sport_type_id?: number;
+    sport_type_ids?: number[];
   }): Promise<Post> {
     await this.ensureCsrfToken();
     return this.request<Post>('/v1/posts', {
@@ -560,8 +561,10 @@ export class ApiClient {
     blocks?: PostBlockInput[];
     min_tier_id?: number;
     sport_type_id?: number;
+    sport_type_ids?: number[];
     clear_min_tier_id?: boolean;
     clear_sport_type_id?: boolean;
+    clear_sport_type_ids?: boolean;
     replace_blocks?: boolean;
     is_pinned?: boolean;
   }): Promise<Post> {

@@ -73,6 +73,7 @@ export interface Post {
   blocks: PostBlock[];
   can_view: boolean;
   sport_type_id?: number | null;
+  sport_type_ids?: number[];
   is_pinned?: boolean;
 }
 
@@ -87,6 +88,7 @@ export interface PostListItem {
   comments_count: number;
   can_view: boolean;
   sport_type_id?: number | null;
+  sport_type_ids?: number[];
   is_pinned?: boolean;
 }
 

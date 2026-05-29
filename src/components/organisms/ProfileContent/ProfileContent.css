@@ -865,12 +865,10 @@
   opacity: 0.75;
 }
 
-/* «Главный пост» выделяем рамкой-акцентом, чтобы он читался как закреплённый. */
 .profile-home__featured {
-  border: 1px solid var(--primary-orange-light, #ffe0d8);
-  border-radius: 16px;
-  padding: 4px;
-  background: linear-gradient(180deg, rgba(255, 107, 74, 0.05), transparent 60%);
+  border: 0;
+  padding: 0;
+  background: transparent;
 }
 
 .profile-home__recent {

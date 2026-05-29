@@ -855,7 +855,7 @@ export async function renderProfileContent(
       ];
 
   const sectionTitles: Record<string, string> = {
-    main: '',
+    main: 'Главная страница профиля',
     publications: isTrainer ? 'Все публикации' : 'Понравившиеся',
     subscriptions: 'Уровни подписки',
     progress: 'История замеров',
@@ -1283,7 +1283,7 @@ export async function renderProfileContent(
         if (addButtonContainer) {
           addButtonContainer.style.display = (canAddPost && isPublications) ? 'block' : 'none';
         }
-        sectionTitleEl.textContent = tabId === 'main' ? '' : (sectionTitles[tabId] || 'Публикации');
+        sectionTitleEl.textContent = tabId === 'main' ? 'Главная страница профиля' : (sectionTitles[tabId] || 'Публикации');
         toggleSearchVisibility(isPublications);
         if (tabId === 'main' || tabId === 'publications') {
           showPostsSkeleton(postsContainer);
