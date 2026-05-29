@@ -353,7 +353,13 @@ function createRouter(api: ApiClient): Router {
     try {
       const { renderSettingsPage } = await import('./pages/SettingsPage/SettingsPage');
       if (isStale()) return;
-      await renderSettingsPage(api, content, { currentUser, onLogout, reload, navigateTo });
+      await renderSettingsPage(api, content, {
+        currentUser,
+        onLogout,
+        clearCurrentUser: () => setCurrentUser(null),
+        reload,
+        navigateTo,
+      });
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to load SettingsPage:', err);

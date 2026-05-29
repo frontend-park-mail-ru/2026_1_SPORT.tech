@@ -12,6 +12,7 @@ import { escapeHtml } from '../../utils/profilePageData';
 interface SettingsPageParams {
   currentUser: AuthResponse;
   onLogout?: (() => Promise<void>) | null;
+  clearCurrentUser?: (() => void) | null;
   reload: () => Promise<void>;
   navigateTo: (path: string) => void;
 }
@@ -85,7 +86,7 @@ export async function renderSettingsPage(
   container: HTMLElement,
   params: SettingsPageParams
 ): Promise<void> {
-  const { currentUser, reload, navigateTo } = params;
+  const { currentUser, clearCurrentUser, reload, navigateTo } = params;
 
   const initialTab = (new URLSearchParams(window.location.search).get('tab') as TabId) || 'account';
   let activeTab: TabId = TABS.some(t => t.id === initialTab) ? initialTab : 'account';
@@ -476,9 +477,11 @@ function renderPrivacyTab(api: ApiClient, panel: HTMLElement, navigateTo: (path:
     if (!window.confirm('Завершить все сессии и выйти?')) return;
     try {
       await api.logoutAllSessions();
-      navigateTo('/auth/login');
     } catch (err) {
       showToast((err as Error).message || 'Не удалось выйти', 'error');
+    } finally {
+      clearCurrentUser?.();
+      navigateTo('/auth/login');
     }
   });
 
@@ -520,6 +523,7 @@ function openDeleteAccountDialog(api: ApiClient, navigateTo: (path: string) => v
     confirmBtn.disabled = true;
     try {
       await api.deleteAccount(pwd);
+      clearCurrentUser?.();
       close();
       navigateTo('/auth/login');
     } catch (err) {
