@@ -42,6 +42,23 @@
   flex-direction: column;
   gap: 16px;
 }
+.subscription-modal__notice {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.subscription-modal__notice--warning {
+  border-color: #f8b58f;
+  background: #fff7ed;
+  color: #7c2d12;
+}
+
 .subscription-modal__tier {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -58,6 +75,12 @@
   color: #4a5568;
   font-size: 14px;
   line-height: 1.4;
+}
+
+.subscription-modal__tier .button {
+  white-space: normal;
+  min-height: 36px;
+  line-height: 1.2;
 }
 /* Добавить в конец файла SubscriptionModal.css */
 .subscription-modal__tier--current {

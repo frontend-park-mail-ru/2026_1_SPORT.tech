@@ -66,9 +66,16 @@ export async function openSubscriptionModal({
         <h2 class="subscription-modal__title">
           ${currentSubscription ? 'Изменить или отменить подписку' : 'Выберите уровень подписки'}
         </h2>
+        ${currentSubscription ? renderSubscriptionNotice(currentSubscription, tiers) : ''}
         <div class="subscription-modal__list">
           ${tiers.map(tier => {
     const isCurrent = currentSubscription?.tier_id === tier.tier_id;
+    const canSelectCurrent = Boolean(
+      isCurrent &&
+      currentSubscription &&
+      (currentSubscription.price_change_requires_resubscribe || currentSubscription.auto_renew === false)
+    );
+    const actionLabel = getTierActionLabel(isCurrent, canSelectCurrent, currentSubscription);
     const chatBadge = tier.chat_enabled
       ? `<span class="subscription-modal__chat-badge">${icons.chat}<span>Чат с тренером</span></span>`
       : '';
@@ -84,9 +91,9 @@ export async function openSubscriptionModal({
                 <button
                   class="button button--primary-orange button--small"
                   data-subscribe="${tier.tier_id}"
-                  ${isCurrent ? 'disabled' : ''}
+                  ${isCurrent && !canSelectCurrent ? 'disabled' : ''}
                 >
-                  ${isCurrent ? 'Текущий уровень' : (currentSubscription ? 'Сменить' : 'Выбрать')}
+                  ${actionLabel}
                 </button>
               </div>
             `;
@@ -99,7 +106,7 @@ export async function openSubscriptionModal({
                 Автопродление включено. После отмены доступ сохранится до конца оплаченного периода${formatPeriodEnd(currentSubscription)}.
               </p>
             ` : ''}
-            <button class="button button--text-orange button--small" data-unsubscribe>Отменить подписку</button>
+            ${currentSubscription.auto_renew ? '<button class="button button--text-orange button--small" data-unsubscribe>Отменить подписку</button>' : ''}
           </div>
         ` : ''}
       </div>
@@ -181,12 +188,51 @@ export async function openSubscriptionModal({
   }
 }
 
+function getTierActionLabel(isCurrent: boolean, canSelectCurrent: boolean, currentSubscription?: Subscription | null): string {
+  if (!currentSubscription) return 'Выбрать';
+  if (!isCurrent) return 'Сменить';
+  if (!canSelectCurrent) return 'Текущий уровень';
+  if (currentSubscription.price_change_requires_resubscribe) return 'Принять цену';
+  return 'Возобновить';
+}
+
+function renderSubscriptionNotice(subscription: Subscription, tiers: Tier[]): string {
+  if (subscription.price_change_requires_resubscribe) {
+    const currentTier = tiers.find(tier => tier.tier_id === subscription.tier_id);
+    const newPrice = currentTier ? ` Новая цена: ${formatMonthlyPrice(currentTier.price)}.` : '';
+    return `
+      <div class="subscription-modal__notice subscription-modal__notice--warning">
+        Цена тарифа изменилась. Следующего списания не будет; доступ сохранится${formatAccessUntil(subscription)}.${newPrice}
+        Чтобы продолжить, выберите тариф заново.
+      </div>
+    `;
+  }
+
+  if (subscription.auto_renew === false) {
+    return `
+      <div class="subscription-modal__notice">
+        Автопродление выключено; доступ сохранится${formatAccessUntil(subscription)}.
+      </div>
+    `;
+  }
+
+  return '';
+}
+
 function formatPeriodEnd(subscription: Subscription): string {
   const raw = subscription.current_period_end || subscription.expires_at;
   if (!raw) return '';
   const date = new Date(raw);
   if (Number.isNaN(date.getTime())) return '';
   return ` (до ${date.toLocaleDateString('ru-RU')})`;
+}
+
+function formatAccessUntil(subscription: Subscription): string {
+  const raw = subscription.current_period_end || subscription.expires_at;
+  if (!raw) return '';
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return '';
+  return ` до ${date.toLocaleDateString('ru-RU')}`;
 }
 
 function getSafeRedirectUrl(value: string): string | null {

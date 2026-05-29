@@ -224,6 +224,7 @@ export interface Subscription {
   auto_renew?: boolean;
   stripe_subscription_id?: string;
   current_period_end?: string;
+  price_change_requires_resubscribe?: boolean;
 }
 
 // НОВЫЙ ТИП для обновления подписки
