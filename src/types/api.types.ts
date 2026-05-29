@@ -73,6 +73,7 @@ export interface Post {
   blocks: PostBlock[];
   can_view: boolean;
   sport_type_id?: number | null;
+  is_pinned?: boolean;
 }
 
 export interface PostListItem {
@@ -86,6 +87,7 @@ export interface PostListItem {
   comments_count: number;
   can_view: boolean;
   sport_type_id?: number | null;
+  is_pinned?: boolean;
 }
 
 export interface PostLikeResponse {
@@ -217,6 +219,9 @@ export interface Subscription {
   expires_at: string;
   created_at: string;
   updated_at: string;
+  auto_renew?: boolean;
+  stripe_subscription_id?: string;
+  current_period_end?: string;
 }
 
 // НОВЫЙ ТИП для обновления подписки

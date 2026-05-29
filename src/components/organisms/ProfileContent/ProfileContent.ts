@@ -242,15 +242,14 @@ async function renderTrainerHome(
   const sorted = [...posts].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
-  const featured = sorted[0];
-  const recent = sorted.slice(1, 5);
+  const featured = sorted.find(post => post.is_pinned) ?? sorted[0];
+  const recent = sorted.filter(post => post.post_id !== featured.post_id).slice(0, 4);
 
   container.innerHTML = `
     <div class="profile-home">
       <section class="profile-home__block">
         <div class="profile-home__block-head">
           <h3 class="profile-home__block-title">Главный пост</h3>
-          <span class="profile-home__badge">Свежее</span>
         </div>
         <div class="profile-home__featured" id="profile-home-featured"></div>
       </section>
@@ -903,7 +902,7 @@ export async function renderProfileContent(
       ];
 
   const sectionTitles: Record<string, string> = {
-    main: 'Обзор',
+    main: '',
     publications: isTrainer ? 'Все публикации' : 'Понравившиеся',
     subscriptions: 'Уровни подписки',
     progress: 'История замеров',
@@ -1340,7 +1339,7 @@ export async function renderProfileContent(
         if (addButtonContainer) {
           addButtonContainer.style.display = (canAddPost && isPublications) ? 'block' : 'none';
         }
-        sectionTitleEl.textContent = sectionTitles[tabId] || 'Публикации';
+        sectionTitleEl.textContent = tabId === 'main' ? '' : (sectionTitles[tabId] || 'Публикации');
         toggleSearchVisibility(isPublications);
         if (tabId === 'main' || tabId === 'publications') {
           if (statsContainer) {

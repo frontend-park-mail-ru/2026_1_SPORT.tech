@@ -147,7 +147,8 @@ async function buildPostsWithAuthor(
       sport_type_id: post.sport_type_id ?? null,
       sport_type: sportTypeName,
       contentBlocks: contentBlocks,
-      attachments: []
+      attachments: [],
+      is_pinned: post.is_pinned ?? false
     };
   }));
 }

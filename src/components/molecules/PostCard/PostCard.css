@@ -294,6 +294,15 @@
   color: var(--primary-orange);
 }
 
+.post-card__icon-btn--active {
+  color: var(--primary-orange);
+}
+
+.post-card__icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Кнопка разворачивания/сворачивания */
 .post-card__collapse-btn {
   display: inline-flex;
@@ -431,8 +440,6 @@
   flex-direction: column;
   gap: 10px;
   margin-bottom: 12px;
-  max-height: 300px;
-  overflow-y: auto;
 }
 
 .post-card__comment {
@@ -626,6 +633,12 @@
   padding: 4px;
   display: flex;
   flex-direction: column;
+}
+
+/* [hidden] из UA-стилей перебивается нашим display:flex, поэтому меню
+   «висело» открытым и не закрывалось — возвращаем скрытие явным правилом. */
+.post-card__comment-menu-list[hidden] {
+  display: none;
 }
 
 .post-card__comment-menu-item {

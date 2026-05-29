@@ -563,6 +563,7 @@ export class ApiClient {
     clear_min_tier_id?: boolean;
     clear_sport_type_id?: boolean;
     replace_blocks?: boolean;
+    is_pinned?: boolean;
   }): Promise<Post> {
     await this.ensureCsrfToken();
     return this.request<Post>(`/v1/posts/${postId}`, {

@@ -25,6 +25,7 @@ export interface PostCardData {
   sport_type?: string;
   tierName?: string;
   tierPrice?: number;
+  is_pinned?: boolean;
 }
 
 interface ContentBlock {
@@ -66,7 +67,8 @@ export async function renderPostCard(
     min_tier_id: minTierId = null,
     sport_type: sportType = '',
     tierName = '',
-    tierPrice = 0
+    tierPrice = 0,
+    is_pinned: isPinned = false
   } = post;
 
   const finalCanView = canView;
@@ -114,7 +116,8 @@ export async function renderPostCard(
     post_id: postId, title, content: shortTextContent, fullContent: content,
     authorName, authorRole, authorAvatar, authorInitials: initials,
     likes, liked, comments, can_view: finalCanView, isOwner,
-    contentBlocks: contentBlocksForTemplate, minTierId, sportType, tierName, tierPrice
+    contentBlocks: contentBlocksForTemplate, minTierId, sportType, tierName, tierPrice,
+    is_pinned: isPinned
   });
 
   const wrapper = document.createElement('div');
@@ -127,7 +130,7 @@ export async function renderPostCard(
   const commentCountEl = postCard.querySelector('[data-post-comment-count]') as HTMLElement | null;
   const editBtn = postCard.querySelector('[data-post-edit]') as HTMLButtonElement | null;
   const deleteBtn = postCard.querySelector('[data-post-delete]') as HTMLButtonElement | null;
-  const shareBtn = postCard.querySelector('[data-post-share]') as HTMLButtonElement | null;
+  const pinBtn = postCard.querySelector('[data-post-pin]') as HTMLButtonElement | null;
   const collapseBtn = postCard.querySelector('[data-post-collapse]') as HTMLButtonElement | null;
   const expandBtn = postCard.querySelector('[data-post-expand-btn]') as HTMLButtonElement | null;
   const shortBody = postCard.querySelector('.post-card__body--short') as HTMLElement | null;
@@ -223,14 +226,17 @@ export async function renderPostCard(
     });
   }
 
-  if (shareBtn) {
-    shareBtn.addEventListener('click', async (e: Event) => {
+  if (pinBtn && api && isOwner) {
+    pinBtn.addEventListener('click', async (e: Event) => {
       e.stopPropagation();
-      const shareData = { title, text: rawText || title, url: window.location.href };
+      pinBtn.disabled = true;
       try {
-        if (navigator.share) await navigator.share(shareData);
-        else await navigator.clipboard.writeText(window.location.href);
-      } catch {}
+        await api.updatePost(postId, { is_pinned: !isPinned });
+        await onPostsUpdated?.();
+      } catch (error) {
+        console.error('Pin error:', error);
+        pinBtn.disabled = false;
+      }
     });
   }
 
@@ -244,6 +250,15 @@ export async function renderPostCard(
     commentsSection.className = 'post-card__comments';
     commentsSection.style.display = 'none';
     postCard.appendChild(commentsSection);
+
+    // Клик вне открытого меню «⋯» закрывает его.
+    document.addEventListener('click', (e: Event) => {
+      const target = e.target as HTMLElement;
+      commentsSection.querySelectorAll('[data-comment-menu-list]').forEach(list => {
+        const menu = (list as HTMLElement).closest('[data-comment-menu]');
+        if (menu && !menu.contains(target)) (list as HTMLElement).hidden = true;
+      });
+    });
 
     const renderComments = async (): Promise<void> => {
       if (!commentsLoaded) {
@@ -413,7 +428,6 @@ export async function renderPostCard(
         btn.addEventListener('click', async (e: Event) => {
           e.stopPropagation();
           const id = Number((btn as HTMLElement).dataset.commentDelete);
-          if (!window.confirm('Удалить комментарий?')) return;
           try {
             await api.deleteComment(id);
             const idx = commentsList.findIndex(c => c.comment_id === id);
@@ -421,7 +435,7 @@ export async function renderPostCard(
             if (commentCountEl) commentCountEl.textContent = String(commentsList.length);
             await renderCommentsList(commentsList);
           } catch (err: unknown) {
-            window.alert(getFriendlyErrorMessage(err, 'Не удалось удалить комментарий'));
+            console.error('Delete comment error:', getFriendlyErrorMessage(err, 'Не удалось удалить комментарий'));
           }
         });
       });

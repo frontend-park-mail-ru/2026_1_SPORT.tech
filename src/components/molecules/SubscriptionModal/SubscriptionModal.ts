@@ -94,7 +94,12 @@ export async function openSubscriptionModal({
         </div>
         ${currentSubscription ? `
           <div class="subscription-modal__unsubscribe">
-            <button class="button button--text-orange button--small" data-unsubscribe>Отписаться</button>
+            ${currentSubscription.auto_renew ? `
+              <p class="subscription-modal__unsubscribe-hint">
+                Автопродление включено. После отмены доступ сохранится до конца оплаченного периода${formatPeriodEnd(currentSubscription)}.
+              </p>
+            ` : ''}
+            <button class="button button--text-orange button--small" data-unsubscribe>Отменить подписку</button>
           </div>
         ` : ''}
       </div>
@@ -169,11 +174,19 @@ export async function openSubscriptionModal({
           if (onSubscribed) onSubscribed();
         } catch {
           btn.disabled = false;
-          btn.textContent = 'Отписаться';
+          btn.textContent = 'Отменить подписку';
         }
       });
     }
   }
+}
+
+function formatPeriodEnd(subscription: Subscription): string {
+  const raw = subscription.current_period_end || subscription.expires_at;
+  if (!raw) return '';
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return '';
+  return ` (до ${date.toLocaleDateString('ru-RU')})`;
 }
 
 function getSafeRedirectUrl(value: string): string | null {

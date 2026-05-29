@@ -28,6 +28,7 @@ export interface PostWithAuthor {
   contentBlocks?: ContentBlockForPost[];
   attachments?: PostAttachmentCompat[];
   isOwner?: boolean;
+  is_pinned?: boolean;
 }
 
 export interface PostAttachmentCompat {

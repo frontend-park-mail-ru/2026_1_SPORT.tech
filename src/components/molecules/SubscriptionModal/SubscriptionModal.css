@@ -80,6 +80,13 @@
   padding-top: 16px;
 }
 
+.subscription-modal__unsubscribe-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #64748b;
+}
+
 .subscription-modal__unsubscribe .button--text-orange {
   background: none;
   border: none;
