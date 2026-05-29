@@ -130,7 +130,9 @@ export async function fillProfilePostsSection(
         ...post,
         api,
         isOwner: canManagePosts,
-        onPostsUpdated: onPostsUpdated ?? undefined
+        onPostsUpdated: onPostsUpdated ?? undefined,
+        tierName: post.tier_name,
+        tierPrice: post.tier_price
       });
     }
   };
@@ -274,7 +276,9 @@ async function renderTrainerHome(
     ...featured,
     api,
     isOwner: canManagePosts,
-    onPostsUpdated: onPostsUpdated ?? undefined
+    onPostsUpdated: onPostsUpdated ?? undefined,
+    tierName: featured.tier_name,
+    tierPrice: featured.tier_price
   });
 
   container.querySelector('#profile-home-see-all')?.addEventListener('click', onSeeAll);
