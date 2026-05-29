@@ -36,9 +36,7 @@ const NOTIFICATION_FIELDS: Array<{ key: keyof NotificationPreferences; label: st
 ];
 
 const PRIVACY_FIELDS: Array<{ key: keyof PrivacySettings; label: string; hint: string }> = [
-  { key: 'show_profile_in_search', label: 'Показывать профиль в поиске', hint: 'Ваш профиль виден в каталоге и поиске' },
-  { key: 'allow_measurement_sharing', label: 'Делиться замерами с тренерами', hint: 'Разрешить выбранным тренерам видеть ваши замеры' },
-  { key: 'show_activity_status', label: 'Показывать статус активности', hint: 'Другие видят, когда вы были онлайн' }
+  { key: 'allow_measurement_sharing', label: 'Делиться замерами с тренерами', hint: 'Разрешить выбранным тренерам видеть ваши замеры' }
 ];
 
 function showToast(message: string, kind: 'success' | 'error'): void {
@@ -251,6 +249,28 @@ function renderAccountTab(
 
     const education = (panel.querySelector('#bt-education') as HTMLInputElement).value.trim();
     const career = (panel.querySelector('#bt-career') as HTMLInputElement).value;
+
+    if (!career) {
+      errorEl.textContent = 'Укажите дату начала карьеры';
+      errorEl.hidden = false;
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(career)) {
+      errorEl.textContent = 'Дата должна быть в формате ГГГГ-ММ-ДД';
+      errorEl.hidden = false;
+      return;
+    }
+    const careerDate = new Date(`${career}T00:00:00Z`);
+    if (Number.isNaN(careerDate.getTime())) {
+      errorEl.textContent = 'Некорректная дата начала карьеры';
+      errorEl.hidden = false;
+      return;
+    }
+    if (careerDate.getTime() > Date.now()) {
+      errorEl.textContent = 'Дата начала карьеры не может быть в будущем';
+      errorEl.hidden = false;
+      return;
+    }
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Сохраняем…';

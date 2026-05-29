@@ -5,6 +5,7 @@ const ERROR_MESSAGE_MAP: Array<[RegExp, string]> = [
     /amount_too_small|invalid donation amount/i,
     `Сумма должна быть от ${MIN_DONATION_AMOUNT_RUB} ₽ до ${MAX_DONATION_AMOUNT_RUB.toLocaleString('ru-RU')} ₽.`
   ],
+  [/career[_ ]?since[_ ]?date|career since/i, 'Укажите корректную дату начала карьеры — она не может быть в будущем.'],
   [/^(offline|failed to fetch|networkerror|load failed)$/i, 'Нет соединения. Попробуйте повторить, когда сеть появится.'],
   [/network|fetch|connection|internet/i, 'Нет соединения. Проверьте сеть и попробуйте ещё раз.'],
   [/csrf/i, 'Сессия устарела. Обновите страницу и попробуйте ещё раз.'],
