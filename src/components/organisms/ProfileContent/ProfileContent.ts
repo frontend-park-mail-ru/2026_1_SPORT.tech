@@ -868,7 +868,9 @@ export async function renderProfileContent(
 
   let currentTab = activeTab;
   if (!isTrainer && (currentTab === 'main' || currentTab === 'publications')) {
-    currentTab = 'publications';
+    // Свой клиентский профиль открывается на «Понравившихся»; чужой
+    // (тренер смотрит клиента) — на «Прогрессе», т.к. вкладки лайков там нет.
+    currentTab = isOwnProfile ? 'publications' : 'progress';
     tabs[0].active = true;
   }
 
