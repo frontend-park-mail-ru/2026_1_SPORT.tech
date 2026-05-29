@@ -5,7 +5,7 @@ import { escapeHtml, mapProfileData, getUserRoleLabel } from './utils/profilePag
 import { getFriendlyErrorMessage } from './utils/errorMessages';
 import type { AuthResponse } from './types/auth.types';
 import type { Router } from './types/router.types';
-import { renderSidebar, setActivePage } from './components/organisms/Sidebar/Sidebar';
+import { renderSidebar, setActivePage, resetSidebarSessionState } from './components/organisms/Sidebar/Sidebar';
 import './styles/index.css';
 import templates from './templates';
 
@@ -144,6 +144,9 @@ function createLogoutHandler(
       setCurrentUser(null);
       localStorage.removeItem('user');
       localStorage.removeItem('cached_user');
+      // Сбрасываем кеш диалогов и SSE-поток, иначе у следующего аккаунта
+      // в чате остаются сообщения предыдущего.
+      resetSidebarSessionState();
       navigateTo('/auth/login');
     }
   };

@@ -151,6 +151,23 @@ function stopChatConversationsFallback(): void {
   }
 }
 
+/**
+ * Сбрасывает сессионное состояние чата при смене аккаунта (logout/login без
+ * перезагрузки страницы). Без этого `lastChatSnapshot` и открытый SSE-поток
+ * остаются от прошлого пользователя, и в чате нового аккаунта показываются
+ * чужие диалоги. Вызывается из обработчика логаута.
+ */
+export function resetSidebarSessionState(): void {
+  if (chatEventSource) {
+    chatEventSource.close();
+    chatEventSource = null;
+  }
+  stopChatConversationsFallback();
+  lastChatSnapshot = null;
+  // Разрешаем заново открыть поток для следующего аккаунта.
+  chatStreamStarted = false;
+}
+
 function startChatConversationsFallback(api: ApiClient): void {
   if (chatFallbackPollTimer != null) return;
 
@@ -450,6 +467,9 @@ export async function renderSidebar(
 
     // Счётчик непрочитанных сообщений приходит из SSE, а не из поллинга.
     if (!chatStreamStarted) {
+      // Сразу подтягиваем снапшот по REST, чтобы бейдж чата появился при входе
+      // в аккаунт, не дожидаясь первого пуша SSE (бэкенд шлёт пуш по событию).
+      void refreshChatConversationsSnapshot(api);
       startChatConversationsStream(api);
       chatStreamStarted = true;
     }
