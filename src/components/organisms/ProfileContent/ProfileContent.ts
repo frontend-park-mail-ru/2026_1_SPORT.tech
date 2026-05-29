@@ -498,53 +498,6 @@ async function loadLikedPosts(api: ApiClient, userId: number): Promise<LikedPost
   }
 }
 
-async function renderStatsPanel(container: HTMLElement, api: ApiClient): Promise<void> {
-  container.innerHTML = `
-    <div class="profile-stats">
-      <div class="page-skeleton__block" style="height:80px;border-radius:12px;flex:1;margin-bottom:0;"></div>
-      <div class="page-skeleton__block" style="height:80px;border-radius:12px;flex:1;margin-bottom:0;"></div>
-      <div class="page-skeleton__block" style="height:80px;border-radius:12px;flex:1;margin-bottom:0;"></div>
-      <div class="page-skeleton__block" style="height:80px;border-radius:12px;flex:1;margin-bottom:0;"></div>
-    </div>
-  `;
-  try {
-    const [stats, balance] = await Promise.all([
-      api.getMyStatistics(),
-      api.getMyBalance().catch(() => null)
-    ]);
-    const rawCurrency = balance?.currency || stats.currency || 'RUB';
-    const currency = rawCurrency === 'RUB' ? '₽' : rawCurrency;
-    const fmt = (n: number): string => n.toLocaleString('ru-RU');
-    container.innerHTML = `
-      <div class="profile-stats">
-        <div class="profile-stats__item">
-          <div class="profile-stats__value">${stats.posts_count}</div>
-          <div class="profile-stats__label">Публикаций</div>
-        </div>
-        <div class="profile-stats__item">
-          <div class="profile-stats__value">${fmt(stats.monthly_revenue)} ${currency}</div>
-          <div class="profile-stats__label">Доход в месяц</div>
-        </div>
-        <div class="profile-stats__item">
-          <div class="profile-stats__value">${fmt(stats.total_revenue)} ${currency}</div>
-          <div class="profile-stats__label">Всего доходов</div>
-        </div>
-        <div class="profile-stats__item">
-          <div class="profile-stats__value">${stats.donations_count}</div>
-          <div class="profile-stats__label">Донатов</div>
-        </div>
-      </div>
-    `;
-  } catch (err: unknown) {
-    console.error('[ProfileContent] failed to load stats:', err);
-    container.innerHTML = `
-      <div class="profile-stats profile-stats--error">
-        <span style="color:#999;font-size:13px;">Статистика недоступна</span>
-      </div>
-    `;
-  }
-}
-
 function showPostsSkeleton(container: HTMLElement): void {
   const card = `
     <div class="post-skeleton">
@@ -1073,15 +1026,6 @@ export async function renderProfileContent(
     if (sidebarRight) sidebarRight.style.display = 'none';
   }
 
-  // Панель статистики — только для собственного профиля тренера
-  let statsContainer: HTMLElement | null = null;
-  if (isOwnProfile && isTrainer) {
-    statsContainer = document.createElement('div');
-    statsContainer.className = 'profile-stats-container';
-    statsContainer.style.display = 'none';
-    postsContainer.insertAdjacentElement('beforebegin', statsContainer);
-  }
-
   let allPosts: PostWithAuthor[] = initialPosts || [];
   let searchQuery = '';
 
@@ -1342,14 +1286,9 @@ export async function renderProfileContent(
         sectionTitleEl.textContent = tabId === 'main' ? '' : (sectionTitles[tabId] || 'Публикации');
         toggleSearchVisibility(isPublications);
         if (tabId === 'main' || tabId === 'publications') {
-          if (statsContainer) {
-            statsContainer.style.display = tabId === 'main' ? 'block' : 'none';
-            if (tabId === 'main') void renderStatsPanel(statsContainer, api);
-          }
           showPostsSkeleton(postsContainer);
           await reloadAllPosts();
         } else {
-          if (statsContainer) statsContainer.style.display = 'none';
           refreshVisiblePosts();
         }
       }
@@ -1432,16 +1371,6 @@ export async function renderProfileContent(
       filtersElement.style.display = initialIsPublications ? 'flex' : 'none';
     }
     showPostsSkeleton(postsContainer);
-
-    // Показываем статистику на главной вкладке собственного профиля тренера
-    if (statsContainer) {
-      if (currentTab === 'main') {
-        statsContainer.style.display = 'block';
-        void renderStatsPanel(statsContainer, api);
-      } else {
-        statsContainer.style.display = 'none';
-      }
-    }
 
     void (async () => {
       if (currentTab === 'publications' && !isTrainer) {

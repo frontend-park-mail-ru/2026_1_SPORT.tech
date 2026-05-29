@@ -56,6 +56,11 @@
   background: var(--background-hover, #fff5f2);
 }
 
+.settings-tab--active:hover {
+  background: var(--primary-orange);
+  color: #fff;
+}
+
 .settings-tab:active {
   transform: scale(0.98);
 }
