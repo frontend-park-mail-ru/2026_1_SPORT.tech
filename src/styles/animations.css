@@ -1,0 +1,126 @@
+/* Глобальные UX-анимации: входы страниц, модалок, hover/focus.
+   Все анимации выключаются для prefers-reduced-motion. */
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes modal-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.home-page,
+.profile-page,
+.meetings-page,
+.chat-page,
+.finance-page,
+.notifications-page,
+.payment-return-page,
+.auth-page {
+  animation: page-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+[class*="-modal__backdrop"],
+.tiers-modal-backdrop {
+  animation: modal-backdrop-in 0.18s ease both;
+}
+
+[class*="-modal__panel"],
+.tiers-modal-panel {
+  animation: modal-panel-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+button,
+a[role="button"],
+.sidebar__nav-item,
+.trainer-card,
+.home-page__filters {
+  transition: background 0.18s ease, border-color 0.18s ease,
+              color 0.18s ease, box-shadow 0.18s ease,
+              transform 0.18s ease;
+}
+
+button:not(:disabled):active,
+a[role="button"]:active {
+  transform: scale(0.98);
+}
+
+input,
+textarea,
+select {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+img {
+  transition: opacity 0.25s ease;
+}
+
+img[src=""] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page,
+  .profile-page,
+  .meetings-page,
+  .chat-page,
+  .finance-page,
+  .notifications-page,
+  .payment-return-page,
+  .auth-page,
+  [class*="-modal__backdrop"],
+  .tiers-modal-backdrop,
+  [class*="-modal__panel"],
+  .tiers-modal-panel {
+    animation: none;
+  }
+
+  button,
+  a[role="button"],
+  input,
+  textarea,
+  select,
+  img {
+    transition: none;
+  }
+
+  button:not(:disabled):active,
+  a[role="button"]:active {
+    transform: none;
+  }
+}

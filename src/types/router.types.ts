@@ -3,6 +3,7 @@ import type { AuthResponse } from './auth.types';
 export interface Router {
   handleRouting: () => Promise<void>;
   navigateTo: (path: string) => void;
+  reload: () => Promise<void>;
   setCurrentUser: (user: AuthResponse | null) => void;
   getCurrentUser: (options?: { force: boolean }) => Promise<AuthResponse | null>;
 }

@@ -6,11 +6,13 @@
 import type { ApiClient } from '../../../utils/api';
 import type { Tier } from '../../../types/api.types';
 import templates from '../../../templates';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 import './TiersModal.css';
 
 export interface TiersModalOptions {
   api: ApiClient;
   onSaved?: () => void;
+  onClose?: () => void;
 }
 
 interface TierData {
@@ -19,13 +21,18 @@ interface TierData {
   price: number;
   description: string;
   chat_enabled: boolean;
+  calendar_enabled: boolean;
   index?: number;
   existingId?: number;  // настоящий tier_id с бэкенда
 }
 
-export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
+export function openTiersModal({ api, onSaved, onClose }: TiersModalOptions): void {
+  // Не открываем повторно, если модалка уже есть в DOM
+  if (document.querySelector('.tiers-modal-container')) return;
+
   let tiers: TierData[] = [];
   let tierCounter = 0;
+  let loading = true;
 
   const template = templates['TiersModal.hbs'];
 
@@ -74,7 +81,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
   // Генерация HTML без повторной привязки событий
   function render(): void {
     updateIndices();
-    const html = template({ tiers });
+    const html = template({ tiers, loading });
     container.innerHTML = html;
   }
 
@@ -98,7 +105,8 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
         name: '',
         price: 0,
         description: '',
-        chat_enabled: false
+        chat_enabled: false,
+        calendar_enabled: false
       });
       render();
       break;
@@ -139,16 +147,88 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
         tier.description = target.value;
       } else if (field === 'chat_enabled') {
         tier.chat_enabled = (target as HTMLInputElement).checked;
+      } else if (field === 'calendar_enabled') {
+        tier.calendar_enabled = (target as HTMLInputElement).checked;
       }
+      // Снимаем подсветку ошибки на текущем поле и убираем баннер,
+      // как только пользователь начал править значение.
+      target.classList.remove('tier-input--error');
+      container.querySelector('.tiers-error-message')?.remove();
     }
   });
 
+  // ========== ВАЛИДАЦИЯ ==========
+  // Ограничения уровня: имя 1–60 символов, цена 1–1 000 000 ₽, описание ≤ 500.
+  // Уровни без названия игнорируем — пользователь мог нажать «+» по ошибке.
+  function validate(): { tiers: TierData[]; error: string | null } {
+    const meaningful = tiers.filter(t => t.name.trim() || t.price > 0 || t.description.trim());
+
+    // Снимаем подсветку с предыдущей попытки.
+    container.querySelectorAll('.tier-input--error').forEach(el => el.classList.remove('tier-input--error'));
+
+    const markError = (tierId: string, field: string): void => {
+      const input = container.querySelector<HTMLInputElement>(
+        `.tier-input[data-tier-id="${tierId}"][data-field="${field}"]`
+      );
+      input?.classList.add('tier-input--error');
+      input?.focus();
+    };
+
+    const seenNames = new Set<string>();
+
+    for (const tier of meaningful) {
+      const name = tier.name.trim();
+      if (!name) {
+        markError(tier.id, 'name');
+        return { tiers: [], error: `Уровень ${tier.index}: укажите название` };
+      }
+      if (name.length < 2) {
+        markError(tier.id, 'name');
+        return { tiers: [], error: `Уровень ${tier.index}: название слишком короткое (минимум 2 символа)` };
+      }
+      if (name.length > 60) {
+        markError(tier.id, 'name');
+        return { tiers: [], error: `Уровень ${tier.index}: название слишком длинное (максимум 60 символов)` };
+      }
+      const key = name.toLowerCase();
+      if (seenNames.has(key)) {
+        markError(tier.id, 'name');
+        return { tiers: [], error: `Уровень ${tier.index}: название «${name}» уже используется` };
+      }
+      seenNames.add(key);
+
+      if (!Number.isFinite(tier.price) || tier.price < 0) {
+        markError(tier.id, 'price');
+        return { tiers: [], error: `Уровень ${tier.index}: цена не может быть отрицательной` };
+      }
+      if (!Number.isInteger(tier.price)) {
+        markError(tier.id, 'price');
+        return { tiers: [], error: `Уровень ${tier.index}: цена должна быть целым числом` };
+      }
+      if (tier.price > 0 && tier.price < 100) {
+        markError(tier.id, 'price');
+        return { tiers: [], error: `Уровень ${tier.index}: минимальная цена платной подписки — 100 ₽. Поставьте 0 для бесплатного уровня.` };
+      }
+      if (tier.price > 1_000_000) {
+        markError(tier.id, 'price');
+        return { tiers: [], error: `Уровень ${tier.index}: цена не может быть больше 1 000 000 ₽` };
+      }
+
+      if (tier.description.length > 500) {
+        markError(tier.id, 'description');
+        return { tiers: [], error: `Уровень ${tier.index}: описание длиннее 500 символов` };
+      }
+    }
+
+    return { tiers: meaningful, error: null };
+  }
+
   // ========== СОХРАНЕНИЕ ==========
   async function handleSave(saveBtn: HTMLButtonElement): Promise<void> {
-    const validTiers = tiers.filter(t => t.name.trim() && t.price !== undefined && t.price !== null && t.price >= 0);
+    const { tiers: validTiers, error } = validate();
 
-    if (validTiers.length === 0) {
-      showError('Добавьте хотя бы один уровень с названием и ценой');
+    if (error) {
+      showError(error || 'Не удалось сохранить уровни');
       return;
     }
 
@@ -157,7 +237,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
 
     try {
       // Получаем существующие уровни для сравнения
-      const existingResponse = await api.getTiers().catch(() => ({ tiers: [] as Tier[] }));
+      const existingResponse = await api.getTiers();
       const existingTiers: Tier[] = existingResponse?.tiers || [];
 
       // Удаляем уровни, которых нет в новом списке
@@ -169,6 +249,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
             await api.deleteTier(existingTier.tier_id);
           } catch (error) {
             console.error(`Failed to delete tier ${existingTier.tier_id}:`, error);
+            throw new Error(`Не удалось удалить уровень «${existingTier.name}»`);
           }
         }
       }
@@ -181,7 +262,8 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
               name: tier.name.trim(),
               price: tier.price,
               description: tier.description.trim() || '',
-              chat_enabled: tier.chat_enabled
+              chat_enabled: tier.chat_enabled,
+              calendar_enabled: tier.calendar_enabled
             });
           } catch (error) {
             console.error(`Failed to update tier ${tier.existingId}:`, error);
@@ -193,7 +275,8 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
               name: tier.name.trim(),
               price: tier.price,
               description: tier.description.trim() || '',
-              chat_enabled: tier.chat_enabled
+              chat_enabled: tier.chat_enabled,
+              calendar_enabled: tier.calendar_enabled
             });
           } catch (error) {
             console.error('Failed to create tier:', error);
@@ -207,7 +290,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to save tiers:', err);
-      showError(err.message || 'Не удалось сохранить уровни подписки');
+      showError(getFriendlyErrorMessage(err.message, 'Не удалось сохранить уровни подписки. Попробуйте ещё раз.'));
       saveBtn.disabled = false;
       saveBtn.textContent = 'Сохранить';
     }
@@ -217,6 +300,7 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
   function close(): void {
     document.removeEventListener('keydown', onKey);
     container.remove();
+    if (onClose) onClose();
   }
 
   function onKey(e: KeyboardEvent): void {
@@ -234,15 +318,20 @@ export function openTiersModal({ api, onSaved }: TiersModalOptions): void {
           price: t.price || 0,
           description: t.description || '',
           chat_enabled: t.chat_enabled ?? false,
+          calendar_enabled: t.calendar_enabled ?? false,
           existingId: t.tier_id
         }));
         tierCounter = tiers.length;
-        render();
       }
     } catch (error) {
       console.error('Failed to load tiers:', error);
+      loading = false;
+      render();
       showError('Не удалось загрузить существующие уровни');
+      return;
     }
+    loading = false;
+    render();
   }
 
   // ========== ИНИЦИАЛИЗАЦИЯ ==========

@@ -46,7 +46,7 @@
 }
 
 .progress-tab__required {
-  color: #E85A2B;
+  color: var(--primary-orange);
 }
 
 .progress-tab__input {
@@ -63,8 +63,13 @@
 }
 
 .progress-tab__input:focus {
-  border-color: #E85A2B;
+  border-color: var(--primary-orange);
   background: #fff;
+}
+
+.progress-tab__input--error {
+  border-color: var(--error-red);
+  background: var(--error-light);
 }
 
 .progress-tab__form-footer {
@@ -78,12 +83,12 @@
 
 .progress-tab__form-error {
   font-size: 13px;
-  color: #E85A2B;
+  color: var(--primary-orange);
   min-height: 20px;
 }
 
 .progress-tab__submit {
-  background: #E85A2B;
+  background: var(--primary-orange);
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -177,15 +182,22 @@
   border: none;
   color: #ccc;
   cursor: pointer;
-  font-size: 14px;
   padding: 4px 6px;
   border-radius: 6px;
   transition: color 0.2s, background 0.2s;
-  line-height: 1;
+  line-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-tab__delete-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .progress-tab__delete-btn:hover {
-  color: #E85A2B;
+  color: var(--primary-orange);
   background: #fff0ec;
 }
 
@@ -200,9 +212,16 @@
 }
 
 .progress-tab__empty-icon {
-  font-size: 48px;
+  display: flex;
+  justify-content: center;
   margin-bottom: 16px;
-  opacity: 0.6;
+  color: var(--primary-orange);
+  opacity: 0.7;
+}
+
+.progress-tab__empty-icon svg {
+  width: 48px;
+  height: 48px;
 }
 
 .progress-tab__empty-text {
@@ -252,6 +271,27 @@
 }
 
 .progress-tab__sharing-summary::-webkit-details-marker { display: none; }
+
+.progress-tab__sharing-icon {
+  display: inline-flex;
+  color: var(--primary-orange);
+}
+
+.progress-tab__sharing-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.progress-tab__sharing-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-tab__sharing-save svg {
+  width: 14px;
+  height: 14px;
+}
 
 .progress-tab__sharing-hint {
   font-size: 12px;

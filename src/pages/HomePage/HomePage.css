@@ -76,7 +76,7 @@
 
 .home-page__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 18px;
 }
 
@@ -86,8 +86,16 @@
   color: #7b8f9f;
 }
 
+.trainer-card-skeleton {
+  height: 196px;
+  border-radius: 20px;
+  margin-bottom: 0;
+}
+
 .trainer-card {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid #dbe9f2;
   background: linear-gradient(180deg, #f9fcff 0%, #f3f9fe 100%);
   border-radius: 20px;
@@ -97,13 +105,26 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  overflow: hidden;
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.26s ease,
+              background 0.26s ease;
 }
 
 .trainer-card:hover {
-  transform: translateY(-3px);
-  border-color: #bfd8e7;
-  box-shadow: 0 12px 26px rgba(52, 94, 132, 0.14);
+  transform: translateY(-6px);
+  border-color: #a8c8dc;
+  background: linear-gradient(180deg, #ffffff 0%, #f0f7fd 100%);
+  box-shadow: 0 18px 40px rgba(52, 94, 132, 0.18);
+}
+
+.trainer-card:hover .trainer-card__avatar {
+  transform: scale(1.04);
+}
+
+.trainer-card__avatar {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .trainer-card:focus-visible {
@@ -115,13 +136,14 @@
   display: flex;
   gap: 14px;
   align-items: center;
+  min-width: 0;
 }
 
 .trainer-card__avatar {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #ff8c66 0%, #e85a2b 100%);
+  background: linear-gradient(135deg, #ff8c66 0%, var(--primary-orange) 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -148,6 +170,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
 }
 
 .trainer-card__name {
@@ -155,6 +178,12 @@
   font-size: 20px;
   line-height: 1.2;
   color: #1a2b3c;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .trainer-card__badge {
@@ -164,7 +193,7 @@
   padding: 4px 10px;
   border-radius: 999px;
   background: #fff1ec;
-  color: #e85a2b;
+  color: var(--primary-orange);
   font-size: 12px;
   font-weight: 600;
 }
@@ -173,6 +202,10 @@
   margin: 6px 0 0;
   color: #6f8494;
   font-size: 13px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .trainer-card__bio {
@@ -185,6 +218,8 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .trainer-card__meta {
@@ -271,16 +306,82 @@
   }
 
   .trainer-card {
-    padding: 16px;
-    border-radius: 18px;
+    padding: 14px;
+    border-radius: 16px;
+    gap: 12px;
+  }
+
+  .trainer-card__header {
+    gap: 12px;
+  }
+
+  .trainer-card__avatar {
+    width: 52px;
+    height: 52px;
+    font-size: 18px;
   }
 
   .trainer-card__name {
-    font-size: 18px;
+    font-size: 17px;
+  }
+
+  .trainer-card__top {
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
   .trainer-card__bio {
     min-height: 0;
+    -webkit-line-clamp: 4;
+    font-size: 13px;
+  }
+
+  .trainer-card__meta,
+  .trainer-card__sports {
+    gap: 6px;
+  }
+
+  .trainer-card__meta-item,
+  .trainer-card__sport {
+    font-size: 11px;
+    padding: 5px 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-page__main {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .home-page__hero,
+  .home-page__catalog {
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+
+  .home-page__title {
+    font-size: 22px;
+  }
+
+  .trainer-card {
+    padding: 12px;
+  }
+
+  .trainer-card__avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 16px;
+  }
+
+  .trainer-card__name {
+    font-size: 16px;
+    -webkit-line-clamp: 2;
+  }
+
+  .home-page__toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 }
 /* Панель инструментов (поиск + фильтры) */
@@ -319,8 +420,8 @@
   background: white;
 }
 .home-page__search-input:focus {
-  border-color: #E85A2B;
-  box-shadow: 0 0 0 3px rgba(232, 90, 43, 0.1);
+  border-color: var(--primary-orange);
+  box-shadow: 0 0 0 3px rgba(255, 107, 74, 0.1);
 }
 
 .home-page__filters {
@@ -385,5 +486,5 @@
 .home-page__filter-option input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #E85A2B;
+  accent-color: var(--primary-orange);
 }

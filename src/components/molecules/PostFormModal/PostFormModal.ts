@@ -11,6 +11,7 @@ import type { PostBlock } from '../../../types/api.types';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { createSportTypesField, loadSportTypes } from '../../organisms/AuthForm/AuthForm';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 
 export interface PostFormModalOptions {
   api: ApiClient;
@@ -21,6 +22,7 @@ export interface PostFormModalOptions {
     text_content?: string;
     raw_text?: string;
     sport_type?: string;
+    sport_type_ids?: number[];
     min_tier_id?: number;
   };
   onSaved?: (() => void) | null;
@@ -32,12 +34,17 @@ interface ContentBlock {
   value: string;
   file: File | null;
   existingUrl?: string;
+  existingKind?: string;
 }
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_SIZE = 12 * 1024 * 1024; // совпадает с лимитом gateway для /posts/media
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+const ALLOWED_VIDEO_TYPES = ['video/mp4'];
 const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+
+function inferMediaKind(url: string): 'image' | 'video' {
+  return /\.(mp4|webm|mov|quicktime)(\?|#|$)/i.test(url) ? 'video' : 'image';
+}
 
 export async function openPostFormModal({
   api,
@@ -65,7 +72,7 @@ export async function openPostFormModal({
   const blocks: ContentBlock[] = [];
   let blockCounter = 0;
   let selectedTiers: number[] = [];
-  let selectedSportTypeId: number | null = null;
+  let selectedSportTypeIds: number[] = [];
 
   // ========== ЗАГРУЖАЕМ СУЩЕСТВУЮЩИЙ ПОСТ (если редактирование) ==========
   if (mode === 'edit' && postId != null) {
@@ -89,7 +96,8 @@ export async function openPostFormModal({
               type: 'media',
               value: block.file_url,
               file: null,
-              existingUrl: block.file_url
+              existingUrl: block.file_url,
+              existingKind: block.kind || inferMediaKind(block.file_url)
             });
           }
         });
@@ -99,8 +107,10 @@ export async function openPostFormModal({
         selectedTiers = [fullPost.min_tier_id];
       }
 
-      if (fullPost.sport_type_id != null) {
-        selectedSportTypeId = fullPost.sport_type_id;
+      if (fullPost.sport_type_ids?.length) {
+        selectedSportTypeIds = fullPost.sport_type_ids;
+      } else if (fullPost.sport_type_id != null) {
+        selectedSportTypeIds = [fullPost.sport_type_id];
       }
     } catch (error) {
       console.error('Failed to load existing post:', error);
@@ -138,30 +148,22 @@ export async function openPostFormModal({
 
   // ========== СОЗДАЁМ ПОЛЯ ФОРМЫ ==========
 
-  // Вид спорта – select (одиночный выбор)
+  // Виды спорта – мультивыбор.
   const sportTypes = await loadSportTypes(api);
   if (sportFieldContainer && sportTypes.length > 0) {
-    const selectEl = document.createElement('select');
-    selectEl.className = 'post-form__tier-select';
-    selectEl.id = 'post-form-sport-select';
-
-    const emptyOption = document.createElement('option');
-    emptyOption.value = '';
-    emptyOption.textContent = 'Не выбрано';
-    selectEl.appendChild(emptyOption);
-
-    sportTypes.forEach(sport => {
-      const option = document.createElement('option');
-      option.value = String(sport.sport_type_id);
-      option.textContent = sport.name;
-      selectEl.appendChild(option);
+    const sportFieldApi = createSportTypesField(sportFieldContainer, {
+      label: '',
+      placeholder: 'Выберите виды спорта',
+      required: false,
+      options: sportTypes,
+      onChange: (ids: number[]) => {
+        selectedSportTypeIds = ids;
+      }
     });
 
-    if (selectedSportTypeId != null) {
-      selectEl.value = String(selectedSportTypeId);
+    if (selectedSportTypeIds.length > 0) {
+      sportFieldApi.setValue(selectedSportTypeIds);
     }
-
-    sportFieldContainer.appendChild(selectEl);
   }
 
   // Уровни подписки – чекбоксы (можно выбрать несколько, передаётся минимальный)
@@ -195,7 +197,7 @@ export async function openPostFormModal({
   // ========== ФУНКЦИИ ДЛЯ БЛОКОВ ==========
   function validateFile(file: File): string | null {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return 'Неподдерживаемый формат файла. Разрешены: JPEG, PNG, GIF, WebP, MP4, WebM, MOV';
+      return 'Неподдерживаемый формат файла. Разрешены: JPEG, PNG, GIF, WebP, MP4';
     }
     if (file.size > MAX_FILE_SIZE) {
       return `Файл слишком большой. Максимальный размер: ${MAX_FILE_SIZE / 1024 / 1024}MB`;
@@ -208,6 +210,7 @@ export async function openPostFormModal({
     if (error) {
       globalErr.textContent = error;
       globalErr.hidden = false;
+      block.file = null;
       return;
     }
 
@@ -246,11 +249,20 @@ export async function openPostFormModal({
 
   function createMediaPreview(block: ContentBlock, container: HTMLElement): void {
     if (block.existingUrl && !block.file) {
-      container.innerHTML = block.existingUrl.toLowerCase().includes('.mp4') ||
-                          block.existingUrl.toLowerCase().includes('.webm') ||
-                          block.existingUrl.toLowerCase().includes('.mov')
-        ? `<video controls src="${block.existingUrl}" style="max-width:100%;max-height:300px;"></video>`
-        : `<img src="${block.existingUrl}" alt="Медиа" style="max-width:100%;max-height:300px;object-fit:contain;">`;
+      container.innerHTML = '';
+      if ((block.existingKind || inferMediaKind(block.existingUrl)) === 'video') {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.src = block.existingUrl;
+        video.style.cssText = 'max-width:100%;max-height:300px;';
+        container.appendChild(video);
+      } else {
+        const img = document.createElement('img');
+        img.src = block.existingUrl;
+        img.alt = 'Медиа';
+        img.style.cssText = 'max-width:100%;max-height:300px;object-fit:contain;';
+        container.appendChild(img);
+      }
       return;
     }
     if (block.value && block.file) {
@@ -384,12 +396,12 @@ export async function openPostFormModal({
             const uploadResult = await api.uploadPostMedia(block.file);
             return { file_url: uploadResult.file_url, kind: block.file.type.startsWith('video/') ? 'video' : 'image' };
           } catch {
-            globalErr.textContent = '⚠️ Загрузка медиа временно недоступна. Файл не будет добавлен.';
+            globalErr.textContent = 'Загрузка медиа временно недоступна. Файл не будет добавлен.';
             globalErr.hidden = false;
             return null;
           }
         } else if (block.type === 'media' && block.existingUrl) {
-          return { file_url: block.existingUrl, kind: 'image' };
+          return { file_url: block.existingUrl, kind: block.existingKind || inferMediaKind(block.existingUrl) };
         } else if (block.type === 'text' && block.value.trim()) {
           return { text_content: block.value.trim(), kind: 'text' };
         }
@@ -404,16 +416,21 @@ export async function openPostFormModal({
         blocks: Array<{ text_content?: string; file_url?: string; kind?: string }>;
         min_tier_id?: number;
         sport_type_id?: number;
+        sport_type_ids?: number[];
         replace_blocks?: boolean;
+        clear_sport_type_id?: boolean;
+        clear_sport_type_ids?: boolean;
       } = {
         title: title.trim(),
         blocks: validBlocks as Array<{ text_content?: string; file_url?: string; kind?: string }>
       };
 
-      // Выбранный вид спорта из select
-      const sportSelect = document.getElementById('post-form-sport-select') as HTMLSelectElement | null;
-      if (sportSelect && sportSelect.value) {
-        payload.sport_type_id = Number(sportSelect.value);
+      if (selectedSportTypeIds.length > 0) {
+        payload.sport_type_ids = selectedSportTypeIds;
+        payload.sport_type_id = selectedSportTypeIds[0];
+      } else if (mode === 'edit') {
+        payload.clear_sport_type_ids = true;
+        payload.clear_sport_type_id = true;
       }
 
       if (selectedTiers.length > 0) {
@@ -431,7 +448,7 @@ export async function openPostFormModal({
       close();
     } catch (error: unknown) {
       const err = error as { message?: string };
-      globalErr.textContent = err.message || 'Не удалось сохранить публикацию';
+      globalErr.textContent = getFriendlyErrorMessage(err.message, 'Не удалось сохранить публикацию. Попробуйте ещё раз.');
       globalErr.hidden = false;
     } finally {
       saveBtn.setDisabled(false);

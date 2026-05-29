@@ -1,0 +1,55 @@
+.statistics-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.statistics-modal--visible {
+  opacity: 1;
+}
+
+.statistics-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.statistics-modal__panel {
+  position: relative;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  width: min(460px, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+  transform: translateY(8px) scale(0.98);
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.statistics-modal--visible .statistics-modal__panel {
+  transform: translateY(0) scale(1);
+}
+
+.statistics-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  border: none;
+  background: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: #999;
+}
+
+.statistics-modal__title {
+  margin: 0 0 16px;
+  font-size: 20px;
+  color: #1a2b3c;
+}

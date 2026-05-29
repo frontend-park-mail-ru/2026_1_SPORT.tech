@@ -1,11 +1,12 @@
 <div class="profile-content">
   <!-- Вкладки -->
-  <div class="profile-content__tabs">
+  <div class="profile-content__tabs" role="tablist" aria-label="Разделы профиля">
     {{#each tabs}}
-    <button class="profile-content__tab {{#if active}}profile-content__tab--active{{/if}}" data-tab="{{id}}">
+    <button class="profile-content__tab {{#if active}}profile-content__tab--active{{/if}}" data-tab="{{id}}" type="button" role="tab" aria-selected="{{#if active}}true{{else}}false{{/if}}">
       {{label}}
     </button>
     {{/each}}
+    <span class="profile-content__tab-indicator" aria-hidden="true"></span>
   </div>
 
   <!-- Основной лэйаут -->
@@ -43,15 +44,19 @@
         </div>
       </div>
 
-      <div id="posts-container">
-        <!-- Посты вставляются через JS -->
+      <div class="profile-content__tab-panels">
+        <div id="posts-panel" class="profile-content__tab-panel" role="tabpanel">
+          <div id="posts-container">
+            <!-- Посты вставляются через JS -->
+          </div>
+        </div>
+
+        <!-- Контейнер для вкладки "Подписки" -->
+        <div id="subscriptions-container" class="profile-content__tab-panel" role="tabpanel" hidden></div>
+
+        <!-- Контейнер для вкладки "Прогресс" -->
+        <div id="progress-container" class="profile-content__tab-panel" role="tabpanel" hidden></div>
       </div>
-
-      <!-- Контейнер для вкладки "Подписки" -->
-      <div id="subscriptions-container" style="display:none;"></div>
-
-      <!-- Контейнер для вкладки "Прогресс" -->
-      <div id="progress-container" style="display:none;"></div>
     </div>
 
     <!-- ПРАВАЯ КОЛОНКА -->

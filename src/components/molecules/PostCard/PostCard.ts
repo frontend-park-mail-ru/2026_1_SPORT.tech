@@ -1,6 +1,8 @@
 import type { ApiClient } from '../../../utils/api';
 import type { ContentBlockForPost } from '../../../types/post.types';
 import { openPostFormModal } from '../PostFormModal/PostFormModal';
+import { openLikesModal } from '../LikesModal/LikesModal';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 
 export interface PostCardData {
   post_id: number;
@@ -23,6 +25,7 @@ export interface PostCardData {
   sport_type?: string;
   tierName?: string;
   tierPrice?: number;
+  is_pinned?: boolean;
 }
 
 interface ContentBlock {
@@ -30,6 +33,14 @@ interface ContentBlock {
   content?: string;
   file_url?: string;
   kind?: string;
+  isVideo?: boolean;
+  isImage?: boolean;
+}
+
+function isVideoBlock(block: ContentBlock): boolean {
+  const kind = (block.kind || '').toLowerCase();
+  const url = (block.file_url || '').toLowerCase();
+  return kind === 'video' || /\.(mp4|webm|mov|quicktime)(\?|#|$)/.test(url);
 }
 
 export async function renderPostCard(
@@ -56,7 +67,8 @@ export async function renderPostCard(
     min_tier_id: minTierId = null,
     sport_type: sportType = '',
     tierName = '',
-    tierPrice = 0
+    tierPrice = 0,
+    is_pinned: isPinned = false
   } = post;
 
   const finalCanView = canView;
@@ -84,6 +96,15 @@ export async function renderPostCard(
     }
   }
 
+  const contentBlocksForTemplate = contentBlocks.map(block => {
+    const isVideo = block.type === 'attachment' && isVideoBlock(block);
+    return {
+      ...block,
+      isVideo,
+      isImage: block.type === 'attachment' && !isVideo
+    };
+  });
+
   const template = (window as any).Handlebars.templates['PostCard.hbs'];
   const initials = authorName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
   const firstTextBlock = contentBlocks.find(b => b.type === 'text');
@@ -95,7 +116,8 @@ export async function renderPostCard(
     post_id: postId, title, content: shortTextContent, fullContent: content,
     authorName, authorRole, authorAvatar, authorInitials: initials,
     likes, liked, comments, can_view: finalCanView, isOwner,
-    contentBlocks, minTierId, sportType, tierName, tierPrice
+    contentBlocks: contentBlocksForTemplate, minTierId, sportType, tierName, tierPrice,
+    is_pinned: isPinned
   });
 
   const wrapper = document.createElement('div');
@@ -108,7 +130,7 @@ export async function renderPostCard(
   const commentCountEl = postCard.querySelector('[data-post-comment-count]') as HTMLElement | null;
   const editBtn = postCard.querySelector('[data-post-edit]') as HTMLButtonElement | null;
   const deleteBtn = postCard.querySelector('[data-post-delete]') as HTMLButtonElement | null;
-  const shareBtn = postCard.querySelector('[data-post-share]') as HTMLButtonElement | null;
+  const pinBtn = postCard.querySelector('[data-post-pin]') as HTMLButtonElement | null;
   const collapseBtn = postCard.querySelector('[data-post-collapse]') as HTMLButtonElement | null;
   const expandBtn = postCard.querySelector('[data-post-expand-btn]') as HTMLButtonElement | null;
   const shortBody = postCard.querySelector('.post-card__body--short') as HTMLElement | null;
@@ -149,7 +171,18 @@ export async function renderPostCard(
     likeCountEl.textContent = String(nextCount);
     const svg = likeBtn.querySelector('svg');
     if (svg) svg.setAttribute('fill', nextLiked ? 'currentColor' : 'none');
+    likeCountEl.classList.toggle('post-card__like-count--clickable', nextCount > 0);
   };
+
+  if (likeCountEl && api && finalCanView) {
+    likeCountEl.classList.toggle('post-card__like-count--clickable', likes > 0);
+    likeCountEl.title = 'Кто оценил';
+    likeCountEl.addEventListener('click', (e: Event) => {
+      e.stopPropagation();
+      const count = parseInt(likeCountEl.textContent || '0', 10) || 0;
+      if (count > 0) void openLikesModal({ api, postId });
+    });
+  }
 
   if (likeBtn && api && finalCanView) {
     likeBtn.addEventListener('click', async (e: Event) => {
@@ -167,7 +200,6 @@ export async function renderPostCard(
           ? (response.likes_count ?? 0)
           : (wasLiked ? Math.max(0, currentCount - 1) : currentCount + 1);
         setLikeUi(newLiked, newCount);
-        if (onPostsUpdated) await onPostsUpdated();
       } catch (error) { console.error('Like error:', error); }
       finally { likeBtn.disabled = false; }
     });
@@ -194,25 +226,39 @@ export async function renderPostCard(
     });
   }
 
-  if (shareBtn) {
-    shareBtn.addEventListener('click', async (e: Event) => {
+  if (pinBtn && api && isOwner) {
+    pinBtn.addEventListener('click', async (e: Event) => {
       e.stopPropagation();
-      const shareData = { title, text: rawText || title, url: window.location.href };
+      pinBtn.disabled = true;
       try {
-        if (navigator.share) await navigator.share(shareData);
-        else await navigator.clipboard.writeText(window.location.href);
-      } catch {}
+        await api.updatePost(postId, { is_pinned: !isPinned });
+        await onPostsUpdated?.();
+      } catch (error) {
+        console.error('Pin error:', error);
+        pinBtn.disabled = false;
+      }
     });
   }
 
   if (commentBtn && api && finalCanView) {
     let commentsLoaded = false;
     let commentsOpen = false;
+    let currentUserId: number | null = null;
+    const COMMENT_EDIT_WINDOW_MS = 15 * 60 * 1000;
 
     const commentsSection = document.createElement('div');
     commentsSection.className = 'post-card__comments';
     commentsSection.style.display = 'none';
     postCard.appendChild(commentsSection);
+
+    // Клик вне открытого меню «⋯» закрывает его.
+    document.addEventListener('click', (e: Event) => {
+      const target = e.target as HTMLElement;
+      commentsSection.querySelectorAll('[data-comment-menu-list]').forEach(list => {
+        const menu = (list as HTMLElement).closest('[data-comment-menu]');
+        if (menu && !menu.contains(target)) (list as HTMLElement).hidden = true;
+      });
+    });
 
     const renderComments = async (): Promise<void> => {
       if (!commentsLoaded) {
@@ -223,23 +269,93 @@ export async function renderPostCard(
           </div>
         `;
         try {
+          if (currentUserId === null) {
+            try {
+              const me = await api.getCurrentUser();
+              currentUserId = me?.user?.user_id ?? null;
+            } catch { /* аноним — без меню правки */ }
+          }
           const data = await api.getComments(postId);
           commentsLoaded = true;
-          renderCommentsList(data.comments);
+          await renderCommentsList(data.comments);
         } catch {
           commentsSection.innerHTML = '<p class="post-card__comments-error">Не удалось загрузить комментарии</p>';
         }
       }
     };
 
-    const renderCommentsList = (commentsList: Array<{ comment_id: number; author_user_id: number; body: string; created_at: string }>): void => {
+    const authorCache = new Map<number, { name: string; avatar: string | null }>();
+
+    const formatCommentTime = (iso: string): string => {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return '';
+      const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+      if (diff < 60) return 'только что';
+      if (diff < 3600) return `${Math.floor(diff / 60)} мин назад`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)} ч назад`;
+      if (diff < 604800) return `${Math.floor(diff / 86400)} дн назад`;
+      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+    };
+    const fullTimestamp = (iso: string): string => {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return '';
+      return date.toLocaleString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    };
+    const isEdited = (c: { created_at: string; updated_at?: string }): boolean =>
+      Boolean(c.updated_at) && new Date(c.updated_at as string).getTime() - new Date(c.created_at).getTime() > 1000;
+
+    const renderCommentsList = async (commentsList: Array<{ comment_id: number; author_user_id: number; body: string; created_at: string; updated_at?: string }>): Promise<void> => {
+      const uniqueIds = [...new Set(commentsList.map(c => c.author_user_id))].filter(id => !authorCache.has(id));
+      await Promise.all(
+        uniqueIds.map(async (userId) => {
+          try {
+            const profile = await api.getProfile(userId);
+            const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim() || profile.username;
+            authorCache.set(userId, { name, avatar: profile.avatar_url ?? null });
+          } catch {
+            authorCache.set(userId, { name: `Пользователь #${userId}`, avatar: null });
+          }
+        })
+      );
+
       const listHtml = commentsList.length > 0
-        ? commentsList.map(c => `
-            <div class="post-card__comment">
-              <div class="post-card__comment-author">Пользователь #${c.author_user_id}</div>
-              <div class="post-card__comment-body">${escapeHtml(c.body)}</div>
+        ? commentsList.map(c => {
+          const info = authorCache.get(c.author_user_id) ?? { name: `Пользователь #${c.author_user_id}`, avatar: null };
+          const initials = info.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+          const avatarInner = info.avatar
+            ? `<img src="${escapeHtml(info.avatar)}" alt="${escapeHtml(info.name)}">`
+            : escapeHtml(initials);
+          const isMine = currentUserId !== null && c.author_user_id === currentUserId;
+          const created = formatCommentTime(c.created_at);
+          const edited = isEdited(c);
+          const editedMark = edited
+            ? ` <span class="post-card__comment-edited" title="Изменено ${escapeHtml(fullTimestamp(c.updated_at as string))}">(изменено)</span>`
+            : '';
+          const canEdit = Date.now() - new Date(c.created_at).getTime() <= COMMENT_EDIT_WINDOW_MS;
+          const menu = isMine
+            ? `
+              <div class="post-card__comment-menu" data-comment-menu>
+                <button type="button" class="post-card__comment-menu-btn" data-comment-menu-toggle aria-label="Действия">⋯</button>
+                <div class="post-card__comment-menu-list" data-comment-menu-list hidden>
+                  ${canEdit ? `<button type="button" class="post-card__comment-menu-item" data-comment-edit="${c.comment_id}">Изменить</button>` : ''}
+                  <button type="button" class="post-card__comment-menu-item post-card__comment-menu-item--danger" data-comment-delete="${c.comment_id}">Удалить</button>
+                </div>
+              </div>`
+            : '';
+          return `
+            <div class="post-card__comment" data-comment-id="${c.comment_id}">
+              <button type="button" class="post-card__comment-avatar" data-comment-profile="${c.author_user_id}" title="${escapeHtml(info.name)}">${avatarInner}</button>
+              <div class="post-card__comment-main">
+                <div class="post-card__comment-head">
+                  <button type="button" class="post-card__comment-author" data-comment-profile="${c.author_user_id}">${escapeHtml(info.name)}</button>
+                  <span class="post-card__comment-time" title="${escapeHtml(fullTimestamp(c.created_at))}">${escapeHtml(created)}</span>${editedMark}
+                </div>
+                <div class="post-card__comment-body" data-comment-body>${escapeHtml(c.body)}</div>
+              </div>
+              ${menu}
             </div>
-          `).join('')
+          `;
+        }).join('')
         : '<p class="post-card__comments-empty">Комментариев пока нет</p>';
 
       commentsSection.innerHTML = `
@@ -269,9 +385,9 @@ export async function renderPostCard(
           input.value = '';
           commentsList.push(resp.comment);
           if (commentCountEl) commentCountEl.textContent = String(commentsList.length);
-          renderCommentsList(commentsList);
+          await renderCommentsList(commentsList);
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : 'Не удалось отправить комментарий';
+          const msg = getFriendlyErrorMessage(err, 'Не удалось отправить комментарий. Попробуйте ещё раз.');
           const errDiv = document.createElement('p');
           errDiv.className = 'post-card__comment-error';
           errDiv.textContent = msg;
@@ -286,6 +402,100 @@ export async function renderPostCard(
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendComment(); }
       });
       input?.addEventListener('click', (e: Event) => e.stopPropagation());
+
+      commentsSection.querySelectorAll('[data-comment-profile]').forEach(el => {
+        el.addEventListener('click', (e: Event) => {
+          e.stopPropagation();
+          const id = (el as HTMLElement).dataset.commentProfile;
+          if (id) window.router.navigateTo(`/profile/${id}`);
+        });
+      });
+
+      // Открытие/закрытие меню действий
+      commentsSection.querySelectorAll('[data-comment-menu-toggle]').forEach(btn => {
+        btn.addEventListener('click', (e: Event) => {
+          e.stopPropagation();
+          const menu = (btn as HTMLElement).closest('[data-comment-menu]') as HTMLElement;
+          const list = menu.querySelector('[data-comment-menu-list]') as HTMLElement;
+          const willOpen = list.hidden;
+          commentsSection.querySelectorAll('[data-comment-menu-list]').forEach(l => { (l as HTMLElement).hidden = true; });
+          list.hidden = !willOpen;
+        });
+      });
+
+      // Удаление комментария
+      commentsSection.querySelectorAll('[data-comment-delete]').forEach(btn => {
+        btn.addEventListener('click', async (e: Event) => {
+          e.stopPropagation();
+          const id = Number((btn as HTMLElement).dataset.commentDelete);
+          try {
+            await api.deleteComment(id);
+            const idx = commentsList.findIndex(c => c.comment_id === id);
+            if (idx >= 0) commentsList.splice(idx, 1);
+            if (commentCountEl) commentCountEl.textContent = String(commentsList.length);
+            await renderCommentsList(commentsList);
+          } catch (err: unknown) {
+            console.error('Delete comment error:', getFriendlyErrorMessage(err, 'Не удалось удалить комментарий'));
+          }
+        });
+      });
+
+      // Инлайн-редактирование комментария
+      commentsSection.querySelectorAll('[data-comment-edit]').forEach(btn => {
+        btn.addEventListener('click', (e: Event) => {
+          e.stopPropagation();
+          const id = Number((btn as HTMLElement).dataset.commentEdit);
+          const comment = commentsList.find(c => c.comment_id === id);
+          if (!comment) return;
+          const commentEl = commentsSection.querySelector(`[data-comment-id="${id}"]`) as HTMLElement | null;
+          const bodyEl = commentEl?.querySelector('[data-comment-body]') as HTMLElement | null;
+          const menuList = commentEl?.querySelector('[data-comment-menu-list]') as HTMLElement | null;
+          if (!commentEl || !bodyEl) return;
+          if (menuList) menuList.hidden = true;
+          if (commentEl.querySelector('.post-card__comment-editor')) return;
+
+          const editor = document.createElement('div');
+          editor.className = 'post-card__comment-editor';
+          editor.innerHTML = `
+            <textarea class="post-card__comment-edit-input" rows="2">${escapeHtml(comment.body)}</textarea>
+            <div class="post-card__comment-edit-actions">
+              <button type="button" class="post-card__comment-edit-cancel">Отмена</button>
+              <button type="button" class="post-card__comment-edit-save">Сохранить</button>
+            </div>
+            <p class="post-card__comment-edit-error" hidden></p>
+          `;
+          bodyEl.style.display = 'none';
+          bodyEl.after(editor);
+
+          const textarea = editor.querySelector('.post-card__comment-edit-input') as HTMLTextAreaElement;
+          const errorEl = editor.querySelector('.post-card__comment-edit-error') as HTMLElement;
+          textarea.focus();
+          textarea.addEventListener('click', (ev: Event) => ev.stopPropagation());
+
+          const cancel = (): void => { editor.remove(); bodyEl.style.display = ''; };
+          (editor.querySelector('.post-card__comment-edit-cancel') as HTMLButtonElement).addEventListener('click', (ev: Event) => { ev.stopPropagation(); cancel(); });
+
+          (editor.querySelector('.post-card__comment-edit-save') as HTMLButtonElement).addEventListener('click', async (ev: Event) => {
+            ev.stopPropagation();
+            const newBody = textarea.value.trim();
+            if (!newBody) { errorEl.textContent = 'Комментарий не может быть пустым'; errorEl.hidden = false; return; }
+            if (newBody === comment.body) { cancel(); return; }
+            const saveBtn = editor.querySelector('.post-card__comment-edit-save') as HTMLButtonElement;
+            saveBtn.disabled = true;
+            try {
+              const resp = await api.updateComment(id, newBody);
+              const updated = resp.comment;
+              const target = commentsList.find(c => c.comment_id === id);
+              if (target) { target.body = updated.body; target.updated_at = updated.updated_at; }
+              await renderCommentsList(commentsList);
+            } catch (err: unknown) {
+              errorEl.textContent = getFriendlyErrorMessage(err, 'Не удалось изменить комментарий');
+              errorEl.hidden = false;
+              saveBtn.disabled = false;
+            }
+          });
+        });
+      });
     };
 
     commentBtn.addEventListener('click', async (e: Event) => {

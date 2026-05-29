@@ -22,6 +22,30 @@ export interface CSRFTokenResponse {
   csrf_token: string;
 }
 
+export interface NotificationPreferences {
+  comments: boolean;
+  likes: boolean;
+  donations: boolean;
+  posts: boolean;
+  subscriptions: boolean;
+  meetings: boolean;
+  email_digest: boolean;
+}
+
+export interface NotificationPreferencesResponse {
+  preferences: NotificationPreferences;
+}
+
+export interface PrivacySettings {
+  show_profile_in_search: boolean;
+  allow_measurement_sharing: boolean;
+  show_activity_status: boolean;
+}
+
+export interface PrivacySettingsResponse {
+  settings: PrivacySettings;
+}
+
 export interface PostBlock {
   post_block_id: number;
   text_content: string;
@@ -49,6 +73,8 @@ export interface Post {
   blocks: PostBlock[];
   can_view: boolean;
   sport_type_id?: number | null;
+  sport_type_ids?: number[];
+  is_pinned?: boolean;
 }
 
 export interface PostListItem {
@@ -62,12 +88,19 @@ export interface PostListItem {
   comments_count: number;
   can_view: boolean;
   sport_type_id?: number | null;
+  sport_type_ids?: number[];
+  is_pinned?: boolean;
 }
 
 export interface PostLikeResponse {
   post_id: number;
   is_liked: boolean;
   likes_count: number;
+}
+
+export interface PostLike {
+  user_id: number;
+  created_at: string;
 }
 
 export interface TrainerSport {
@@ -121,8 +154,41 @@ export interface Tier {
   price: number;
   description: string;
   chat_enabled: boolean;
+  calendar_enabled: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface MeetingAvailabilityRule {
+  rule_id: number;
+  weekday: number;
+  start_hour: number;
+  created_at: string;
+}
+
+export interface MeetingSlot {
+  slot_id: number;
+  starts_at: string;
+  created_at: string;
+}
+
+export interface MeetingAvailabilitySlot {
+  starts_at: string;
+  ends_at: string;
+}
+
+export interface MeetingBooking {
+  booking_id: number;
+  trainer_user_id: number;
+  client_user_id: number;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  created_by_user_id: number;
+  note?: string;
+  created_at: string;
+  role: string;
+  other_user_id: number;
 }
 
 export interface ChatMessage {
@@ -140,6 +206,11 @@ export interface ChatConversation {
   unread_count: number;
 }
 
+export interface ChatConversationsSnapshot {
+  conversations: ChatConversation[];
+  unread_total: number;
+}
+
 export interface Subscription {
   subscription_id: number;
   trainer_id: number;
@@ -150,6 +221,10 @@ export interface Subscription {
   expires_at: string;
   created_at: string;
   updated_at: string;
+  auto_renew?: boolean;
+  stripe_subscription_id?: string;
+  current_period_end?: string;
+  price_change_requires_resubscribe?: boolean;
 }
 
 // НОВЫЙ ТИП для обновления подписки

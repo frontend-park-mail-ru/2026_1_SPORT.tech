@@ -15,9 +15,16 @@ import type { InputAPI, InputType } from '../../atoms/Input/Input';
 import type { ButtonAPI } from '../../atoms/Button/Button';
 import type { SportTypeFieldApi, SportTypeFieldOption } from '../../../types/components.types';
 import type { ValidationResult } from '../../../types/validation.types';
-import { Validator } from '../../../utils/validator';
+import {
+  MAX_PASSWORD_LENGTH,
+  MAX_PUBLIC_NAME_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  Validator
+} from '../../../utils/validator';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
+import { escapeHtml } from '../../../utils/profilePageData';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
 
 export const AUTH_MODES = {
   LOGIN: 'login',
@@ -34,6 +41,7 @@ interface FieldConfig {
   placeholder: string;
   required: boolean;
   showEye?: boolean;
+  maxlength?: number;
 }
 
 interface ModeConfig {
@@ -42,6 +50,7 @@ interface ModeConfig {
   submitText: string;
   altText: string;
   altLinkText: string;
+  altLinkHref: string;
   fields: FieldConfig[];
 }
 
@@ -64,15 +73,15 @@ export interface AuthFormAPI {
 }
 
 const SERVER_ERROR_MAP: Record<string, string> = {
-  'invalid credentials': 'Неверный email или пароль',
-  'invalid credential': 'Неверный email или пароль',
-  'wrong password': 'Неверный email или пароль',
+  'invalid credentials': 'Неверная почта или пароль',
+  'invalid credential': 'Неверная почта или пароль',
+  'wrong password': 'Неверная почта или пароль',
   'user not found': 'Пользователь не найден',
-  'email already exists': 'Этот email уже занят',
-  'email already taken': 'Этот email уже занят',
+  'email already exists': 'Эта почта уже занята',
+  'email already taken': 'Эта почта уже занята',
   'username already exists': 'Это имя пользователя уже занято',
   'username already taken': 'Это имя пользователя уже занято',
-  'user already exists': 'Пользователь с таким email или именем уже существует',
+  'user already exists': 'Пользователь с такой почтой или именем уже существует',
   'unauthorized': 'Необходима авторизация',
   'forbidden': 'Доступ запрещён',
   'internal server error': 'Ошибка сервера, попробуйте позже',
@@ -83,7 +92,7 @@ const SERVER_ERROR_MAP: Record<string, string> = {
 function translateServerError(message: string): string {
   if (!message) return 'Произошла ошибка';
   const key = message.toLowerCase().trim();
-  return SERVER_ERROR_MAP[key] ?? message;
+  return SERVER_ERROR_MAP[key] ?? getFriendlyErrorMessage(message);
 }
 
 let sportTypesPromise: Promise<SportTypeFieldOption[]> | null = null;
@@ -121,7 +130,7 @@ export function createSportTypesField(
   wrapper.className = 'sport-types-field sport-types-field--normal';
   wrapper.innerHTML = `
     <label class="sport-types-field__label">
-      ${label}${required ? ' *' : ''}
+      ${escapeHtml(label)}${required ? '<span class="input-field__required" aria-hidden="true"> *</span>' : ''}
     </label>
     <button type="button" class="sport-types-field__trigger" aria-expanded="false">
       <span class="sport-types-field__trigger-text">${placeholder}</span>
@@ -173,7 +182,7 @@ export function createSportTypesField(
         class="sport-types-field__checkbox"
         value="${option.sport_type_id}"
       >
-      <span class="sport-types-field__option-label">${option.name}</span>
+      <span class="sport-types-field__option-label">${escapeHtml(option.name)}</span>
     `;
 
     const checkbox = item.querySelector('input') as HTMLInputElement;
@@ -260,6 +269,7 @@ export async function renderAuthForm(
       submitText: 'Войти',
       altText: 'Нет аккаунта?',
       altLinkText: 'Зарегистрироваться',
+      altLinkHref: '/auth/register',
       fields: [
         {
           type: INPUT_TYPES.MAIL as InputType,
@@ -284,20 +294,23 @@ export async function renderAuthForm(
       submitText: 'Зарегистрироваться',
       altText: 'Уже есть аккаунт?',
       altLinkText: 'Войти',
+      altLinkHref: '/auth/login',
       fields: [
         {
           type: INPUT_TYPES.NAME as InputType,
           name: 'first_name',
           label: 'Имя',
           placeholder: 'Введите имя',
-          required: true
+          required: true,
+          maxlength: MAX_PUBLIC_NAME_LENGTH
         },
         {
           type: INPUT_TYPES.NAME as InputType,
           name: 'last_name',
           label: 'Фамилия',
           placeholder: 'Введите фамилию',
-          required: true
+          required: true,
+          maxlength: MAX_PUBLIC_NAME_LENGTH
         },
         {
           type: INPUT_TYPES.WITHOUTS as InputType,
@@ -317,9 +330,10 @@ export async function renderAuthForm(
           type: INPUT_TYPES.PASSWORD as InputType,
           name: 'password',
           label: 'Пароль',
-          placeholder: 'Минимум 8 символов',
+          placeholder: `От ${MIN_PASSWORD_LENGTH} до ${MAX_PASSWORD_LENGTH} символов`,
           required: true,
-          showEye: true
+          showEye: true,
+          maxlength: MAX_PASSWORD_LENGTH
         },
         {
           type: INPUT_TYPES.PASSWORD as InputType,
@@ -327,7 +341,8 @@ export async function renderAuthForm(
           label: 'Подтверждение пароля',
           placeholder: 'Повторите пароль',
           required: true,
-          showEye: true
+          showEye: true,
+          maxlength: MAX_PASSWORD_LENGTH
         }
       ]
     },
@@ -337,26 +352,29 @@ export async function renderAuthForm(
       submitText: 'Зарегистрироваться',
       altText: 'Уже есть аккаунт?',
       altLinkText: 'Войти',
+      altLinkHref: '/auth/login',
       fields: [
-        {
-          type: INPUT_TYPES.WITHOUTS as InputType,
-          name: 'username',
-          label: 'Никнейм (отображаемое имя)',
-          placeholder: 'john_doe',
-          required: true
-        },
         {
           type: INPUT_TYPES.NAME as InputType,
           name: 'first_name',
           label: 'Имя',
           placeholder: 'Введите имя',
-          required: true
+          required: true,
+          maxlength: MAX_PUBLIC_NAME_LENGTH
         },
         {
           type: INPUT_TYPES.NAME as InputType,
           name: 'last_name',
           label: 'Фамилия',
           placeholder: 'Введите фамилию',
+          required: true,
+          maxlength: MAX_PUBLIC_NAME_LENGTH
+        },
+        {
+          type: INPUT_TYPES.WITHOUTS as InputType,
+          name: 'username',
+          label: 'Имя пользователя',
+          placeholder: 'john_doe',
           required: true
         },
         {
@@ -370,9 +388,10 @@ export async function renderAuthForm(
           type: INPUT_TYPES.PASSWORD as InputType,
           name: 'password',
           label: 'Пароль',
-          placeholder: 'Минимум 8 символов',
+          placeholder: `От ${MIN_PASSWORD_LENGTH} до ${MAX_PASSWORD_LENGTH} символов`,
           required: true,
-          showEye: true
+          showEye: true,
+          maxlength: MAX_PASSWORD_LENGTH
         },
         {
           type: INPUT_TYPES.PASSWORD as InputType,
@@ -380,7 +399,8 @@ export async function renderAuthForm(
           label: 'Подтверждение пароля',
           placeholder: 'Повторите пароль',
           required: true,
-          showEye: true
+          showEye: true,
+          maxlength: MAX_PASSWORD_LENGTH
         },
         {
           type: INPUT_TYPES.WITHOUTS as InputType,
@@ -399,7 +419,7 @@ export async function renderAuthForm(
         {
           type: INPUT_TYPES.WITHOUTS as InputType,
           name: 'sport_discipline',
-          label: 'Вид дисциплины/спорта',
+          label: 'Виды спорта',
           placeholder: 'Выберите виды спорта',
           required: true
         },
@@ -421,7 +441,8 @@ export async function renderAuthForm(
     subtitle: currentMode.subtitle,
     hasAltAction: true,
     altText: currentMode.altText,
-    altLinkText: currentMode.altLinkText
+    altLinkText: currentMode.altLinkText,
+    altLinkHref: currentMode.altLinkHref
   });
 
   const wrapper = document.createElement('div');
@@ -541,6 +562,7 @@ export async function renderAuthForm(
         placeholder: fieldConfig.placeholder,
         name: fieldConfig.name,
         required: fieldConfig.required,
+        maxlength: fieldConfig.maxlength,
         onChange: (value: string) => validateField(fieldConfig.name, value)
       });
 
@@ -559,17 +581,17 @@ export async function renderAuthForm(
         onChange: (value: number[]) => validateField(fieldConfig.name, value)
       });
 
-      const helpText = document.createElement('small');
-      helpText.textContent = sportTypeOptions.length > 0
-        ? 'Можно выбрать несколько дисциплин'
-        : 'Не удалось загрузить список дисциплин';
-      helpText.style.cssText = `
-        font-size: var(--font-size-xs);
-        color: var(--text-placeholder);
-        margin-top: 2px;
-        display: block;
-      `;
-      fieldContainer.appendChild(helpText);
+      if (sportTypeOptions.length === 0) {
+        const helpText = document.createElement('small');
+        helpText.textContent = 'Не удалось загрузить список дисциплин';
+        helpText.style.cssText = `
+          font-size: var(--font-size-xs);
+          color: var(--text-placeholder);
+          margin-top: 2px;
+          display: block;
+        `;
+        fieldContainer.appendChild(helpText);
+      }
 
       inputs.set(fieldConfig.name, fieldContainer);
       inputsApi.set(fieldConfig.name, sportFieldApi);
@@ -581,6 +603,7 @@ export async function renderAuthForm(
         name: fieldConfig.name,
         required: fieldConfig.required,
         showEye: fieldConfig.showEye,
+        maxlength: fieldConfig.maxlength,
         onChange: (value: string) => validateField(fieldConfig.name, value)
       });
 

@@ -1,45 +1,120 @@
 /**
- * Service Worker: предкэш оболочки + кэширование ресурсов с того же origin при первом успешном запросе.
+ * Service Worker.
+ * Стратегии:
+ *   - /api/**            → только сеть, никогда не кэшируем (динамика).
+ *   - shell/ассеты сборки → precache при установке.
+ *   - навигация (HTML)   → network-first, offline fallback на закэшированный '/'.
+ *   - хешированные ассеты → cache-first (имя файла меняется при сборке, безопасно).
+ *   - остальное          → network-first с fallback только на совпадающий cache key.
  * @fileoverview
  */
 
-const CACHE_NAME = 'sportech-shell-v1';
-const SHELL_URLS = [
-  '/index.html',
-  '/static/css/global.css',
-  '/static/js/main.js'
-];
+const CACHE_VERSION = 'dev'; // __CACHE_VERSION__
+const CACHE_NAME = `sportech-shell-${CACHE_VERSION}`;
+const PRECACHE_URLS = ['/']; // __PRECACHE_URLS__
+const PRECACHE_URL_SET = new Set(PRECACHE_URLS);
+const NAVIGATION_FALLBACK_URL = '/';
+
+// Иммутабельные бандлы вида main.a1b2c3d4.js / styles.deadbeef12.css
+const IMMUTABLE_ASSET = /\.[0-9a-f]{8,}(?:\.chunk)?\.(js|css)$/;
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL_URLS)).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', event => {
   const { request } = event;
+
   if (request.method !== 'GET') return;
 
-  event.respondWith(
-    caches.match(request).then(cached => {
-      if (cached) return cached;
-      return fetch(request)
-        .then(response => {
-          if (
-            response.ok &&
-            request.url.startsWith(self.location.origin) &&
-            !request.url.includes('/node_modules/')
-          ) {
+  const url = new URL(request.url);
+
+  // Чужой origin и API не трогаем — пусть идут в сеть как есть.
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api/')) return;
+
+  if (request.mode === 'navigate' && self.navigator.onLine === false) {
+    event.respondWith(caches.match(NAVIGATION_FALLBACK_URL).then(cached => cached || Response.error()));
+    return;
+  }
+
+  // Всё, что попало в precache при сборке, отдаём cache-first без сетевого промаха.
+  // HTML-навигацию оставляем network-first, иначе '/' может зависнуть на старой версии.
+  if (request.mode !== 'navigate' && PRECACHE_URL_SET.has(url.pathname)) {
+    event.respondWith(
+      caches.match(url.pathname).then(cached => {
+        if (cached) return cached;
+        return fetch(request).then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(url.pathname, copy));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Иммутабельные ассеты: cache-first.
+  if (IMMUTABLE_ASSET.test(url.pathname)) {
+    event.respondWith(
+      caches.match(request).then(cached => {
+        if (cached) return cached;
+        return fetch(request).then(response => {
+          if (response.ok) {
             const copy = response.clone();
             caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
           }
           return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Навигация: network-first с fallback на SPA entrypoint.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(NAVIGATION_FALLBACK_URL, copy);
+            });
+          }
+          return response;
         })
-        .catch(() => caches.match(request).then(c => c || caches.match('/index.html')));
-    })
+        .catch(() => caches.match(NAVIGATION_FALLBACK_URL).then(cached => cached || Response.error()))
+    );
+    return;
+  }
+
+  // Остальные same-origin ресурсы: network-first, но без подстановки HTML.
+  event.respondWith(
+    fetch(request)
+      .then(response => {
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+        }
+        return response;
+      })
+      .catch(() => caches.match(request).then(cached => cached || Response.error()))
   );
 });

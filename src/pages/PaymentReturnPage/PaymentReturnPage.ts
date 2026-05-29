@@ -1,17 +1,19 @@
 import './PaymentReturnPage.css';
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse, PaymentResponse } from '../../types/api.types';
-import { formatMonthlyPrice } from '../../utils/profilePageData';
+import { escapeHtml, formatMonthlyPrice } from '../../utils/profilePageData';
+import { getFriendlyErrorMessage } from '../../utils/errorMessages';
+import { emitSubscriptionsChanged } from '../../components/organisms/Sidebar/Sidebar';
+import { icons } from '../../utils/icons';
 
 interface PaymentReturnPageParams {
   currentUser?: AuthResponse | null;
   onLogout?: (() => Promise<void>) | null;
 }
 
-function formatAmount(kopecks: number, currency: string): string {
-  const roubles = kopecks / 100;
+function formatAmount(amount: number, currency: string): string {
   const symbol = currency === 'RUB' ? '₽' : currency;
-  return `${roubles.toLocaleString('ru-RU')} ${symbol}`;
+  return `${amount.toLocaleString('ru-RU')} ${symbol}`;
 }
 
 function renderProcessing(el: HTMLElement): void {
@@ -24,7 +26,12 @@ function renderProcessing(el: HTMLElement): void {
   `;
 }
 
-function renderSuccess(el: HTMLElement, payment: PaymentResponse, navigateTo: (p: string) => void): void {
+async function renderSuccess(
+  el: HTMLElement,
+  payment: PaymentResponse,
+  navigateTo: (p: string) => void,
+  api: ApiClient
+): Promise<void> {
   const isSubscription = !!payment.subscription;
   const trainerId = isSubscription
     ? payment.subscription!.trainer_id
@@ -38,27 +45,43 @@ function renderSuccess(el: HTMLElement, payment: PaymentResponse, navigateTo: (p
       : '';
     details = `
       <div class="payment-result__sub-info">
-        <p class="payment-result__sub-tier">Тариф: <strong>${sub.tier_name}</strong></p>
-        <p class="payment-result__sub-price">${formatMonthlyPrice(sub.price)}</p>
-        ${expires ? `<p class="payment-result__sub-expires">Активна до: ${expires}</p>` : ''}
+        <p class="payment-result__sub-tier">Тариф: <strong>${escapeHtml(sub.tier_name)}</strong></p>
+        <p class="payment-result__sub-price">${escapeHtml(formatMonthlyPrice(sub.price))}</p>
+        ${expires ? `<p class="payment-result__sub-expires">Активна до: ${escapeHtml(expires)}</p>` : ''}
       </div>
     `;
   } else {
     const amountStr = formatAmount(payment.amount_value, payment.currency || 'RUB');
     details = `
-      <div class="payment-result__amount">${amountStr}</div>
-      <p class="payment-result__message">${payment.message || 'Спасибо за поддержку!'}</p>
+      <div class="payment-result__amount">${escapeHtml(amountStr)}</div>
+      <p class="payment-result__message">${escapeHtml(payment.message || 'Спасибо за поддержку!')}</p>
     `;
   }
 
+  // Определяем, включён ли чат в купленном тире подписки
+  let chatEnabled = false;
+  if (isSubscription && trainerId && payment.subscription?.tier_id) {
+    try {
+      const tiersResp = await api.getTrainerTiers(trainerId);
+      const tier = (tiersResp?.tiers || []).find(t => t.tier_id === payment.subscription!.tier_id);
+      chatEnabled = tier?.chat_enabled ?? false;
+    } catch { /* игнорируем */ }
+  }
+
+  const chatBtn = chatEnabled && trainerId
+    ? `<button class="payment-result__btn payment-result__btn--secondary payment-result__btn--with-icon" id="btn-chat">${icons.chat}<span>Написать тренеру</span></button>`
+    : '';
+
   el.innerHTML = `
     <div class="payment-result">
-      <div class="payment-result__icon payment-result__icon--success">✓</div>
+      <div class="payment-result__icon payment-result__icon--success">${icons.successCircle}</div>
       <h1 class="payment-result__title">${isSubscription ? 'Подписка оформлена!' : 'Оплата прошла!'}</h1>
       ${details}
+      ${chatEnabled ? '<p class="payment-result__chat-hint">Ваша подписка включает чат с тренером — напишите ему прямо сейчас!</p>' : ''}
       <div class="payment-result__actions">
         <button class="payment-result__btn payment-result__btn--primary" id="btn-home">На главную</button>
         ${trainerId ? '<button class="payment-result__btn payment-result__btn--secondary" id="btn-profile">Профиль тренера</button>' : ''}
+        ${chatBtn}
       </div>
     </div>
   `;
@@ -67,15 +90,20 @@ function renderSuccess(el: HTMLElement, payment: PaymentResponse, navigateTo: (p
     el.querySelector('#btn-profile')?.addEventListener('click', () =>
       navigateTo(`/profile/${trainerId}`)
     );
+    if (chatEnabled) {
+      el.querySelector('#btn-chat')?.addEventListener('click', () =>
+        navigateTo(`/chat/${trainerId}`)
+      );
+    }
   }
 }
 
 function renderError(el: HTMLElement, message: string, navigateTo: (p: string) => void): void {
   el.innerHTML = `
     <div class="payment-result">
-      <div class="payment-result__icon payment-result__icon--error">✗</div>
+      <div class="payment-result__icon payment-result__icon--error">${icons.errorCircle}</div>
       <h1 class="payment-result__title">Ошибка оплаты</h1>
-      <p class="payment-result__message">${message}</p>
+      <p class="payment-result__message">${escapeHtml(message)}</p>
       <div class="payment-result__actions">
         <button class="payment-result__btn payment-result__btn--primary" id="btn-home">На главную</button>
         <button class="payment-result__btn payment-result__btn--secondary" id="btn-back">Назад</button>
@@ -134,10 +162,13 @@ export async function renderPaymentReturnPage(
   try {
     const payment = await api.confirmPayment(paymentId, confirmationToken);
     localStorage.removeItem('sporteon_pending_payment');
-    renderSuccess(resultEl, payment, navigateTo);
+    if (payment.subscription) {
+      emitSubscriptionsChanged();
+    }
+    await renderSuccess(resultEl, payment, navigateTo, api);
   } catch (error: unknown) {
     const err = error as { message?: string; data?: { error?: { message?: string } } };
-    const msg = err.data?.error?.message || err.message || 'Не удалось подтвердить платёж.';
+    const msg = getFriendlyErrorMessage(err.data?.error?.message || err.message, 'Не удалось подтвердить платёж. Попробуйте позже.');
     renderError(resultEl, msg, navigateTo);
   }
 }

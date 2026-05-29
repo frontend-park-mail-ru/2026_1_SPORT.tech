@@ -12,7 +12,7 @@
       <!-- Аватар -->
       <div class="profile-edit-modal__avatar-section">
         <div class="profile-edit-modal__avatar-preview">
-          <img id="profile-avatar-preview" src="{{avatar}}" alt="Аватар" class="profile-edit-modal__avatar-img">
+          <img id="profile-avatar-preview" {{#if avatar}}src="{{avatar}}"{{/if}} alt="Аватар" class="profile-edit-modal__avatar-img">
           <span class="profile-edit-modal__avatar-placeholder" style="display: none;">{{initials}}</span>
         </div>
         <div class="profile-edit-modal__avatar-actions">

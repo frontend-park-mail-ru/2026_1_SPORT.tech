@@ -12,6 +12,12 @@ import type {
   ValidationRule
 } from '../types/validation.types';
 
+export const MIN_DONATION_AMOUNT_RUB = 100;
+export const MAX_DONATION_AMOUNT_RUB = 1_000_000;
+export const MAX_PUBLIC_NAME_LENGTH = 30;
+export const MIN_PASSWORD_LENGTH = 8;
+export const MAX_PASSWORD_LENGTH = 72;
+
 interface Rules {
   username: ValidationRule;
   email: ValidationRule;
@@ -44,41 +50,43 @@ const rules: Rules = {
     max: 254,
     pattern: /^[A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}$/,
     messages: {
-      required: 'Email обязателен',
-      pattern: 'Неверный формат email (пример: example@smail.ru)'
+      required: 'Почта обязательна',
+      pattern: 'Неверный формат почты (пример: example@gmail.com)'
     }
   },
   password: {
     required: true,
-    min: 8,
+    min: MIN_PASSWORD_LENGTH,
+    max: MAX_PASSWORD_LENGTH,
     pattern: /^[A-Za-z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]*$/,
     messages: {
       required: 'Пароль обязателен',
-      min: 'Минимум 8 символов',
+      min: `Минимум ${MIN_PASSWORD_LENGTH} символов`,
+      max: `Максимум ${MAX_PASSWORD_LENGTH} символа`,
       pattern: 'Пароль может содержать только латинские буквы, цифры и спецсимволы'
     }
   },
   first_name: {
     required: true,
     min: 1,
-    max: 100,
+    max: MAX_PUBLIC_NAME_LENGTH,
     pattern: /^[A-Za-zА-Яа-я]+$/,
     messages: {
       required: 'Имя обязательно',
       min: 'Имя не может быть пустым',
-      max: 'Максимум 100 символов',
+      max: `Максимум ${MAX_PUBLIC_NAME_LENGTH} символов`,
       pattern: 'Имя может содержать только латинские и кириллические буквы'
     }
   },
   last_name: {
     required: true,
     min: 1,
-    max: 100,
+    max: MAX_PUBLIC_NAME_LENGTH,
     pattern: /^[A-Za-zА-Яа-я]+$/,
     messages: {
       required: 'Фамилия обязательна',
       min: 'Фамилия не может быть пустой',
-      max: 'Максимум 100 символов',
+      max: `Максимум ${MAX_PUBLIC_NAME_LENGTH} символов`,
       pattern: 'Фамилия может содержать только латинские и кириллические буквы'
     }
   },
@@ -487,9 +495,9 @@ export class Validator {
     const amountNum = Validator.parseDonationAmount(data?.amount);
     if (amountNum === null) {
       this.addError('amount', 'Введите корректную сумму');
-    } else if (amountNum <= 0) {
-      this.addError('amount', 'Сумма должна быть больше нуля');
-    } else if (amountNum > 1_000_000_000) {
+    } else if (amountNum < MIN_DONATION_AMOUNT_RUB) {
+      this.addError('amount', `Минимальная сумма — ${MIN_DONATION_AMOUNT_RUB} ₽`);
+    } else if (amountNum > MAX_DONATION_AMOUNT_RUB) {
       this.addError('amount', 'Сумма слишком велика');
     }
     return { isValid: !this.hasErrors(), errors: this.getErrors(), amountNumber: amountNum };
@@ -502,9 +510,9 @@ export class Validator {
 
     if (amountNum === null) {
       this.addError('amount', 'Введите корректную сумму');
-    } else if (amountNum <= 0) {
-      this.addError('amount', 'Сумма должна быть больше нуля');
-    } else if (amountNum > 1_000_000_000) {
+    } else if (amountNum < MIN_DONATION_AMOUNT_RUB) {
+      this.addError('amount', `Минимальная сумма — ${MIN_DONATION_AMOUNT_RUB} ₽`);
+    } else if (amountNum > MAX_DONATION_AMOUNT_RUB) {
       this.addError('amount', 'Сумма слишком велика');
     }
 

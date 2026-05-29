@@ -5,6 +5,7 @@
 
 import type { ApiClient } from '../../../utils/api';
 import type { Measurement } from '../../../types/api.types';
+import { icons } from '../../../utils/icons';
 import './ProgressTab.css';
 
 export interface ProgressTabOptions {
@@ -18,7 +19,8 @@ function escapeHtml(s: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function formatDate(ts: string): string {
@@ -29,6 +31,46 @@ function formatDate(ts: string): string {
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+interface MeasurementNumberField {
+  name: 'weight_kg' | 'body_fat_pct' | 'chest_cm' | 'waist_cm' | 'hips_cm';
+  label: string;
+  min: number;
+  max: number;
+  integerOnly?: boolean;
+}
+
+const measurementNumberFields: MeasurementNumberField[] = [
+  { name: 'weight_kg', label: 'Вес', min: 20, max: 300 },
+  { name: 'body_fat_pct', label: '% жира', min: 1, max: 60 },
+  { name: 'chest_cm', label: 'Грудь', min: 40, max: 200, integerOnly: true },
+  { name: 'waist_cm', label: 'Талия', min: 40, max: 200, integerOnly: true },
+  { name: 'hips_cm', label: 'Бёдра', min: 40, max: 200, integerOnly: true }
+];
+
+function getMeasurementNumberField(name: string): MeasurementNumberField | undefined {
+  return measurementNumberFields.find(field => field.name === name);
+}
+
+function parseMeasurementNumber(raw: string, field: MeasurementNumberField): { value: number | null; error: string | null } {
+  const text = raw.trim();
+  if (!text) return { value: null, error: null };
+
+  const decimalPattern = field.integerOnly ? /^\d+$/ : /^\d+(?:[,.]\d+)?$/;
+  if (!decimalPattern.test(text)) {
+    return { value: null, error: `${field.label}: введите число` };
+  }
+
+  const value = Number(text.replace(',', '.'));
+  if (!Number.isFinite(value)) {
+    return { value: null, error: `${field.label}: введите число` };
+  }
+  if (value < field.min || value > field.max) {
+    return { value: null, error: `${field.label}: от ${field.min} до ${field.max}` };
+  }
+
+  return { value, error: null };
 }
 
 function renderMeasurementRow(m: Measurement): string {
@@ -42,14 +84,14 @@ function renderMeasurementRow(m: Measurement): string {
     `<td class="progress-table__cell">${m.hips_cm != null ? `${m.hips_cm} см` : '—'}</td>`,
     `<td class="progress-table__cell progress-table__cell--notes">${m.notes ? escapeHtml(m.notes) : '—'}</td>`,
   ].join('');
-  return `<tr class="progress-table__row" data-id="${m.measurement_id}">${cells}<td class="progress-table__cell progress-table__cell--actions"><button class="progress-tab__delete-btn" data-id="${m.measurement_id}" title="Удалить">✕</button></td></tr>`;
+  return `<tr class="progress-table__row" data-id="${m.measurement_id}">${cells}<td class="progress-table__cell progress-table__cell--actions"><button class="progress-tab__delete-btn" data-id="${m.measurement_id}" title="Удалить">${icons.close}</button></td></tr>`;
 }
 
 function renderEmptyState(isOwnProfile: boolean): string {
   if (isOwnProfile) {
     return `
       <div class="progress-tab__empty">
-        <div class="progress-tab__empty-icon">📊</div>
+        <div class="progress-tab__empty-icon">${icons.chart}</div>
         <p class="progress-tab__empty-text">Нет замеров</p>
         <p class="progress-tab__empty-hint">Добавьте первый замер, чтобы начать следить за прогрессом</p>
       </div>
@@ -57,7 +99,7 @@ function renderEmptyState(isOwnProfile: boolean): string {
   }
   return `
     <div class="progress-tab__empty">
-      <div class="progress-tab__empty-icon">📊</div>
+      <div class="progress-tab__empty-icon">${icons.chart}</div>
       <p class="progress-tab__empty-text">Замеров пока нет</p>
       <p class="progress-tab__empty-hint">Пользователь ещё не добавил ни одного замера</p>
     </div>
@@ -116,7 +158,7 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
       const denied = document.createElement('div');
       denied.className = 'progress-tab__empty';
       denied.innerHTML = `
-        <div class="progress-tab__empty-icon">🔒</div>
+        <div class="progress-tab__empty-icon">${icons.lock}</div>
         <p class="progress-tab__empty-text">Нет доступа к замерам</p>
         <p class="progress-tab__empty-hint">Клиент не открыл вам доступ к своим данным</p>
       `;
@@ -147,7 +189,7 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
           await refresh();
         } catch {
           btn.disabled = false;
-          btn.textContent = '✕';
+          btn.innerHTML = icons.close;
         }
       });
     }
@@ -156,6 +198,7 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
   const buildForm = (): HTMLElement => {
     const form = document.createElement('form');
     form.className = 'progress-tab__form';
+    form.noValidate = true;
     form.innerHTML = `
       <h3 class="progress-tab__form-title">Добавить замер</h3>
       <div class="progress-tab__form-grid">
@@ -165,23 +208,23 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
         </label>
         <label class="progress-tab__field">
           <span class="progress-tab__label">Вес (кг)</span>
-          <input class="progress-tab__input" type="number" name="weight_kg" min="20" max="300" step="0.1" placeholder="75.5">
+          <input class="progress-tab__input" type="text" inputmode="decimal" name="weight_kg" data-number-field="weight_kg" maxlength="6" placeholder="75.5">
         </label>
         <label class="progress-tab__field">
           <span class="progress-tab__label">% жира</span>
-          <input class="progress-tab__input" type="number" name="body_fat_pct" min="1" max="60" step="0.1" placeholder="18.5">
+          <input class="progress-tab__input" type="text" inputmode="decimal" name="body_fat_pct" data-number-field="body_fat_pct" maxlength="5" placeholder="18.5">
         </label>
         <label class="progress-tab__field">
           <span class="progress-tab__label">Грудь (см)</span>
-          <input class="progress-tab__input" type="number" name="chest_cm" min="40" max="200" step="1" placeholder="100">
+          <input class="progress-tab__input" type="text" inputmode="numeric" name="chest_cm" data-number-field="chest_cm" maxlength="3" placeholder="100">
         </label>
         <label class="progress-tab__field">
           <span class="progress-tab__label">Талия (см)</span>
-          <input class="progress-tab__input" type="number" name="waist_cm" min="40" max="200" step="1" placeholder="80">
+          <input class="progress-tab__input" type="text" inputmode="numeric" name="waist_cm" data-number-field="waist_cm" maxlength="3" placeholder="80">
         </label>
         <label class="progress-tab__field">
           <span class="progress-tab__label">Бёдра (см)</span>
-          <input class="progress-tab__input" type="number" name="hips_cm" min="40" max="200" step="1" placeholder="95">
+          <input class="progress-tab__input" type="text" inputmode="numeric" name="hips_cm" data-number-field="hips_cm" maxlength="3" placeholder="95">
         </label>
         <label class="progress-tab__field progress-tab__field--full">
           <span class="progress-tab__label">Заметки</span>
@@ -194,9 +237,28 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
       </div>
     `;
 
+    const errorEl = form.querySelector('#progress-form-error') as HTMLElement;
+
+    form.querySelectorAll<HTMLInputElement>('[data-number-field]').forEach(input => {
+      input.addEventListener('beforeinput', (event: InputEvent) => {
+        if (event.data && /[^0-9.,]/.test(event.data)) {
+          event.preventDefault();
+        }
+      });
+      input.addEventListener('input', () => {
+        const field = getMeasurementNumberField(input.name);
+        const allowedPattern = field?.integerOnly ? /[^\d]/g : /[^\d.,]/g;
+        const sanitized = input.value.replace(allowedPattern || /[^\d.,]/g, '');
+        if (input.value !== sanitized) {
+          input.value = sanitized;
+        }
+        input.classList.remove('progress-tab__input--error');
+        errorEl.textContent = '';
+      });
+    });
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const errorEl = form.querySelector('#progress-form-error') as HTMLElement;
       const submitBtn = form.querySelector('.progress-tab__submit') as HTMLButtonElement;
       const fd = new FormData(form);
 
@@ -207,10 +269,34 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
       const hipsVal = fd.get('hips_cm') as string;
       const notesVal = (fd.get('notes') as string).trim();
 
-      const hasAtLeastOne = weightVal || fatVal || chestVal || waistVal || hipsVal;
+      form.querySelectorAll('.progress-tab__input--error').forEach(input => {
+        input.classList.remove('progress-tab__input--error');
+      });
+
+      const measuredAt = (fd.get('measured_at') as string) || '';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(measuredAt)) {
+        errorEl.textContent = 'Укажите дату замера';
+        form.querySelector<HTMLInputElement>('input[name="measured_at"]')?.classList.add('progress-tab__input--error');
+        return;
+      }
+
+      const hasAtLeastOne = Boolean(weightVal || fatVal || chestVal || waistVal || hipsVal);
       if (!hasAtLeastOne) {
         errorEl.textContent = 'Укажите хотя бы одно измерение';
         return;
+      }
+
+      const parsedValues: Record<string, number | null> = {};
+      for (const field of measurementNumberFields) {
+        const input = form.querySelector<HTMLInputElement>(`input[name="${field.name}"]`);
+        const parsed = parseMeasurementNumber(input?.value || '', field);
+        if (parsed.error) {
+          errorEl.textContent = parsed.error;
+          input?.classList.add('progress-tab__input--error');
+          input?.focus();
+          return;
+        }
+        parsedValues[field.name] = parsed.value;
       }
 
       errorEl.textContent = '';
@@ -219,12 +305,12 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
 
       try {
         await api.createMeasurement({
-          measured_at: fd.get('measured_at') as string,
-          weight_kg: weightVal ? parseFloat(weightVal) : null,
-          body_fat_pct: fatVal ? parseFloat(fatVal) : null,
-          chest_cm: chestVal ? parseInt(chestVal) : null,
-          waist_cm: waistVal ? parseInt(waistVal) : null,
-          hips_cm: hipsVal ? parseInt(hipsVal) : null,
+          measured_at: measuredAt,
+          weight_kg: parsedValues.weight_kg,
+          body_fat_pct: parsedValues.body_fat_pct,
+          chest_cm: parsedValues.chest_cm,
+          waist_cm: parsedValues.waist_cm,
+          hips_cm: parsedValues.hips_cm,
           notes: notesVal || null,
         });
         form.reset();
@@ -248,7 +334,8 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
     section.innerHTML = `
       <details class="progress-tab__sharing-details">
         <summary class="progress-tab__sharing-summary">
-          🔒 Доступ тренеров к замерам
+          <span class="progress-tab__sharing-icon">${icons.lock}</span>
+          <span>Доступ тренеров к замерам</span>
           <span class="progress-tab__sharing-hint">Выберите тренеров, которые могут видеть ваш прогресс</span>
         </summary>
         <div class="progress-tab__sharing-body">
@@ -289,7 +376,7 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
         row.innerHTML = `
           <input type="checkbox" class="progress-tab__sharing-checkbox" data-trainer-id="${sub.trainer_id}" ${checked}>
           <span class="progress-tab__sharing-name">Тренер #${sub.trainer_id}</span>
-          <span class="progress-tab__sharing-tier">${sub.tier_name}</span>
+          <span class="progress-tab__sharing-tier">${escapeHtml(sub.tier_name)}</span>
         `;
         body.appendChild(row);
       });
@@ -317,7 +404,7 @@ export async function renderProgressTab(container: HTMLElement, options: Progres
             body.querySelectorAll<HTMLInputElement>('.progress-tab__sharing-checkbox:checked')
           ).map(cb => Number(cb.dataset.trainerId));
           await api.setMeasurementSharing(selected);
-          saveBtn.textContent = '✓ Сохранено';
+          saveBtn.innerHTML = `${icons.check}<span>Сохранено</span>`;
           setTimeout(() => {
             saveBtn.disabled = false;
             saveBtn.textContent = 'Сохранить доступ';

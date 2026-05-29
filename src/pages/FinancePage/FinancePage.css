@@ -244,6 +244,14 @@
   font-size: 14px;
 }
 
+.finance-page__row-skeleton {
+  height: 64px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #f4f4f4 25%, #ececec 50%, #f4f4f4 75%);
+  background-size: 200% 100%;
+  animation: finance-skeleton-shimmer 1.4s infinite;
+}
+
 .finance-page__empty {
   text-align: center;
   color: #aaa;

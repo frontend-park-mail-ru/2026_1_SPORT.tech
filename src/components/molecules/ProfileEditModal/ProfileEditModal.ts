@@ -12,7 +12,8 @@ import type { ValidationResult } from '../../../types/validation.types';
 import { BUTTON_SIZES, BUTTON_VARIANTS, renderButton } from '../../atoms/Button/Button';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
 import { createSportTypesField, loadSportTypes } from '../../organisms/AuthForm/AuthForm';
-import { Validator } from '../../../utils/validator';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
+import { MAX_PUBLIC_NAME_LENGTH, Validator } from '../../../utils/validator';
 
 export interface ProfileEditModalOptions {
   api: ApiClient;
@@ -87,15 +88,15 @@ export async function openProfileEditModal({
 
   const baseFields: FieldConfig[] = [
     { name: 'username', label: 'Имя пользователя', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 30, placeholder: 'john_doe' },
-    { name: 'first_name', label: 'Имя', type: INPUT_TYPES.NAME as InputType, required: true, maxlength: 100, placeholder: 'Введите имя' },
-    { name: 'last_name', label: 'Фамилия', type: INPUT_TYPES.NAME as InputType, required: true, maxlength: 100, placeholder: 'Введите фамилию' },
+    { name: 'first_name', label: 'Имя', type: INPUT_TYPES.NAME as InputType, required: true, maxlength: MAX_PUBLIC_NAME_LENGTH, placeholder: 'Введите имя' },
+    { name: 'last_name', label: 'Фамилия', type: INPUT_TYPES.NAME as InputType, required: true, maxlength: MAX_PUBLIC_NAME_LENGTH, placeholder: 'Введите фамилию' },
     { name: 'bio', label: 'О себе', type: INPUT_TYPES.WITHOUTS as InputType, required: false, maxlength: 1000, placeholder: 'Расскажите о себе' }
   ];
 
   const trainerFields: FieldConfig[] = [
     { name: 'education_degree', label: 'Образование', type: INPUT_TYPES.WITHOUTS as InputType, required: false, maxlength: 255, placeholder: 'Введите образование' },
-    { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 10, placeholder: 'ГГГГ-ММ-ДД' },
-    { name: 'sport_discipline', label: 'Вид дисциплины/спорта', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 100, placeholder: 'Выберите виды спорта' }
+    { name: 'career_since_date', label: 'Дата начала профессиональной деятельности', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 10, placeholder: '' },
+    { name: 'sport_discipline', label: 'Виды спорта', type: INPUT_TYPES.WITHOUTS as InputType, required: true, maxlength: 100, placeholder: 'Выберите виды спорта' }
   ];
 
   // Безопасное получение значения поля пользователя
@@ -266,19 +267,9 @@ export async function openProfileEditModal({
 
       if (field.name === 'career_since_date') {
         const input = inputApi.input;
-        input.addEventListener('input', (e: Event) => {
-          const target = e.target as HTMLInputElement;
-          let val = target.value.replace(/\D/g, '');
-          if (val.length >= 4) {
-            let formatted = val.substring(0, 4);
-            if (val.length > 4) formatted += '-' + val.substring(4, 6);
-            if (val.length > 6) formatted += '-' + val.substring(6, 8);
-            target.value = formatted;
-          } else {
-            target.value = val;
-          }
-          validateField(field.name, target.value);
-        });
+        input.type = 'date';
+        input.max = new Date().toISOString().slice(0, 10);
+        input.placeholder = '';
       }
 
       inputsApi.set(field.name, inputApi);
@@ -445,7 +436,7 @@ export async function openProfileEditModal({
         message = err.data.error.message || message;
       }
 
-      globalErr.textContent = message;
+      globalErr.textContent = getFriendlyErrorMessage(message, 'Не удалось сохранить изменения. Попробуйте ещё раз.');
       globalErr.hidden = false;
     } finally {
       saveBtn.setDisabled(false);

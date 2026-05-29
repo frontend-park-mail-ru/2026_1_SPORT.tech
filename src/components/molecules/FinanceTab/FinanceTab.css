@@ -86,6 +86,20 @@
 
 .finance-tab__disclaimer p {
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.finance-tab__disclaimer-icon {
+  display: inline-flex;
+  color: var(--primary-orange);
+  flex-shrink: 0;
+}
+
+.finance-tab__disclaimer-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* ── Error state ── */
@@ -95,8 +109,15 @@
 }
 
 .finance-tab__error-icon {
-  font-size: 40px;
+  display: flex;
+  justify-content: center;
+  color: var(--error-red);
   margin-bottom: 12px;
+}
+
+.finance-tab__error-icon svg {
+  width: 40px;
+  height: 40px;
 }
 
 .finance-tab__error-text {

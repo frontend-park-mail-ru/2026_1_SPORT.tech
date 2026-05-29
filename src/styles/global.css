@@ -47,8 +47,8 @@
     --gradient-end: #E1F2FE;     /* 65% */
 
     /* ===== ШРИФТЫ ===== */
-    --font-heading: 'IBM Plex Sans', sans-serif;  /* Для заголовков */
-    --font-body: 'Inter', sans-serif;              /* Для обычного текста */
+    --font-heading: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;  /* Для заголовков */
+    --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;     /* Для обычного текста */
 
     /* Размеры шрифтов */
     --font-size-xs: 12px;
@@ -96,6 +96,17 @@
     box-sizing: border-box;
 }
 
+/* Резервируем место под вертикальный скроллбар всегда, чтобы ширина
+   центрированного контента не «прыгала» при появлении/исчезновении
+   полосы прокрутки (например, при переключении вкладок в настройках). */
+html {
+    /* Резервируем место под вертикальный скроллбар всегда, чтобы ширина
+       центрированного контента не сдвигалась при появлении/исчезновении
+       полосы прокрутки. overflow-x: hidden режет горизонтальный скролл. */
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+}
+
 body {
     font-family: var(--font-body);
     color: var(--text-primary);
@@ -105,12 +116,26 @@ body {
         radial-gradient(circle at top left, rgba(152, 210, 235, 0.22), transparent 32%),
         linear-gradient(180deg, #f7fbff 0%, #f5f5f5 100%);
     min-height: 100vh;
-    overflow-x: hidden;
 }
 
 
 img {
     max-width: 100%;
+}
+
+/* Фолбэк для битых аватаров: заполняет контейнер и центрирует инициалы.
+   Подставляется из JS при ошибке загрузки картинки. */
+.avatar-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-orange-light);
+    color: var(--primary-orange);
+    font-weight: var(--font-weight-semibold);
+    border-radius: inherit;
+    line-height: 1;
 }
 
 /* Заголовки используют IBM Plex Sans */
@@ -342,6 +367,37 @@ h6 { font-size: var(--font-size-md); }
     margin-bottom: 0;
 }
 
+.page-skeleton__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.page-skeleton__action {
+    width: 140px;
+    height: 40px;
+    margin-bottom: 0;
+}
+
+.profile-header--skeleton .profile-header__avatar {
+    background: linear-gradient(90deg, #edf3f8 0%, #ffffff 50%, #edf3f8 100%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.2s ease-in-out infinite;
+    border-radius: 50%;
+}
+
+@media (max-width: 768px) {
+    .page-skeleton__actions {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .page-skeleton__action {
+        width: 100%;
+    }
+}
+
 .page-skeleton__block--card {
     width: 100%;
     height: 160px;
@@ -350,7 +406,7 @@ h6 { font-size: var(--font-size-md); }
 /* Во время загрузки страницы держим левый бар оранжевым (как настоящий сайдбар),
    иначе при переходах он мерцает: оранжевый → серый скелетон → оранжевый. */
 .profile-page--loading .profile-page__sidebar {
-    background: #E85A2B;
+    background: var(--primary-orange);
 }
 
 .profile-page--loading .page-skeleton--sidebar {

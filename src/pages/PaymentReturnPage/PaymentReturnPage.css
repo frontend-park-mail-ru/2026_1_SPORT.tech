@@ -30,7 +30,7 @@
   width: 56px;
   height: 56px;
   border: 4px solid #f0f0f0;
-  border-top-color: #E85A2B;
+  border-top-color: var(--primary-orange);
   border-radius: 50%;
   animation: pr-spin 0.9s linear infinite;
   margin: 0 auto 24px;
@@ -61,9 +61,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
   margin: 0 auto 24px;
   animation: pr-pop 0.35s ease;
+}
+
+.payment-result__icon svg {
+  width: 40px;
+  height: 40px;
+  stroke-width: 2.5;
+}
+
+.payment-result__btn--with-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.payment-result__btn--with-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 @keyframes pr-pop {
@@ -85,7 +102,7 @@
 .payment-result__amount {
   font-size: 32px;
   font-weight: 800;
-  color: #E85A2B;
+  color: var(--primary-orange);
   margin: 8px 0 4px;
 }
 
@@ -116,7 +133,7 @@
 .payment-result__sub-price {
   font-size: 18px !important;
   font-weight: 700;
-  color: #E85A2B !important;
+  color: var(--primary-orange) !important;
 }
 
 .payment-result__sub-expires {
@@ -141,7 +158,7 @@
 }
 
 .payment-result__btn--primary {
-  background: #E85A2B;
+  background: var(--primary-orange);
   color: white;
 }
 
@@ -163,4 +180,11 @@
   .payment-return-page__sidebar { display: none; }
   .payment-return-page__main { padding: 20px 16px; }
   .payment-result { padding: 36px 24px; }
+}
+
+.payment-result__chat-hint {
+  font-size: 14px;
+  color: var(--primary-orange);
+  margin: 8px 0 0;
+  font-weight: 500;
 }

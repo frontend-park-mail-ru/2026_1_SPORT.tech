@@ -1,7 +1,10 @@
 import type { ApiClient } from '../../../utils/api';
 import type { InputAPI } from '../../atoms/Input/Input';
 import { INPUT_TYPES, renderInput } from '../../atoms/Input/Input';
-import { Validator } from '../../../utils/validator';
+import { MIN_DONATION_AMOUNT_RUB, MAX_DONATION_AMOUNT_RUB, Validator } from '../../../utils/validator';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
+import { icons } from '../../../utils/icons';
+import { closeAllModals, registerModal } from '../../../utils/modals';
 
 export interface DonationModalOptions {
   api: ApiClient;
@@ -27,11 +30,15 @@ export async function openDonationModal({
   const amountApi: InputAPI = await renderInput(amountHost, {
     type: INPUT_TYPES.WITHOUTS,
     label: 'Сумма (₽)',
-    placeholder: 'Например, 500',
+    placeholder: `От ${MIN_DONATION_AMOUNT_RUB}`,
     name: 'amount',
     required: true,
+    message: `Минимальная сумма — ${MIN_DONATION_AMOUNT_RUB} ₽`,
     onChange: () => amountApi.setNormal()
   });
+  amountApi.input.inputMode = 'numeric';
+  amountApi.input.min = String(MIN_DONATION_AMOUNT_RUB);
+  amountApi.input.max = String(MAX_DONATION_AMOUNT_RUB);
 
   const messageApi: InputAPI = await renderInput(messageHost, {
     type: INPUT_TYPES.WITHOUTS,
@@ -42,8 +49,10 @@ export async function openDonationModal({
     onChange: () => messageApi.setNormal()
   });
 
+  let unregister: (() => void) | null = null;
   const close = (): void => {
     document.removeEventListener('keydown', onKey);
+    if (unregister) unregister();
     modal.remove();
   };
 
@@ -75,13 +84,13 @@ export async function openDonationModal({
     submitBtn.textContent = 'Перенаправление...';
 
     try {
-      const amountInKopecks = Math.round((result.amountNumber || 0) * 100);
-      const message = messageApi.getValue().trim() || 'Пожертвование';
+      const amountValue = Math.round(result.amountNumber || 0);
+      const message = messageApi.getValue().trim();
       const origin = window.location.origin;
 
       const payment = await api.createDonationPayment({
         user_id: recipientUserId,
-        amount_value: amountInKopecks,
+        amount_value: amountValue,
         currency: 'RUB',
         message,
         return_url: `${origin}/payment/return`,
@@ -89,6 +98,10 @@ export async function openDonationModal({
       });
 
       if (payment.confirmation_url) {
+        const confirmationUrl = getSafeRedirectUrl(payment.confirmation_url);
+        if (!confirmationUrl) {
+          throw new Error('Некорректная ссылка на оплату');
+        }
         localStorage.setItem('sporteon_pending_payment', JSON.stringify({
           payment_id: payment.payment_id,
           confirmation_token: payment.confirmation_token
@@ -107,7 +120,7 @@ export async function openDonationModal({
         `;
         // Небольшая задержка чтобы пользователь увидел сообщение
         setTimeout(() => {
-          window.location.href = payment.confirmation_url;
+          window.location.href = confirmationUrl;
         }, 800);
         return;
       }
@@ -119,19 +132,32 @@ export async function openDonationModal({
       submitBtn.innerHTML = originalBtnHtml;
       submitBtn.disabled = false;
 
-      let errorMessage = 'Не удалось создать платёж. Попробуйте ещё раз.';
-      if (err.data?.error?.message) errorMessage = err.data.error.message;
-      else if (err.message) errorMessage = err.message;
+      const errorMessage = getFriendlyErrorMessage(
+        err.data?.error?.message || err.message,
+        'Не удалось создать платёж. Попробуйте ещё раз.'
+      );
 
       globalErr.textContent = errorMessage;
       globalErr.hidden = false;
     }
   });
 
+  closeAllModals();
   document.addEventListener('keydown', onKey);
   document.body.appendChild(modal);
+  unregister = registerModal(close);
   modal.focus({ preventScroll: true } as FocusOptions);
   amountApi.focus();
+}
+
+function getSafeRedirectUrl(value: string): string | null {
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+    return url.href;
+  } catch {
+    return null;
+  }
 }
 
 function showSuccess(form: HTMLFormElement, submitBtn: HTMLButtonElement, amount: number, close: () => void): void {
@@ -143,7 +169,7 @@ function showSuccess(form: HTMLFormElement, submitBtn: HTMLButtonElement, amount
   const successMessage = document.createElement('div');
   successMessage.className = 'donation-modal__success';
   successMessage.innerHTML = `
-    <div class="donation-modal__success-icon">✓</div>
+    <div class="donation-modal__success-icon">${icons.successCircle}</div>
     <h3 class="donation-modal__success-title">Спасибо!</h3>
     <p class="donation-modal__success-text">
       Ваше пожертвование в размере <strong>${amount} ₽</strong> успешно отправлено.

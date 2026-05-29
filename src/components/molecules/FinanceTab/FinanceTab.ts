@@ -4,6 +4,9 @@
  */
 
 import type { ApiClient } from '../../../utils/api';
+import { escapeHtml } from '../../../utils/profilePageData';
+import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
+import { icons } from '../../../utils/icons';
 import './FinanceTab.css';
 
 export interface FinanceTabOptions {
@@ -18,9 +21,9 @@ function fmtMoney(value: number, currency: string): string {
 function card(value: string, label: string, sub?: string): string {
   return `
     <div class="finance-card">
-      <div class="finance-card__value">${value}</div>
-      <div class="finance-card__label">${label}</div>
-      ${sub ? `<div class="finance-card__sub">${sub}</div>` : ''}
+      <div class="finance-card__value">${escapeHtml(value)}</div>
+      <div class="finance-card__label">${escapeHtml(label)}</div>
+      ${sub ? `<div class="finance-card__sub">${escapeHtml(sub)}</div>` : ''}
     </div>
   `;
 }
@@ -56,16 +59,16 @@ export async function renderFinanceTab(container: HTMLElement, { api }: FinanceT
       </div>
 
       <div class="finance-tab__disclaimer">
-        <p>💡 Доходы рассчитываются по завершённым платежам. Актуализируются в реальном времени.</p>
+        <p><span class="finance-tab__disclaimer-icon">${icons.bulb}</span>Доходы рассчитываются по завершённым платежам. Актуализируются в реальном времени.</p>
       </div>
     `;
   } catch (err: unknown) {
-    const msg = (err as Error).message || 'Неизвестная ошибка';
+    const msg = getFriendlyErrorMessage(err, 'Попробуйте повторить позже.');
     root.innerHTML = `
       <div class="finance-tab__error">
-        <div class="finance-tab__error-icon">⚠️</div>
+        <div class="finance-tab__error-icon">${icons.warning}</div>
         <p class="finance-tab__error-text">Не удалось загрузить финансовые данные</p>
-        <p class="finance-tab__error-detail">${msg}</p>
+        <p class="finance-tab__error-detail">${escapeHtml(msg)}</p>
         <button class="finance-tab__retry-btn">Попробовать снова</button>
       </div>
     `;

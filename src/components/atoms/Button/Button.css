@@ -160,6 +160,56 @@
     text-decoration: none;
 }
 
+/* ===== НАТИВНЫЕ СОСТОЯНИЯ (hover / active / focus) =====
+   Раньше hover/active проявлялись только через JS-классы (.button--hover),
+   которые проставлял лишь один вызывающий компонент, — поэтому у большинства
+   кнопок в приложении не было ни ховера, ни видимой фокус-рамки для клавиатуры.
+   Дублируем состояния нативными псевдоклассами, чтобы это работало везде сразу.
+   У disabled-кнопок pointer-events: none, поэтому :hover/:active им не страшны. */
+.button--primary-orange:hover {
+    background: var(--primary-orange-hover);
+}
+
+.button--primary-orange:active {
+    background: var(--primary-orange-active);
+    transform: translateY(1px);
+}
+
+.button--secondary-blue:hover {
+    background: var(--secondary-blue-hover);
+}
+
+.button--secondary-blue:active {
+    background: var(--secondary-blue-active);
+    transform: translateY(1px);
+}
+
+.button--text-orange:hover {
+    color: var(--text-orange-hover);
+    text-decoration: underline;
+}
+
+.button--text-orange:active {
+    color: var(--primary-orange-active);
+    text-decoration: underline;
+}
+
+.button--text-blue:hover {
+    color: var(--text-blue-hover);
+    text-decoration: underline;
+}
+
+.button--text-blue:active {
+    color: var(--secondary-blue-active);
+    text-decoration: underline;
+}
+
+/* Видимая фокус-рамка для навигации с клавиатуры (при клике мышью не показывается). */
+.button:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
+}
+
 /* ===== МОДИФИКАТОР: FULL WIDTH ===== */
 .button--full-width {
     width: 100%;

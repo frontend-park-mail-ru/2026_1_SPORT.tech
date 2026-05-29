@@ -4,6 +4,8 @@ import './FinancePage.css';
 import type { ApiClient } from '../../utils/api';
 import type { AuthResponse } from '../../types/auth.types';
 import type { DonationItem } from '../../types/api.types';
+import { escapeHtml } from '../../utils/profilePageData';
+import { getFriendlyErrorMessage } from '../../utils/errorMessages';
 
 interface FinancePageParams {
   currentUser: AuthResponse;
@@ -32,7 +34,9 @@ export async function renderFinancePage(
       <div class="finance-page__section">
         <h2 class="finance-page__section-title">История донатов</h2>
         <div id="finance-donations-list" class="finance-page__donations-list">
-          <div class="finance-page__loading">Загрузка...</div>
+          <div class="finance-page__row-skeleton"></div>
+          <div class="finance-page__row-skeleton"></div>
+          <div class="finance-page__row-skeleton"></div>
         </div>
         <div id="finance-donations-pagination" class="finance-page__pagination"></div>
       </div>
@@ -40,7 +44,9 @@ export async function renderFinancePage(
       <div class="finance-page__section">
         <h2 class="finance-page__section-title">Подписчики</h2>
         <div id="finance-subscribers-list" class="finance-page__subscribers-list">
-          <div class="finance-page__loading">Загрузка...</div>
+          <div class="finance-page__row-skeleton"></div>
+          <div class="finance-page__row-skeleton"></div>
+          <div class="finance-page__row-skeleton"></div>
         </div>
       </div>
     </div>
@@ -59,13 +65,14 @@ async function loadSummaryCards(api: ApiClient, cardsEl: HTMLElement): Promise<v
       api.getMyBalance().catch(() => null)
     ]);
 
-    const currency = balance?.currency || stats.currency || 'RUB';
+    const rawCurrency = balance?.currency || stats.currency || 'RUB';
+    const currency = rawCurrency === 'RUB' ? '₽' : rawCurrency;
     const fmt = (n: number): string => n.toLocaleString('ru-RU');
 
     const card = (value: string, label: string, accent = false): string => `
       <div class="finance-page__card${accent ? ' finance-page__card--accent' : ''}">
-        <div class="finance-page__card-value">${value}</div>
-        <div class="finance-page__card-label">${label}</div>
+        <div class="finance-page__card-value">${escapeHtml(value)}</div>
+        <div class="finance-page__card-label">${escapeHtml(label)}</div>
       </div>
     `;
 
@@ -81,16 +88,21 @@ async function loadSummaryCards(api: ApiClient, cardsEl: HTMLElement): Promise<v
       ${card(String(stats.posts_count), 'Публикаций')}
     `;
   } catch (err: unknown) {
-    const msg = (err as Error).message || 'Неизвестная ошибка';
+    const msg = getFriendlyErrorMessage(err, 'Попробуйте повторить позже.');
     console.error('[FinancePage] failed to load stats:', err);
     cardsEl.innerHTML = `
       <div class="finance-page__error">
-        <p>Не удалось загрузить статистику: ${msg}</p>
+        <p>Не удалось загрузить статистику: ${escapeHtml(msg)}</p>
         <button class="finance-page__retry-btn" id="finance-stats-retry">Повторить</button>
       </div>
     `;
     cardsEl.querySelector('#finance-stats-retry')?.addEventListener('click', () => {
-      cardsEl.innerHTML = '<div class="finance-page__loading">Загрузка...</div>';
+      cardsEl.innerHTML = `
+        <div class="finance-page__card-skeleton"></div>
+        <div class="finance-page__card-skeleton"></div>
+        <div class="finance-page__card-skeleton"></div>
+        <div class="finance-page__card-skeleton"></div>
+      `;
       void loadSummaryCards(api, cardsEl);
     });
   }
@@ -101,7 +113,11 @@ async function loadDonations(api: ApiClient, container: HTMLElement, offset: num
   const paginationEl = container.querySelector('#finance-donations-pagination') as HTMLElement;
 
   if (!listEl) return;
-  listEl.innerHTML = '<div class="finance-page__loading">Загрузка...</div>';
+  listEl.innerHTML = `
+    <div class="finance-page__row-skeleton"></div>
+    <div class="finance-page__row-skeleton"></div>
+    <div class="finance-page__row-skeleton"></div>
+  `;
 
   try {
     const data = await api.getMyReceivedDonations({ limit: PAGE_SIZE, offset });
@@ -149,11 +165,11 @@ async function loadDonations(api: ApiClient, container: HTMLElement, offset: num
       paginationEl.innerHTML = '';
     }
   } catch (err: unknown) {
-    const msg = (err as Error).message || 'Неизвестная ошибка';
+    const msg = getFriendlyErrorMessage(err, 'Попробуйте повторить позже.');
     console.error('[FinancePage] failed to load donations:', err);
     listEl.innerHTML = `
       <div class="finance-page__error">
-        <p>Не удалось загрузить донаты: ${msg}</p>
+        <p>Не удалось загрузить донаты: ${escapeHtml(msg)}</p>
         <button class="finance-page__retry-btn" id="finance-donations-retry">Повторить</button>
       </div>
     `;
@@ -170,25 +186,32 @@ function renderDonationRow(
   const name = sender?.name ?? `Пользователь #${d.sender_user_id}`;
   const avatarUrl = sender?.avatarUrl;
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const safeName = escapeHtml(name);
+  const safeAvatarUrl = avatarUrl ? escapeHtml(avatarUrl) : '';
+  const safeInitials = escapeHtml(initials);
+  const safeCurrency = escapeHtml(d.currency === 'RUB' ? '₽' : d.currency);
   const date = new Date(d.created_at).toLocaleDateString('ru-RU', {
     day: '2-digit', month: 'long', year: 'numeric'
   });
+  const safeDate = escapeHtml(date);
   const fmt = (n: number) => n.toLocaleString('ru-RU');
+  const trimmedMessage = (d.message ?? '').trim();
+  const hasMessage = trimmedMessage !== '' && trimmedMessage !== 'Пожертвование';
 
   return `
     <div class="finance-page__donation-row">
       <div class="finance-page__donation-avatar">
         ${avatarUrl
-    ? `<img src="${avatarUrl}" alt="${name}" class="finance-page__avatar-img">`
-    : `<span class="finance-page__avatar-initials">${initials}</span>`}
+    ? `<img src="${safeAvatarUrl}" alt="${safeName}" class="finance-page__avatar-img">`
+    : `<span class="finance-page__avatar-initials">${safeInitials}</span>`}
       </div>
       <div class="finance-page__donation-info">
-        <div class="finance-page__donation-sender">${name}</div>
-        ${d.message ? `<div class="finance-page__donation-message">"${d.message}"</div>` : ''}
-        <div class="finance-page__donation-date">${date}</div>
+        <div class="finance-page__donation-sender">${safeName}</div>
+        ${hasMessage ? `<div class="finance-page__donation-message">"${escapeHtml(trimmedMessage)}"</div>` : ''}
+        <div class="finance-page__donation-date">${safeDate}</div>
       </div>
       <div class="finance-page__donation-amount">
-        +${fmt(d.amount_value)} ${d.currency}
+        +${escapeHtml(fmt(d.amount_value))} ${safeCurrency}
       </div>
     </div>
   `;
@@ -254,17 +277,23 @@ async function loadSubscribers(api: ApiClient, container: HTMLElement): Promise<
         : '—';
       const statusClass = s.active ? 'finance-page__sub-status--active' : 'finance-page__sub-status--inactive';
       const statusLabel = s.active ? 'Активна' : 'Истекла';
+      const safeName = escapeHtml(name);
+      const safeAvatarUrl = avatarUrl ? escapeHtml(avatarUrl) : '';
+      const safeInitials = escapeHtml(initials);
+      const safeTierName = escapeHtml(s.tier_name);
+      const safeExpiresAt = escapeHtml(expiresAt);
+      const safePrice = escapeHtml(s.price.toLocaleString('ru-RU'));
 
       return `
         <div class="finance-page__subscriber-row" data-user-id="${s.client_id}" style="cursor:pointer;">
           <div class="finance-page__donation-avatar">
             ${avatarUrl
-    ? `<img src="${avatarUrl}" alt="${name}" class="finance-page__avatar-img">`
-    : `<span class="finance-page__avatar-initials">${initials}</span>`}
+    ? `<img src="${safeAvatarUrl}" alt="${safeName}" class="finance-page__avatar-img">`
+    : `<span class="finance-page__avatar-initials">${safeInitials}</span>`}
           </div>
           <div class="finance-page__donation-info">
-            <div class="finance-page__donation-sender">${name}</div>
-            <div class="finance-page__donation-date">${s.tier_name} · ${s.price.toLocaleString('ru-RU')} ₽/мес · до ${expiresAt}</div>
+            <div class="finance-page__donation-sender">${safeName}</div>
+            <div class="finance-page__donation-date">${safeTierName} · ${safePrice} ₽/мес · до ${safeExpiresAt}</div>
           </div>
           <span class="finance-page__sub-status ${statusClass}">${statusLabel}</span>
         </div>
@@ -278,11 +307,11 @@ async function loadSubscribers(api: ApiClient, container: HTMLElement): Promise<
       });
     });
   } catch (err: unknown) {
-    const msg = (err as Error).message || 'Неизвестная ошибка';
+    const msg = getFriendlyErrorMessage(err, 'Попробуйте повторить позже.');
     console.error('[FinancePage] failed to load subscribers:', err);
     listEl.innerHTML = `
       <div class="finance-page__error">
-        <p>Не удалось загрузить подписчиков: ${msg}</p>
+        <p>Не удалось загрузить подписчиков: ${escapeHtml(msg)}</p>
         <button class="finance-page__retry-btn" id="finance-subs-retry">Повторить</button>
       </div>
     `;
