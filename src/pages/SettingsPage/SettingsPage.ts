@@ -53,6 +53,19 @@ function showToast(message: string, kind: 'success' | 'error'): void {
   }, 3200);
 }
 
+// Скелетон строк-переключателей на время загрузки настроек (вместо текста «Загрузка…»).
+function skeletonToggles(count: number): string {
+  const row = `
+    <div class="settings-skeleton__row">
+      <div class="settings-skeleton__text">
+        <span class="settings-skeleton__bar settings-skeleton__bar--label"></span>
+        <span class="settings-skeleton__bar settings-skeleton__bar--hint"></span>
+      </div>
+      <span class="settings-skeleton__switch"></span>
+    </div>`;
+  return `<div class="settings-skeleton" aria-hidden="true">${row.repeat(count)}</div>`;
+}
+
 function toggleRow(key: string, label: string, hint: string, checked: boolean): string {
   return `
     <label class="settings-toggle">
@@ -175,7 +188,16 @@ function renderAccountTab(
   const errorEl = panel.querySelector('#bt-error') as HTMLElement;
   const form = panel.querySelector('#become-trainer-form') as HTMLFormElement;
   const submitBtn = panel.querySelector('#bt-submit') as HTMLButtonElement;
+  const addSportBtn = panel.querySelector('#bt-add-sport') as HTMLButtonElement;
   let sportTypes: SportType[] = [];
+
+  // Пока грузится справочник видов спорта — показываем скелетон строки и
+  // блокируем «+ Добавить», чтобы не было пустоты и кликов вхолостую.
+  sportsContainer.innerHTML = `
+    <div class="settings-skeleton__sport" aria-hidden="true">
+      <span class="settings-skeleton__bar settings-skeleton__bar--field"></span>
+    </div>`;
+  addSportBtn.disabled = true;
 
   const addSportRow = (): void => {
     const row = document.createElement('div');
@@ -195,13 +217,15 @@ function renderAccountTab(
   api.getSportTypes()
     .then(data => {
       sportTypes = data.sport_types || [];
+      sportsContainer.innerHTML = '';
+      addSportBtn.disabled = false;
       addSportRow();
     })
     .catch(() => {
       sportsContainer.innerHTML = '<p class="settings-form__error">Не удалось загрузить виды спорта</p>';
     });
 
-  (panel.querySelector('#bt-add-sport') as HTMLButtonElement).addEventListener('click', () => {
+  addSportBtn.addEventListener('click', () => {
     if (sportTypes.length) addSportRow();
   });
 
@@ -349,7 +373,13 @@ function renderSecurityTab(api: ApiClient, panel: HTMLElement): void {
 // ─── Notifications tab ───────────────────────────────────────────────────────
 
 async function renderNotificationsTab(api: ApiClient, panel: HTMLElement): Promise<void> {
-  panel.innerHTML = '<div class="settings-card"><div class="settings-loading">Загрузка…</div></div>';
+  panel.innerHTML = `
+    <div class="settings-card">
+      <h2 class="settings-card__title">Уведомления</h2>
+      <p class="settings-card__lead">Выберите, о чём вас оповещать.</p>
+      ${skeletonToggles(NOTIFICATION_FIELDS.length)}
+    </div>
+  `;
   let prefs: NotificationPreferences;
   try {
     prefs = await api.getNotificationPreferences();
@@ -393,7 +423,7 @@ function renderPrivacyTab(api: ApiClient, panel: HTMLElement, navigateTo: (path:
     <div class="settings-card">
       <h2 class="settings-card__title">Приватность</h2>
       <div class="settings-toggles" id="privacy-toggles">
-        <div class="settings-loading">Загрузка…</div>
+        ${skeletonToggles(PRIVACY_FIELDS.length)}
       </div>
     </div>
     <div class="settings-card settings-card--danger">

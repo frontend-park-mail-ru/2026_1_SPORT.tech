@@ -3,6 +3,7 @@
 import type { ApiClient } from '../../../utils/api';
 import { escapeHtml } from '../../../utils/profilePageData';
 import { getFriendlyErrorMessage } from '../../../utils/errorMessages';
+import { registerModal } from '../../../utils/modals';
 import './StatisticsModal.css';
 
 export interface StatisticsModalOptions {
@@ -26,7 +27,10 @@ export async function openStatisticsModal({ api }: StatisticsModalOptions): Prom
   // второй включает класс с конечным состоянием, чтобы transition действительно сыграл.
   requestAnimationFrame(() => requestAnimationFrame(() => modal.classList.add('statistics-modal--visible')));
 
+  // Закрытие по Escape — через общий реестр модалок (см. utils/modals).
+  const unregister = registerModal(() => close());
   const close = (): void => {
+    unregister();
     modal.classList.remove('statistics-modal--visible');
     setTimeout(() => modal.remove(), 220);
   };

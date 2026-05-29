@@ -2,6 +2,7 @@
 
 import type { ApiClient } from '../../../utils/api';
 import { escapeHtml, formatMonthlyPrice } from '../../../utils/profilePageData';
+import { registerModal } from '../../../utils/modals';
 
 export interface SubscribersModalOptions {
   api: ApiClient;
@@ -30,9 +31,12 @@ export async function openSubscribersModal({ api }: SubscribersModalOptions): Pr
   });
 
   let closing = false;
+  // Закрытие по Escape — через общий реестр модалок (см. utils/modals).
+  const unregister = registerModal(() => closeModal());
   const closeModal = (): void => {
     if (closing) return;
     closing = true;
+    unregister();
     backdrop.style.opacity = '0';
     dialog.style.opacity = '0';
     dialog.style.transform = 'translateY(8px) scale(0.96)';

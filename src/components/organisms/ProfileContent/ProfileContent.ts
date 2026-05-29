@@ -182,6 +182,117 @@ function getYearsWord(years: number): string {
   return 'лет';
 }
 
+interface TrainerHomeParams {
+  posts: PostWithAuthor[];
+  api: ApiClient;
+  canManagePosts: boolean;
+  onPostsUpdated?: (() => Promise<void>) | null;
+  tierNameMap?: Map<number, string>;
+  tierPriceMap?: Map<number, number>;
+  onSeeAll: () => void;
+}
+
+const HEART_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+
+// Компактный тизер поста для обзорной вкладки «Главная страница». В отличие от
+// полноразмерных карточек в «Публикациях» — только заголовок, краткий отрывок и
+// метрики; клик уводит в «Публикации» к самому посту.
+function postTeaserRow(post: PostWithAuthor): string {
+  const date = post.created_at ? new Date(post.created_at).toLocaleDateString('ru-RU') : '';
+  const flat = (post.raw_text || '').replace(/\s+/g, ' ').trim();
+  const snippet = flat.slice(0, 130);
+  const locked = !post.can_view;
+  return `
+    <button class="profile-home__teaser" data-post-id="${post.post_id}" type="button">
+      <div class="profile-home__teaser-title">${escapeHtml(post.title || 'Без названия')}</div>
+      ${snippet ? `<div class="profile-home__teaser-snippet">${escapeHtml(snippet)}${flat.length > 130 ? '…' : ''}</div>` : ''}
+      <div class="profile-home__teaser-meta">
+        ${date ? `<span>${escapeHtml(date)}</span>` : ''}
+        <span class="profile-home__teaser-stat">${HEART_SVG}${post.likes || 0}</span>
+        <span class="profile-home__teaser-stat">💬 ${post.comments || 0}</span>
+        ${locked ? '<span class="profile-home__teaser-lock">🔒 по подписке</span>' : ''}
+      </div>
+    </button>`;
+}
+
+// Обзор профиля тренера: «главный пост» (свежайшая публикация крупной карточкой)
+// + лента последних публикаций тизерами. Это и есть «стена», а не дубль списка
+// из вкладки «Публикации».
+async function renderTrainerHome(
+  container: HTMLElement,
+  params: TrainerHomeParams
+): Promise<void> {
+  const { posts, api, canManagePosts, onPostsUpdated, tierNameMap, tierPriceMap, onSeeAll } = params;
+
+  if (posts.length === 0) {
+    setPostsContainerMessageState(container, true);
+    container.innerHTML = `
+      <div class="profile-content__empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+          <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z"/>
+        </svg>
+        <p>Пока нет публикаций</p>
+      </div>`;
+    return;
+  }
+
+  setPostsContainerMessageState(container, false);
+
+  const sorted = [...posts].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  const featured = sorted[0];
+  const recent = sorted.slice(1, 5);
+
+  container.innerHTML = `
+    <div class="profile-home">
+      <section class="profile-home__block">
+        <div class="profile-home__block-head">
+          <h3 class="profile-home__block-title">Главный пост</h3>
+          <span class="profile-home__badge">Свежее</span>
+        </div>
+        <div class="profile-home__featured" id="profile-home-featured"></div>
+      </section>
+      ${recent.length ? `
+      <section class="profile-home__block">
+        <div class="profile-home__block-head">
+          <h3 class="profile-home__block-title">Последние публикации</h3>
+          <button type="button" class="profile-home__see-all" id="profile-home-see-all">Все публикации →</button>
+        </div>
+        <div class="profile-home__recent">
+          ${recent.map(postTeaserRow).join('')}
+        </div>
+      </section>` : ''}
+    </div>`;
+
+  const featuredEl = container.querySelector('#profile-home-featured') as HTMLElement;
+  if (tierNameMap && featured.min_tier_id) {
+    featured.tier_name = tierNameMap.get(featured.min_tier_id);
+    featured.tier_price = tierPriceMap?.get(featured.min_tier_id) ?? 0;
+  }
+  await renderPostCard(featuredEl, {
+    ...featured,
+    api,
+    isOwner: canManagePosts,
+    onPostsUpdated: onPostsUpdated ?? undefined
+  });
+
+  container.querySelector('#profile-home-see-all')?.addEventListener('click', onSeeAll);
+
+  container.querySelectorAll<HTMLElement>('.profile-home__teaser').forEach(el => {
+    el.addEventListener('click', () => {
+      const postId = el.dataset.postId;
+      onSeeAll();
+      // После переключения на «Публикации» доскролливаем к выбранному посту.
+      window.setTimeout(() => {
+        const card = document.querySelector<HTMLElement>(`[data-post-id="${postId}"][data-post-expand]`);
+        card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 350);
+    });
+  });
+}
+
 function escapeHtml(value: string | null | undefined): string {
   if (value === null || value === undefined) return '';
   return String(value)
@@ -792,7 +903,7 @@ export async function renderProfileContent(
       ];
 
   const sectionTitles: Record<string, string> = {
-    main: 'Недавние публикации',
+    main: 'Обзор',
     publications: isTrainer ? 'Все публикации' : 'Понравившиеся',
     subscriptions: 'Уровни подписки',
     progress: 'История замеров',
@@ -998,9 +1109,30 @@ export async function renderProfileContent(
     }
   };
 
+  // Программное переключение на вкладку «Публикации» (из обзора главной).
+  function goToPublications(): void {
+    const pubTab = element.querySelector<HTMLElement>('.profile-content__tab[data-tab="publications"]');
+    pubTab?.click();
+  }
+
   // Клиентская фильтрация загруженного набора по тексту поиска.
   // Фильтр по видам спорта выполняется на бэкенде (см. applySportFilter).
   function refreshVisiblePosts(): void {
+    // Вкладка «Главная страница» тренера — это обзор (главный пост + последние),
+    // а не полный список постов: рендерим её отдельно.
+    if (currentTab === 'main' && isTrainer) {
+      void renderTrainerHome(postsContainer, {
+        posts: allPosts,
+        api,
+        canManagePosts,
+        onPostsUpdated: onPostsUpdated ?? undefined,
+        tierNameMap,
+        tierPriceMap,
+        onSeeAll: goToPublications
+      });
+      return;
+    }
+
     let filteredPosts = allPosts;
 
     if (searchQuery.trim()) {
@@ -1199,14 +1331,17 @@ export async function renderProfileContent(
         allPosts = (await loadLikedPosts(api, viewedUserId)) as PostWithAuthor[];
         refreshVisiblePosts();
       } else {
+        // Поиск и фильтры относятся к полному списку «Публикаций»; на обзорной
+        // «Главной странице» они не нужны.
+        const isPublications = tabId === 'publications';
         if (filtersElement) {
-          filtersElement.style.display = (tabId === 'main' || tabId === 'publications') ? 'flex' : 'none';
+          filtersElement.style.display = isPublications ? 'flex' : 'none';
         }
         if (addButtonContainer) {
-          addButtonContainer.style.display = (canAddPost && tabId === 'publications') ? 'block' : 'none';
+          addButtonContainer.style.display = (canAddPost && isPublications) ? 'block' : 'none';
         }
         sectionTitleEl.textContent = sectionTitles[tabId] || 'Публикации';
-        toggleSearchVisibility(true);
+        toggleSearchVisibility(isPublications);
         if (tabId === 'main' || tabId === 'publications') {
           if (statsContainer) {
             statsContainer.style.display = tabId === 'main' ? 'block' : 'none';
@@ -1288,7 +1423,13 @@ export async function renderProfileContent(
       void renderSubscriptionsSection(subsContainer, api, isTrainer, isOwnProfile, viewedUserId);
     }
   } else {
-    toggleSearchVisibility(true);
+    // На обзорной «Главной странице» тренера поиск/фильтры скрыты — они для
+    // полного списка «Публикаций».
+    const initialIsPublications = currentTab === 'publications';
+    toggleSearchVisibility(initialIsPublications);
+    if (filtersElement && isTrainer) {
+      filtersElement.style.display = initialIsPublications ? 'flex' : 'none';
+    }
     showPostsSkeleton(postsContainer);
 
     // Показываем статистику на главной вкладке собственного профиля тренера

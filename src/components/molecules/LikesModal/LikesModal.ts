@@ -1,5 +1,6 @@
 import type { ApiClient } from '../../../utils/api';
 import { escapeHtml } from '../../../utils/profilePageData';
+import { registerModal } from '../../../utils/modals';
 
 export interface LikesModalOptions {
   api: ApiClient;
@@ -18,7 +19,10 @@ export async function openLikesModal({ api, postId }: LikesModalOptions): Promis
     </div>
   `;
   document.body.appendChild(modal);
-  modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', () => modal.remove()));
+  // Закрытие по клику и по Escape (через общий реестр модалок).
+  const unregister = registerModal(() => modal.remove());
+  const close = (): void => { unregister(); modal.remove(); };
+  modal.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', close));
 
   const listEl = modal.querySelector('#likes-modal-list') as HTMLElement;
   listEl.innerHTML = `
@@ -60,7 +64,7 @@ export async function openLikesModal({ api, postId }: LikesModalOptions): Promis
       row.addEventListener('mouseenter', () => { row.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'; });
       row.addEventListener('mouseleave', () => { row.style.boxShadow = 'none'; });
       row.addEventListener('click', () => {
-        modal.remove();
+        close();
         window.router.navigateTo(`/profile/${like.user_id}`);
       });
       listEl.appendChild(row);

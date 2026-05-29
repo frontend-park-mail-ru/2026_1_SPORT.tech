@@ -311,7 +311,7 @@ function createRouter(api: ApiClient): Router {
         currentUser: mappedData.currentUser,
         subscriptions: [],
         posts: [],
-        activeTab: 'publications',
+        activeTab: 'main',
         popularPosts: [],
         viewedUserId: profileData.user_id,
         onLogout,

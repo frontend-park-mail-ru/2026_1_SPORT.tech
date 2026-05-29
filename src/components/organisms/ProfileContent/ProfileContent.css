@@ -860,3 +860,134 @@
     transform: none;
   }
 }
+
+/* ===== ОБЗОР ГЛАВНОЙ СТРАНИЦЫ ТРЕНЕРА (главный пост + последние) ===== */
+.profile-home {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.profile-home__block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.profile-home__block-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a2b3c;
+  margin: 0;
+}
+
+.profile-home__badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-orange);
+  background: var(--primary-orange-light, #ffe8e3);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.profile-home__see-all {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-orange);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.profile-home__see-all:hover {
+  opacity: 0.75;
+}
+
+/* «Главный пост» выделяем рамкой-акцентом, чтобы он читался как закреплённый. */
+.profile-home__featured {
+  border: 1px solid var(--primary-orange-light, #ffe0d8);
+  border-radius: 16px;
+  padding: 4px;
+  background: linear-gradient(180deg, rgba(255, 107, 74, 0.05), transparent 60%);
+}
+
+.profile-home__recent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-home__teaser {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.profile-home__teaser:hover {
+  border-color: var(--primary-orange-light, #ffd5cc);
+  box-shadow: 0 6px 18px rgba(36, 67, 103, 0.08);
+  transform: translateY(-1px);
+}
+
+.profile-home__teaser-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a2b3c;
+  margin-bottom: 6px;
+  overflow-wrap: anywhere;
+}
+
+.profile-home__teaser-snippet {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #5b6b7b;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.profile-home__teaser-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  color: #8a98a5;
+}
+
+.profile-home__teaser-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.profile-home__teaser-stat svg {
+  color: var(--primary-orange);
+}
+
+.profile-home__teaser-lock {
+  color: var(--primary-orange);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-home__teaser {
+    transition: none;
+  }
+  .profile-home__teaser:hover {
+    transform: none;
+  }
+}

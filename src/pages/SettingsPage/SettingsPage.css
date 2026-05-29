@@ -49,17 +49,31 @@
   font-size: 15px;
   color: var(--text-primary);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
 }
 
 .settings-tab:hover {
   background: var(--background-hover, #fff5f2);
 }
 
+.settings-tab:active {
+  transform: scale(0.98);
+}
+
 .settings-tab--active {
   background: var(--primary-orange);
   color: #fff;
   font-weight: 600;
+  box-shadow: 0 4px 12px rgba(255, 107, 74, 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-tab {
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .settings-tab:active {
+    transform: none;
+  }
 }
 
 .settings-page__panel {
@@ -77,6 +91,18 @@
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  /* Плавное появление при переключении вкладок — innerHTML панели пересоздаётся,
+     поэтому анимация проигрывается на каждый переход. */
+  animation: settings-card-in 0.28s ease both;
+}
+
+@keyframes settings-card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-card { animation: none; }
 }
 
 .settings-card--danger {
@@ -226,6 +252,17 @@
 .settings-toggles {
   display: flex;
   flex-direction: column;
+  /* Мягкое проявление переключателей, когда они заменяют скелетон загрузки. */
+  animation: settings-fade-in 0.28s ease both;
+}
+
+@keyframes settings-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-toggles { animation: none; }
 }
 
 .settings-toggle {
@@ -317,6 +354,74 @@
 .settings-loading {
   color: var(--text-secondary, #6b7280);
   padding: 8px 0;
+}
+
+/* ===== СКЕЛЕТОН ПЕРЕКЛЮЧАТЕЛЕЙ ===== */
+.settings-skeleton {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-skeleton__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-color, #f0f0f0);
+}
+
+.settings-skeleton__row:last-child {
+  border-bottom: none;
+}
+
+.settings-skeleton__text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.settings-skeleton__bar,
+.settings-skeleton__switch {
+  background: linear-gradient(90deg, #edf3f8 0%, #ffffff 50%, #edf3f8 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.settings-skeleton__bar {
+  display: block;
+  border-radius: 6px;
+}
+
+.settings-skeleton__bar--label {
+  height: 14px;
+  width: 38%;
+}
+
+.settings-skeleton__bar--hint {
+  height: 12px;
+  width: 66%;
+}
+
+.settings-skeleton__bar--field {
+  height: 42px;
+  width: 100%;
+  border-radius: 10px;
+}
+
+.settings-skeleton__switch {
+  flex-shrink: 0;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-skeleton__bar,
+  .settings-skeleton__switch {
+    animation: none;
+  }
 }
 
 /* Toast */

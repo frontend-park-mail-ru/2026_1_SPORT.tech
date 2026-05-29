@@ -70,12 +70,32 @@ export async function renderProfileHeader(
   wrapper.innerHTML = html.trim();
   const element = wrapper.firstElementChild as HTMLElement;
 
+  // Вставляем шапку в DOM сразу: статичная часть (аватар, имя, bio, мета) видна
+  // мгновенно, а кнопки подписки/доната догружаются прогрессивно. Иначе при
+  // просмотре чужого профиля весь блок ждал сетевых запросов updateSubscriptionUI
+  // и появлялся «рывком» уже после того, как скелетон страницы был снят.
+  container.appendChild(element);
+
   const subscribeContainer = element.querySelector(`#profile-subscribe-${id}`) as HTMLElement | null;
   const donateContainer = element.querySelector(`#profile-donate-${id}`) as HTMLElement | null;
   const editContainer = element.querySelector(`#profile-edit-${id}`) as HTMLElement | null;
   const secondaryContainer = element.querySelector(`#profile-secondary-${id}`) as HTMLElement | null;
   const metaContainer = element.querySelector(`#profile-meta-${id}`) as HTMLElement | null;
   const actionsRow = element.querySelector('.profile-header__actions') as HTMLElement | null;
+
+  // Скелетоны-заглушки кнопок: вставляем их сразу в слоты, которые точно будут
+  // заполнены (по тем же условиям, что и сами кнопки ниже). Так строка действий
+  // не схлопывается, а реальные кнопки — часть из которых ждёт сетевых запросов —
+  // встают на место заглушек без «рывка» по высоте шапки.
+  const ACTION_SKELETON = '<span class="profile-header__action-skeleton" aria-hidden="true"></span>';
+  if (!isOwnProfile && showDonate) {
+    if (subscribeContainer) subscribeContainer.innerHTML = ACTION_SKELETON;
+    if (donateContainer && onDonate) donateContainer.innerHTML = ACTION_SKELETON;
+  }
+  if (isOwnProfile) {
+    if (editContainer) editContainer.innerHTML = ACTION_SKELETON;
+    if (isTrainer && secondaryContainer) secondaryContainer.innerHTML = ACTION_SKELETON;
+  }
 
   // ---- Строка метаданных (@handle · публикации · стаж · подписчики) ----
   const metaParts: { handle?: MetaItem; posts?: MetaItem; experience?: MetaItem; subscribers?: MetaItem } = {};
@@ -166,6 +186,7 @@ export async function renderProfileHeader(
 
   // ---- Пожертвовать ----
   if (!isOwnProfile && showDonate && donateContainer && onDonate) {
+    donateContainer.innerHTML = '';
     await renderButton(donateContainer, {
       text: 'Пожертвовать',
       variant: 'primary-orange',
@@ -248,6 +269,7 @@ export async function renderProfileHeader(
       });
     };
 
+    subscribeContainer.innerHTML = '';
     subscriptionButton = await renderButton(subscribeContainer, {
       text: 'Подписаться',
       variant: 'primary-orange',
@@ -295,6 +317,7 @@ export async function renderProfileHeader(
 
   // ---- Редактировать профиль (только свой) ----
   if (isOwnProfile && editContainer) {
+    editContainer.innerHTML = '';
     await renderButton(editContainer, {
       text: 'Редактировать',
       variant: 'primary-orange',
@@ -320,6 +343,7 @@ export async function renderProfileHeader(
 
   // ---- Статистика (только собственный профиль тренера) ----
   if (isOwnProfile && isTrainer && secondaryContainer) {
+    secondaryContainer.innerHTML = '';
     secondaryContainer.classList.add('profile-header__secondary-slot');
     await renderButton(secondaryContainer, {
       text: 'Статистика',
@@ -358,8 +382,6 @@ export async function renderProfileHeader(
       }
     });
   }
-
-  container.appendChild(element);
 
   window.requestAnimationFrame(setupBioToggle);
   return element;

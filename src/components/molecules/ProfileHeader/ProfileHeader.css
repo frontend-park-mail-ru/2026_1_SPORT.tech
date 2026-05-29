@@ -4,6 +4,17 @@
   padding: 28px;
   max-width: 100%;
   overflow: hidden;
+  animation: profile-header-in 0.3s ease both;
+}
+
+/* Плавное появление шапки вместо «рывка» при снятии скелетона. */
+@keyframes profile-header-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-header { animation: none; }
 }
 
 .profile-header__main {
@@ -158,6 +169,8 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+  /* Высота medium-кнопки: строка не схлопывается, пока действия догружаются. */
+  min-height: 40px;
 }
 
 .profile-header__actions-slot {
@@ -166,6 +179,23 @@
 
 .profile-header__actions-slot:empty {
   display: none;
+}
+
+/* Заглушка кнопки на время загрузки действий (подписка/донат/правка/статистика). */
+.profile-header__action-skeleton {
+  display: inline-block;
+  width: 150px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, #edf3f8 0%, #ffffff 50%, #edf3f8 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-header__action-skeleton {
+    animation: none;
+  }
 }
 
 .profile-header__subscription-actions {
@@ -185,6 +215,9 @@
   gap: 6px;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
   white-space: nowrap;
+  /* Кнопки «Написать»/«Записаться» добавляются после сетевых запросов —
+     мягко проявляем их, чтобы не было резкого «впрыгивания». */
+  animation: profile-header-in 0.3s ease both;
 }
 
 .profile-header__subscription-action svg {
@@ -266,6 +299,10 @@
   }
 
   .profile-header__actions-slot > .button {
+    width: 100%;
+  }
+
+  .profile-header__action-skeleton {
     width: 100%;
   }
 
