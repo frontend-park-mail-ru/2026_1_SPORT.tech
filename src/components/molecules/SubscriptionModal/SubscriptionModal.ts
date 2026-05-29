@@ -107,6 +107,7 @@ export async function openSubscriptionModal({
               </p>
             ` : ''}
             ${currentSubscription.auto_renew ? '<button class="button button--text-orange button--small" data-unsubscribe>Отменить подписку</button>' : ''}
+            <div class="subscription-modal__status" data-unsubscribe-status role="status" aria-live="polite" hidden></div>
           </div>
         ` : ''}
       </div>
@@ -171,17 +172,33 @@ export async function openSubscriptionModal({
     // Отписка остаётся прямой (не через платёжного провайдера)
     const unsubscribeBtn = modal.querySelector('[data-unsubscribe]');
     if (unsubscribeBtn && currentSubscription) {
+      const statusEl = modal.querySelector('[data-unsubscribe-status]') as HTMLElement | null;
+      const setUnsubscribeStatus = (message: string, kind: 'info' | 'success' | 'error'): void => {
+        if (!statusEl) return;
+        statusEl.hidden = false;
+        statusEl.textContent = message;
+        statusEl.className = `subscription-modal__status subscription-modal__status--${kind}`;
+      };
       unsubscribeBtn.addEventListener('click', async () => {
         const btn = unsubscribeBtn as HTMLButtonElement;
         btn.disabled = true;
         btn.textContent = 'Отписка...';
+        setUnsubscribeStatus('Отменяем автопродление...', 'info');
         try {
           await api.cancelSubscription(currentSubscription.subscription_id);
-          modal.remove();
+          btn.textContent = 'Подписка отменена';
+          setUnsubscribeStatus(`Подписка отменена. Доступ сохранится${formatAccessUntil(currentSubscription)}.`, 'success');
           if (onSubscribed) onSubscribed();
-        } catch {
+        } catch (err) {
+          if (isAlreadyCancelledError(err)) {
+            btn.textContent = 'Подписка отменена';
+            setUnsubscribeStatus('Подписка уже отменена. Данные обновлены.', 'success');
+            if (onSubscribed) onSubscribed();
+            return;
+          }
           btn.disabled = false;
           btn.textContent = 'Отменить подписку';
+          setUnsubscribeStatus((err as Error).message || 'Не удалось отменить подписку', 'error');
         }
       });
     }
@@ -243,4 +260,10 @@ function getSafeRedirectUrl(value: string): string | null {
   } catch {
     return null;
   }
+}
+
+function isAlreadyCancelledError(error: unknown): boolean {
+  const enriched = error as { status?: number; rawMessage?: string; message?: string };
+  const message = `${enriched.rawMessage || ''} ${enriched.message || ''}`;
+  return enriched.status === 404 || /subscription not found|подписк.*не найд|уже отмен/i.test(message);
 }

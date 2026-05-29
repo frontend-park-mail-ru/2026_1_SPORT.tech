@@ -110,6 +110,24 @@
   color: #64748b;
 }
 
+.subscription-modal__status {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.subscription-modal__status--info {
+  color: #475569;
+}
+
+.subscription-modal__status--success {
+  color: #166534;
+}
+
+.subscription-modal__status--error {
+  color: #b91c1c;
+}
+
 .subscription-modal__unsubscribe .button--text-orange {
   background: none;
   border: none;

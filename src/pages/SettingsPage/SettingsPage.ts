@@ -31,8 +31,7 @@ const NOTIFICATION_FIELDS: Array<{ key: keyof NotificationPreferences; label: st
   { key: 'posts', label: 'Новые посты', hint: 'Авторы, на которых вы подписаны, публикуют материалы' },
   { key: 'subscriptions', label: 'Подписки', hint: 'Новые подписки и изменения тарифов' },
   { key: 'donations', label: 'Донаты', hint: 'Полученные донаты' },
-  { key: 'meetings', label: 'Встречи', hint: 'Напоминания и изменения по встречам' },
-  { key: 'email_digest', label: 'Дублировать на email', hint: 'Присылать копию уведомлений на почту' }
+  { key: 'meetings', label: 'Встречи', hint: 'Напоминания и изменения по встречам' }
 ];
 
 const PRIVACY_FIELDS: Array<{ key: keyof PrivacySettings; label: string; hint: string }> = [
@@ -382,7 +381,7 @@ async function renderNotificationsTab(api: ApiClient, panel: HTMLElement): Promi
   `;
   let prefs: NotificationPreferences;
   try {
-    prefs = await api.getNotificationPreferences();
+    prefs = { ...await api.getNotificationPreferences(), email_digest: false };
   } catch {
     panel.innerHTML = '<div class="settings-card"><p class="settings-form__error">Не удалось загрузить настройки уведомлений</p></div>';
     return;
@@ -400,7 +399,7 @@ async function renderNotificationsTab(api: ApiClient, panel: HTMLElement): Promi
 
   panel.querySelectorAll('input[data-pref]').forEach(input => {
     input.addEventListener('change', async () => {
-      const next: NotificationPreferences = { ...prefs };
+      const next: NotificationPreferences = { ...prefs, email_digest: false };
       panel.querySelectorAll('input[data-pref]').forEach(el => {
         const key = (el as HTMLInputElement).dataset.pref as keyof NotificationPreferences;
         next[key] = (el as HTMLInputElement).checked;

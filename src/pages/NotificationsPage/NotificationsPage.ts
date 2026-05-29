@@ -50,6 +50,7 @@ function notifIcon(type: string): string {
   case 'like':         return icons.heart;
   case 'comment':      return icons.chat;
   case 'post':         return icons.post;
+  case 'meeting':      return icons.calendar;
   default:             return icons.bell;
   }
 }
